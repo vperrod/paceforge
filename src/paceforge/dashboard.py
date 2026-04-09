@@ -1422,7 +1422,7 @@ with tab_calendar:
             with st.spinner("Fetching activities from Garmin Connect..."):
                 try:
                     r = requests.get(
-                        f"{API_BASE}/activities?days=90",
+                        f"{API_BASE}/activities?days=240",
                         headers=_auth_headers(),
                         timeout=60,
                     )
