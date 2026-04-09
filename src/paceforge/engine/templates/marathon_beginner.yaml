@@ -1,0 +1,104 @@
+# PaceForge — Marathon Plan Template (Beginner, 18 weeks)
+# 4 days/week, conservative build, focus on finishing
+
+name: "Marathon — Beginner"
+goal_type: MARATHON
+total_weeks: 18
+experience_level: beginner
+days_per_week: 4
+
+phases:
+  - name: Base
+    weeks: [1, 2, 3, 4, 5, 6]
+  - name: Build
+    weeks: [7, 8, 9, 10, 11, 12]
+  - name: Peak
+    weeks: [13, 14, 15]
+  - name: Taper
+    weeks: [16, 17, 18]
+
+volume_progression:
+  - 0.40  # wk1
+  - 0.45  # wk2
+  - 0.48  # wk3
+  - 0.40  # wk4 (cutback)
+  - 0.52  # wk5
+  - 0.55  # wk6
+  - 0.58  # wk7
+  - 0.48  # wk8 (cutback)
+  - 0.62  # wk9
+  - 0.66  # wk10
+  - 0.70  # wk11
+  - 0.58  # wk12 (cutback)
+  - 0.78  # wk13
+  - 0.85  # wk14
+  - 1.00  # wk15 (peak)
+  - 0.65  # wk16 (taper start)
+  - 0.45  # wk17
+  - 0.30  # wk18 (race week)
+
+peak_weekly_km:
+  beginner: 50
+  intermediate: 70
+  advanced: 95
+
+week_template:
+  - day: monday
+    type: rest
+
+  - day: tuesday
+    type: easy_run
+    description: "Easy aerobic run"
+    fraction_of_weekly: 0.22
+
+  - day: wednesday
+    type: rest
+
+  - day: thursday
+    type: tempo
+    description: "Steady tempo effort"
+    fraction_of_weekly: 0.20
+    steps:
+      - type: warmup
+        duration_min: 10
+      - type: active
+        duration_min: 20
+        pace: marathon
+      - type: cooldown
+        duration_min: 10
+
+  - day: friday
+    type: rest
+
+  - day: saturday
+    type: easy_run
+    description: "Easy run"
+    fraction_of_weekly: 0.16
+
+  - day: sunday
+    type: long_run
+    description: "Long run (slow and steady)"
+    fraction_of_weekly: 0.42
+    pace: easy
+
+race_week:
+  - day: monday
+    type: rest
+  - day: tuesday
+    type: easy_run
+    description: "Easy shakeout"
+    distance_km: 5
+  - day: wednesday
+    type: rest
+  - day: thursday
+    type: easy_run
+    description: "Short easy run"
+    distance_km: 4
+  - day: friday
+    type: rest
+  - day: saturday
+    type: rest
+  - day: sunday
+    type: race_pace
+    description: "RACE DAY — Marathon"
+    distance_km: 42.2

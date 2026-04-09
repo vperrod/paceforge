@@ -49,6 +49,26 @@ class WorkoutType(str, Enum):
     HYROX_MIXED = "hyrox_mixed"
     CROSS_TRAINING = "cross_training"
     REST = "rest"
+    PROGRESSIVE = "progressive"
+    HILLS = "hills"
+    STRIDES = "strides"
+    SPEED = "speed"
+    VO2MAX = "vo2max"
+    EASY_WITH_STRIDES = "easy_with_strides"
+    LONG_RUN_PROGRESSIVE = "long_run_progressive"
+    LONG_RUN_WITH_RACE_PACE = "long_run_with_race_pace"
+
+
+class TrainingPurpose(str, Enum):
+    AEROBIC_BASE = "aerobic_base"
+    VO2MAX = "vo2max"
+    LACTATE_THRESHOLD = "lactate_threshold"
+    RUNNING_ECONOMY = "running_economy"
+    SPEED_NEUROMUSCULAR = "speed_neuromuscular"
+    RACE_SPECIFICITY = "race_specificity"
+    ENDURANCE = "endurance"
+    RECOVERY = "recovery"
+    MENTAL_TOUGHNESS = "mental_toughness"
 
 
 class Workout(BaseModel):
@@ -60,6 +80,8 @@ class Workout(BaseModel):
     estimated_distance_meters: float | None = None
     steps: list[WorkoutStep] = Field(default_factory=list)
     notes: str = ""
+    purpose: TrainingPurpose | None = None
+    cadence_target: int | None = None
 
 
 class TrainingWeek(BaseModel):
@@ -67,6 +89,7 @@ class TrainingWeek(BaseModel):
     phase: str = Field(default="", description="e.g. 'Base', 'Build', 'Peak', 'Taper'")
     total_distance_km: float | None = None
     workouts: list[Workout] = Field(default_factory=list)
+    focus: str = Field(default="", description="Week's training focus summary")
 
 
 class TrainingPlan(BaseModel):

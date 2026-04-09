@@ -1,0 +1,151 @@
+# PaceForge — Marathon Plan Template (Advanced, 16 weeks)
+# 6 days/week, higher volume, quality doubles
+
+name: "Marathon — Advanced"
+goal_type: MARATHON
+total_weeks: 16
+experience_level: advanced
+days_per_week: 6
+
+phases:
+  - name: Base
+    weeks: [1, 2, 3, 4]
+  - name: Build
+    weeks: [5, 6, 7, 8, 9, 10]
+  - name: Peak
+    weeks: [11, 12, 13]
+  - name: Taper
+    weeks: [14, 15, 16]
+
+volume_progression:
+  - 0.55
+  - 0.60
+  - 0.65
+  - 0.50  # cutback
+  - 0.70
+  - 0.75
+  - 0.80
+  - 0.65  # cutback
+  - 0.85
+  - 0.90
+  - 0.95
+  - 1.00  # peak
+  - 0.75  # cutback
+  - 0.60  # taper
+  - 0.45
+  - 0.30  # race week
+
+peak_weekly_km:
+  beginner: 50
+  intermediate: 70
+  advanced: 95
+
+week_template:
+  - day: monday
+    type: recovery_run
+    description: "Recovery run"
+    fraction_of_weekly: 0.08
+
+  - day: tuesday
+    type: intervals
+    description: "VO2max / speed intervals"
+    fraction_of_weekly: 0.13
+    steps:
+      - type: warmup
+        duration_min: 15
+      - type: repeat
+        count: 7
+        steps:
+          - type: interval
+            duration_min: 4
+            pace: interval
+          - type: recovery
+            duration_min: 2.5
+            pace: easy
+      - type: cooldown
+        duration_min: 10
+
+  - day: wednesday
+    type: easy_run
+    description: "Medium-easy run"
+    fraction_of_weekly: 0.13
+
+  - day: thursday
+    type: tempo
+    description: "Marathon pace long tempo"
+    fraction_of_weekly: 0.17
+    steps:
+      - type: warmup
+        duration_min: 15
+      - type: active
+        duration_min: 35
+        pace: marathon
+      - type: cooldown
+        duration_min: 10
+
+  - day: friday
+    type: easy_run
+    description: "Easy recovery"
+    fraction_of_weekly: 0.08
+
+  - day: saturday
+    type: threshold
+    description: "Threshold cruise intervals"
+    fraction_of_weekly: 0.10
+    steps:
+      - type: warmup
+        duration_min: 10
+      - type: repeat
+        count: 4
+        steps:
+          - type: interval
+            duration_min: 6
+            pace: threshold
+          - type: recovery
+            duration_min: 1.5
+            pace: easy
+      - type: cooldown
+        duration_min: 10
+
+  - day: sunday
+    type: long_run
+    description: "Long run with MP segments"
+    fraction_of_weekly: 0.31
+    pace: easy
+    notes: "Include 6-8 km at marathon pace in the middle"
+
+race_week:
+  - day: monday
+    type: rest
+  - day: tuesday
+    type: easy_run
+    description: "Easy shakeout"
+    distance_km: 6
+  - day: wednesday
+    type: rest
+  - day: thursday
+    type: easy_run
+    description: "Short strides"
+    distance_km: 5
+    steps:
+      - type: warmup
+        duration_min: 12
+      - type: repeat
+        count: 5
+        steps:
+          - type: interval
+            duration_min: 0.33
+            pace: repetition
+          - type: recovery
+            duration_min: 1
+            pace: easy
+      - type: cooldown
+        duration_min: 5
+  - day: friday
+    type: rest
+  - day: saturday
+    type: rest
+  - day: sunday
+    type: race_pace
+    description: "RACE DAY — Marathon"
+    distance_km: 42.2

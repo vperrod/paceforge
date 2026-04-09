@@ -1,0 +1,137 @@
+# PaceForge — Half Marathon Plan Template (Advanced, 12 weeks)
+# Higher volume, 6 days/week, quality sessions
+
+name: "Half Marathon — Advanced"
+goal_type: HALF_MARATHON
+total_weeks: 12
+experience_level: advanced
+days_per_week: 6
+
+phases:
+  - name: Base
+    weeks: [1, 2, 3]
+  - name: Build
+    weeks: [4, 5, 6, 7]
+  - name: Peak
+    weeks: [8, 9, 10]
+  - name: Taper
+    weeks: [11, 12]
+
+volume_progression:
+  - 0.65
+  - 0.70
+  - 0.75
+  - 0.60  # cutback
+  - 0.80
+  - 0.85
+  - 0.90
+  - 0.70  # cutback
+  - 0.95
+  - 1.00  # peak
+  - 0.65  # taper
+  - 0.40  # race week
+
+peak_weekly_km:
+  beginner: 40
+  intermediate: 55
+  advanced: 70
+
+week_template:
+  - day: monday
+    type: recovery_run
+    description: "Recovery run"
+    fraction_of_weekly: 0.10
+
+  - day: tuesday
+    type: intervals
+    description: "VO2max intervals"
+    fraction_of_weekly: 0.14
+    steps:
+      - type: warmup
+        duration_min: 15
+      - type: repeat
+        count: 6
+        steps:
+          - type: interval
+            duration_min: 3.5
+            pace: interval
+          - type: recovery
+            duration_min: 2.5
+            pace: easy
+      - type: cooldown
+        duration_min: 10
+
+  - day: wednesday
+    type: easy_run
+    description: "Easy aerobic run"
+    fraction_of_weekly: 0.14
+
+  - day: thursday
+    type: threshold
+    description: "Threshold / tempo cruise intervals"
+    fraction_of_weekly: 0.16
+    steps:
+      - type: warmup
+        duration_min: 15
+      - type: repeat
+        count: 3
+        steps:
+          - type: interval
+            duration_min: 8
+            pace: threshold
+          - type: recovery
+            duration_min: 2
+            pace: easy
+      - type: cooldown
+        duration_min: 10
+
+  - day: friday
+    type: rest
+
+  - day: saturday
+    type: easy_run
+    description: "Pre-long-run easy"
+    fraction_of_weekly: 0.10
+
+  - day: sunday
+    type: long_run
+    description: "Long run with MP finish"
+    fraction_of_weekly: 0.36
+    pace: easy
+    notes: "Last 3-4 km at marathon pace"
+
+race_week:
+  - day: monday
+    type: rest
+  - day: tuesday
+    type: easy_run
+    description: "Easy shakeout"
+    distance_km: 6
+  - day: wednesday
+    type: rest
+  - day: thursday
+    type: easy_run
+    description: "Strides session"
+    distance_km: 5
+    steps:
+      - type: warmup
+        duration_min: 12
+      - type: repeat
+        count: 6
+        steps:
+          - type: interval
+            duration_min: 0.33
+            pace: repetition
+          - type: recovery
+            duration_min: 1
+            pace: easy
+      - type: cooldown
+        duration_min: 5
+  - day: friday
+    type: rest
+  - day: saturday
+    type: rest
+  - day: sunday
+    type: race_pace
+    description: "RACE DAY — Half Marathon"
+    distance_km: 21.1

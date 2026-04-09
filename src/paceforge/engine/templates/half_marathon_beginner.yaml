@@ -1,0 +1,100 @@
+# PaceForge — Half Marathon Plan Template (Beginner, 14 weeks)
+# Gentler progression, 4 days/week, longer base phase
+
+name: "Half Marathon — Beginner"
+goal_type: HALF_MARATHON
+total_weeks: 14
+experience_level: beginner
+days_per_week: 4
+
+phases:
+  - name: Base
+    weeks: [1, 2, 3, 4, 5, 6]
+  - name: Build
+    weeks: [7, 8, 9, 10]
+  - name: Peak
+    weeks: [11, 12]
+  - name: Taper
+    weeks: [13, 14]
+
+volume_progression:
+  - 0.45  # wk1
+  - 0.50  # wk2
+  - 0.55  # wk3
+  - 0.45  # wk4 (cutback)
+  - 0.58  # wk5
+  - 0.62  # wk6
+  - 0.65  # wk7
+  - 0.55  # wk8 (cutback)
+  - 0.72  # wk9
+  - 0.80  # wk10
+  - 0.90  # wk11
+  - 1.00  # wk12 (peak)
+  - 0.60  # wk13 (taper)
+  - 0.35  # wk14 (race week)
+
+peak_weekly_km:
+  beginner: 40
+  intermediate: 55
+  advanced: 70
+
+week_template:
+  - day: monday
+    type: rest
+
+  - day: tuesday
+    type: easy_run
+    description: "Easy aerobic run"
+    fraction_of_weekly: 0.22
+
+  - day: wednesday
+    type: rest
+
+  - day: thursday
+    type: tempo
+    description: "Steady-state / tempo effort"
+    fraction_of_weekly: 0.22
+    steps:
+      - type: warmup
+        duration_min: 10
+      - type: active
+        duration_min: 15
+        pace: threshold
+      - type: cooldown
+        duration_min: 10
+
+  - day: friday
+    type: rest
+
+  - day: saturday
+    type: easy_run
+    description: "Easy run"
+    fraction_of_weekly: 0.18
+
+  - day: sunday
+    type: long_run
+    description: "Long run (conversational pace)"
+    fraction_of_weekly: 0.38
+    pace: easy
+
+race_week:
+  - day: monday
+    type: rest
+  - day: tuesday
+    type: easy_run
+    description: "Easy shakeout"
+    distance_km: 4
+  - day: wednesday
+    type: rest
+  - day: thursday
+    type: easy_run
+    description: "Short shakeout"
+    distance_km: 3
+  - day: friday
+    type: rest
+  - day: saturday
+    type: rest
+  - day: sunday
+    type: race_pace
+    description: "RACE DAY — Half Marathon"
+    distance_km: 21.1

@@ -3,6 +3,7 @@
 from datetime import date, timedelta
 
 from paceforge.engine.planner import generate_plan
+from paceforge.models.plan import WorkoutType
 from paceforge.models.profile import (
     ExperienceLevel,
     GoalType,
@@ -84,3 +85,31 @@ class TestPlanGeneration:
         plan = generate_plan(profile, _make_goal())
         assert plan.total_weeks > 0
         assert len(plan.weeks) > 0
+
+    def test_workouts_have_variety(self):
+        """Across all weeks, at least 4 different WorkoutType values should be used."""
+        plan = generate_plan(_make_profile(), _make_goal())
+        all_types = {
+            w.workout_type
+            for week in plan.weeks
+            for w in week.workouts
+        }
+        # Filter out REST since it's not a "real" workout type for variety purposes
+        non_rest_types = all_types - {WorkoutType.REST}
+        assert len(non_rest_types) >= 4, f"Only found {len(non_rest_types)} types: {non_rest_types}"
+
+    def test_workouts_have_purpose(self):
+        """Non-rest workouts should have a purpose field set."""
+        plan = generate_plan(_make_profile(), _make_goal())
+        for week in plan.weeks:
+            for w in week.workouts:
+                if w.workout_type != WorkoutType.REST:
+                    assert w.purpose is not None, (
+                        f"Week {week.week_number}, workout '{w.name}' has no purpose"
+                    )
+
+    def test_weeks_have_focus(self):
+        """Each week should have a non-empty focus field."""
+        plan = generate_plan(_make_profile(), _make_goal())
+        for week in plan.weeks:
+            assert week.focus, f"Week {week.week_number} has empty focus"
