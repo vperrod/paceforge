@@ -168,6 +168,7 @@ def generate_plan(
             week_start=week_start,
             wk_idx=wk_idx,
             long_run_day=goal.long_run_day,
+            max_days=goal.max_days_per_week,
         )
 
         focus = _get_focus(phase, wk_idx)
@@ -216,6 +217,7 @@ def _build_varied_week(
     week_start: date,
     wk_idx: int,
     long_run_day: str,
+    max_days: int = 5,
 ) -> list[Workout]:
     """Build a week of workouts with variety based on phase and rotation index."""
     workouts: list[Workout] = []
@@ -282,19 +284,32 @@ def _build_varied_week(
         scheduled_date=week_start + timedelta(days=4),
     ))
 
-    # Saturday: Easy 2 (alternate type from Wednesday)
+    # Long run + easy: respect long_run_day preference
+    lr_offset = _DAY_OFFSETS.get(long_run_day, 6)
+    easy2_offset = 5 if lr_offset == 6 else 6
+
     e2 = (
         factory.easy_with_strides(easy2_km)
         if easy_type == "easy"
         else factory.easy_run(easy2_km)
     )
-    e2.scheduled_date = week_start + timedelta(days=5)
+    e2.scheduled_date = week_start + timedelta(days=easy2_offset)
     workouts.append(e2)
 
-    # Sunday: Long run
     lr = _make_long_run(factory, lr_type, long_km)
-    lr.scheduled_date = week_start + timedelta(days=6)
+    lr.scheduled_date = week_start + timedelta(days=lr_offset)
     workouts.append(lr)
+
+    # Reduce running days if needed
+    if max_days < 5:
+        drop_count = 5 - max_days
+        drop_indices = [5, 2][:drop_count]
+        for idx in sorted(drop_indices, reverse=True):
+            workouts[idx] = Workout(
+                workout_type=WorkoutType.REST,
+                name="Rest Day",
+                scheduled_date=workouts[idx].scheduled_date,
+            )
 
     return workouts
 
@@ -413,6 +428,7 @@ def _build_workouts(
     week_km: float,
     paces: TrainingPaces | None,
     long_run_day: str,
+    max_days: int = 5,
 ) -> list[Workout]:
     workouts: list[Workout] = []
 

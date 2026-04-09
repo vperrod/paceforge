@@ -9,7 +9,9 @@ from datetime import date
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
+from paceforge.ai.coach import Coach
 from paceforge.api.config import settings
+from paceforge.engine.adaptation import adapt_plan
 from paceforge.engine.planner import generate_plan
 from paceforge.garmin.client import GarminClient
 from paceforge.models.plan import TrainingPlan
@@ -23,10 +25,11 @@ from paceforge.models.profile import (
 logging.basicConfig(level=settings.log_level)
 logger = logging.getLogger(__name__)
 
-# Shared Garmin client (single-user personal app)
+# Shared state (single-user personal app)
 _garmin: GarminClient | None = None
 _cached_profile: UserFitnessProfile | None = None
 _cached_plan: TrainingPlan | None = None
+_coach: Coach | None = None
 
 
 @asynccontextmanager
@@ -148,11 +151,36 @@ async def push_plan(req: PushPlanRequest):
 
 @app.post("/coach/chat", response_model=ChatResponse)
 async def coach_chat(req: ChatRequest):
-    """AI coaching endpoint — placeholder for LLM integration."""
-    # Phase 3 will add real LLM integration
-    return ChatResponse(
-        reply=(
-            "AI coaching is not yet configured. "
-            "Set PACEFORGE_OPENAI_API_KEY to enable AI-powered coaching."
+    """AI coaching endpoint powered by OpenAI."""
+    global _coach
+    if not settings.openai_api_key:
+        return ChatResponse(
+            reply=(
+                "AI coaching is not configured. "
+                "Set PACEFORGE_OPENAI_API_KEY to enable."
+            )
         )
+    if _coach is None:
+        _coach = Coach(
+            api_key=settings.openai_api_key,
+            model=settings.openai_model,
+        )
+    result = _coach.chat(
+        message=req.message,
+        profile=_cached_profile,
+        plan=_cached_plan,
     )
+    return ChatResponse(reply=result.reply)
+
+
+@app.post("/plan/adapt", response_model=TrainingPlan)
+async def adapt_current_plan():
+    """Re-evaluate the plan based on latest fitness data."""
+    global _cached_plan, _cached_profile
+    if not _garmin:
+        raise HTTPException(401, "Not logged in")
+    if not _cached_plan:
+        raise HTTPException(404, "No plan generated yet")
+    _cached_profile = _garmin.get_fitness_profile()
+    _cached_plan = adapt_plan(_cached_plan, _cached_profile)
+    return _cached_plan

@@ -178,20 +178,41 @@ with tab_plan:
             st.write("**Training Paces:** " + " | ".join(f"{k}: {v}" for k, v in paces.items()))
 
         for week in plan.get("weeks", []):
+            focus = week.get('focus', '')
             with st.expander(
-                f"Week {week['week_number']} — {week['phase']} ({week.get('total_distance_km', 0)} km)"
+                f"Week {week['week_number']} — {week['phase']}"
+                f" ({week.get('total_distance_km', 0)} km)"
+                f"{' | ' + focus if focus else ''}"
             ):
                 for w in week.get("workouts", []):
                     if w["workout_type"] == "rest":
                         st.write(f"🛌 **{w.get('scheduled_date', '')}** — Rest")
                     else:
-                        dist = round(w.get("estimated_distance_meters", 0) / 1000, 1)
+                        dist = round(
+                            w.get("estimated_distance_meters", 0) / 1000, 1
+                        )
+                        purpose = w.get("purpose", "")
+                        purpose_str = f" [{purpose}]" if purpose else ""
                         st.write(
                             f"🏃 **{w.get('scheduled_date', '')}** — "
-                            f"{w['name']} ({dist} km)"
+                            f"{w['name']} ({dist} km){purpose_str}"
                         )
                         if w.get("notes"):
                             st.caption(w["notes"])
+
+        st.divider()
+        if st.button("Adapt Plan (re-evaluate)"):
+            with st.spinner("Adapting plan based on latest fitness..."):
+                r = requests.post(
+                    f"{API_BASE}/plan/adapt",
+                    timeout=30,
+                )
+                if r.status_code == 200:
+                    st.session_state.plan = r.json()
+                    st.success("Plan adapted!")
+                    st.rerun()
+                else:
+                    st.error(f"Error: {r.json().get('detail', r.text)}")
 
 
 # ── Tab 3: Push to Garmin ────────────────────────────────────────────
