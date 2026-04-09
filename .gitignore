@@ -34,3 +34,7 @@ Thumbs.db
 htmlcov/
 .coverage
 coverage.xml
+
+# SQLite database (contains credentials)
+paceforge.db
+*.db-journal

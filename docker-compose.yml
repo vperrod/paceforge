@@ -1,0 +1,16 @@
+services:
+  paceforge:
+    build: .
+    ports:
+      - "8000:8000"
+      - "8501:8501"
+    env_file: .env
+    environment:
+      - PACEFORGE_DB_PATH=/data/paceforge.db
+      - PACEFORGE_GARMIN_TOKEN_DIR=/data/garmin-tokens
+    volumes:
+      - paceforge-data:/data
+    restart: unless-stopped
+
+volumes:
+  paceforge-data:
