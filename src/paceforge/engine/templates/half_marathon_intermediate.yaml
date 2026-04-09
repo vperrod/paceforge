@@ -1,0 +1,137 @@
+# PaceForge — Half Marathon Plan Template (Intermediate, 12 weeks)
+# Distances in km, durations in minutes
+# Workout types: easy_run, long_run, tempo, intervals, recovery_run, threshold, rest
+# Phases: Base (wk 1-4), Build (wk 5-8), Peak (wk 9-10), Taper (wk 11-12)
+
+name: "Half Marathon — Intermediate"
+goal_type: HALF_MARATHON
+total_weeks: 12
+experience_level: intermediate
+days_per_week: 5
+
+phases:
+  - name: Base
+    weeks: [1, 2, 3, 4]
+  - name: Build
+    weeks: [5, 6, 7, 8]
+  - name: Peak
+    weeks: [9, 10]
+  - name: Taper
+    weeks: [11, 12]
+
+# Weekly volume multipliers (fraction of peak weekly km)
+# Peak week is 1.0; cutback weeks are ~0.75
+volume_progression:
+  - 0.60  # wk1
+  - 0.65  # wk2
+  - 0.70  # wk3
+  - 0.55  # wk4 (cutback)
+  - 0.75  # wk5
+  - 0.80  # wk6
+  - 0.85  # wk7
+  - 0.65  # wk8 (cutback)
+  - 0.90  # wk9
+  - 1.00  # wk10 (peak)
+  - 0.65  # wk11 (taper)
+  - 0.40  # wk12 (race week)
+
+# Peak weekly volume depends on level:
+#   beginner: ~40 km, intermediate: ~55 km, advanced: ~70 km
+peak_weekly_km:
+  beginner: 40
+  intermediate: 55
+  advanced: 70
+
+# Weekly workout pattern (day names are placeholders — shifted to user preference)
+# Each workout references a type and distance/duration as fraction of weekly total
+week_template:
+  - day: monday
+    type: rest
+
+  - day: tuesday
+    type: intervals
+    description: "Interval session"
+    fraction_of_weekly: 0.15
+    steps:
+      - type: warmup
+        duration_min: 10
+      - type: repeat
+        count: 5
+        steps:
+          - type: interval
+            duration_min: 4
+            pace: interval
+          - type: recovery
+            duration_min: 2
+            pace: easy
+      - type: cooldown
+        duration_min: 10
+
+  - day: wednesday
+    type: easy_run
+    description: "Easy recovery run"
+    fraction_of_weekly: 0.15
+
+  - day: thursday
+    type: tempo
+    description: "Tempo / threshold run"
+    fraction_of_weekly: 0.18
+    steps:
+      - type: warmup
+        duration_min: 10
+      - type: active
+        duration_min: 20
+        pace: threshold
+      - type: cooldown
+        duration_min: 10
+
+  - day: friday
+    type: rest
+
+  - day: saturday
+    type: easy_run
+    description: "Easy run"
+    fraction_of_weekly: 0.15
+
+  - day: sunday
+    type: long_run
+    description: "Long run"
+    fraction_of_weekly: 0.37
+    pace: easy
+
+# Race week override (week 12)
+race_week:
+  - day: monday
+    type: rest
+  - day: tuesday
+    type: easy_run
+    description: "Easy shakeout"
+    distance_km: 5
+  - day: wednesday
+    type: rest
+  - day: thursday
+    type: easy_run
+    description: "Short shakeout with strides"
+    distance_km: 4
+    steps:
+      - type: warmup
+        duration_min: 10
+      - type: repeat
+        count: 4
+        steps:
+          - type: interval
+            duration_min: 0.33
+            pace: repetition
+          - type: recovery
+            duration_min: 1
+            pace: easy
+      - type: cooldown
+        duration_min: 5
+  - day: friday
+    type: rest
+  - day: saturday
+    type: rest
+  - day: sunday
+    type: race_pace
+    description: "RACE DAY — Half Marathon"
+    distance_km: 21.1

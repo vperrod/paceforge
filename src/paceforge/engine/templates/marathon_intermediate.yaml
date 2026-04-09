@@ -1,0 +1,131 @@
+# PaceForge — Marathon Plan Template (Intermediate, 16 weeks)
+
+name: "Marathon — Intermediate"
+goal_type: MARATHON
+total_weeks: 16
+experience_level: intermediate
+days_per_week: 5
+
+phases:
+  - name: Base
+    weeks: [1, 2, 3, 4]
+  - name: Build
+    weeks: [5, 6, 7, 8, 9, 10]
+  - name: Peak
+    weeks: [11, 12, 13]
+  - name: Taper
+    weeks: [14, 15, 16]
+
+volume_progression:
+  - 0.50  # wk1
+  - 0.55  # wk2
+  - 0.60  # wk3
+  - 0.50  # wk4 (cutback)
+  - 0.65  # wk5
+  - 0.70  # wk6
+  - 0.75  # wk7
+  - 0.60  # wk8 (cutback)
+  - 0.80  # wk9
+  - 0.85  # wk10
+  - 0.90  # wk11
+  - 0.70  # wk12 (cutback)
+  - 1.00  # wk13 (peak)
+  - 0.70  # wk14 (taper start)
+  - 0.50  # wk15
+  - 0.35  # wk16 (race week)
+
+peak_weekly_km:
+  beginner: 50
+  intermediate: 70
+  advanced: 95
+
+week_template:
+  - day: monday
+    type: rest
+
+  - day: tuesday
+    type: intervals
+    description: "Speed/interval session"
+    fraction_of_weekly: 0.13
+    steps:
+      - type: warmup
+        duration_min: 15
+      - type: repeat
+        count: 6
+        steps:
+          - type: interval
+            duration_min: 4
+            pace: interval
+          - type: recovery
+            duration_min: 2.5
+            pace: easy
+      - type: cooldown
+        duration_min: 10
+
+  - day: wednesday
+    type: easy_run
+    description: "Easy aerobic run"
+    fraction_of_weekly: 0.14
+
+  - day: thursday
+    type: tempo
+    description: "Marathon pace / tempo"
+    fraction_of_weekly: 0.17
+    steps:
+      - type: warmup
+        duration_min: 15
+      - type: active
+        duration_min: 25
+        pace: marathon
+      - type: cooldown
+        duration_min: 10
+
+  - day: friday
+    type: rest
+
+  - day: saturday
+    type: easy_run
+    description: "Easy run"
+    fraction_of_weekly: 0.14
+
+  - day: sunday
+    type: long_run
+    description: "Long run"
+    fraction_of_weekly: 0.42
+    pace: easy
+
+race_week:
+  - day: monday
+    type: rest
+  - day: tuesday
+    type: easy_run
+    description: "Easy shakeout"
+    distance_km: 6
+  - day: wednesday
+    type: rest
+  - day: thursday
+    type: easy_run
+    description: "Short shakeout with strides"
+    distance_km: 5
+    steps:
+      - type: warmup
+        duration_min: 12
+      - type: repeat
+        count: 4
+        steps:
+          - type: interval
+            duration_min: 0.33
+            pace: repetition
+          - type: recovery
+            duration_min: 1
+            pace: easy
+      - type: cooldown
+        duration_min: 5
+  - day: friday
+    type: rest
+  - day: saturday
+    type: rest
+  - day: sunday
+    type: race_pace
+    description: "RACE DAY — Marathon"
+    distance_km: 42.2
