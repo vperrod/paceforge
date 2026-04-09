@@ -524,6 +524,7 @@ for key, default in {
     "jwt": None,
     "role": None,
     "user_name": None,
+    "user_email": None,
     "garmin_logged_in": False,
     "mfa_required": False,
     "profile": None,
@@ -541,7 +542,7 @@ def _auth_headers() -> dict:
 
 
 def _logout():
-    for key in ["jwt", "role", "user_name", "garmin_logged_in", "mfa_required", "profile", "plan"]:
+    for key in ["jwt", "role", "user_name", "user_email", "garmin_logged_in", "mfa_required", "profile", "plan"]:
         st.session_state[key] = None if key not in ("garmin_logged_in", "mfa_required") else False
     st.session_state.page = "login"
 
@@ -876,6 +877,7 @@ if st.session_state.jwt is None:
                         st.session_state.jwt = data["access_token"]
                         st.session_state.role = data["role"]
                         st.session_state.user_name = data["name"]
+                        st.session_state.user_email = data.get("email", "")
                         st.session_state.page = "app"
                         st.rerun()
                     elif r.status_code == 403:
@@ -919,6 +921,54 @@ with st.sidebar:
         </div>""",
         unsafe_allow_html=True,
     )
+
+    with st.expander("⚙️ Profile Settings"):
+        with st.form("profile_form"):
+            new_name = st.text_input("Name", value=st.session_state.user_name or "")
+            new_email = st.text_input("Email", value=st.session_state.user_email or "")
+            st.markdown('<div style="margin-top:0.5rem;font-size:0.8rem;color:#8B92A5;">Leave blank to keep current password</div>', unsafe_allow_html=True)
+            new_password = st.text_input("New Password", type="password", placeholder="min 8 characters")
+            confirm_password = st.text_input("Confirm New Password", type="password")
+            st.markdown("---")
+            current_password = st.text_input("Current Password (required)", type="password")
+            save_clicked = st.form_submit_button("Save Changes", type="primary", use_container_width=True)
+
+        if save_clicked:
+            if not current_password:
+                st.error("Current password is required to make changes.")
+            elif new_password and new_password != confirm_password:
+                st.error("New passwords do not match.")
+            elif new_password and len(new_password) < 8:
+                st.error("New password must be at least 8 characters.")
+            else:
+                payload = {"current_password": current_password}
+                if new_name and new_name != st.session_state.user_name:
+                    payload["name"] = new_name
+                if new_email and new_email != st.session_state.user_email:
+                    payload["email"] = new_email
+                if new_password:
+                    payload["new_password"] = new_password
+
+                if len(payload) == 1:
+                    st.info("No changes detected.")
+                else:
+                    try:
+                        r = requests.patch(
+                            f"{API_BASE}/auth/profile",
+                            json=payload,
+                            headers=_auth_headers(),
+                            timeout=15,
+                        )
+                        if r.status_code == 200:
+                            data = r.json()
+                            st.session_state.user_name = data["name"]
+                            st.session_state.user_email = data["email"]
+                            st.success("Profile updated!")
+                            st.rerun()
+                        else:
+                            st.error(_error_detail(r))
+                    except requests.ConnectionError:
+                        st.error("Cannot reach API.")
 
     if st.button("Logout", use_container_width=True):
         _logout()

@@ -24,6 +24,7 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     role: str
     name: str
+    email: str
 
 
 class UserOut(BaseModel):
@@ -40,3 +41,10 @@ class UserOut(BaseModel):
 
 class UserStatusUpdate(BaseModel):
     status: str = Field(..., pattern="^(approved|rejected)$")
+
+
+class ProfileUpdateRequest(BaseModel):
+    name: str | None = Field(None, min_length=1, max_length=100)
+    email: EmailStr | None = None
+    new_password: str | None = Field(None, min_length=8, max_length=128)
+    current_password: str = Field(..., min_length=1)

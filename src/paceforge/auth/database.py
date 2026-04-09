@@ -139,6 +139,39 @@ def update_garmin_email(db_path: str, user_id: str, garmin_email: str) -> None:
         conn.commit()
 
 
+def update_user_profile(
+    db_path: str,
+    user_id: str,
+    *,
+    name: str | None = None,
+    email: str | None = None,
+    password_hash: str | None = None,
+) -> dict | None:
+    """Update editable profile fields. Returns updated user dict."""
+    fields: list[str] = []
+    values: list[str] = []
+    if name is not None:
+        fields.append("name = ?")
+        values.append(name)
+    if email is not None:
+        fields.append("email = ?")
+        values.append(email)
+    if password_hash is not None:
+        fields.append("password_hash = ?")
+        values.append(password_hash)
+    if not fields:
+        return get_user_by_id(db_path, user_id)
+    values.append(user_id)
+    with _lock:
+        conn = _get_conn(db_path)
+        conn.execute(
+            f"UPDATE users SET {', '.join(fields)} WHERE id = ?",
+            values,
+        )
+        conn.commit()
+    return get_user_by_id(db_path, user_id)
+
+
 def reset_connection() -> None:
     """Reset DB connection (useful for tests with temp DBs)."""
     global _connection

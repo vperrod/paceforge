@@ -21,10 +21,12 @@ from paceforge.auth.database import (
     init_db,
     list_users,
     update_garmin_email,
+    update_user_profile,
     update_user_status,
 )
 from paceforge.auth.models import (
     AppLoginRequest,
+    ProfileUpdateRequest,
     RegisterRequest,
     TokenResponse,
     UserOut,
@@ -150,7 +152,34 @@ async def app_login(req: AppLoginRequest):
     if user["status"] == "rejected":
         raise HTTPException(403, "Your account has been rejected")
     token = create_access_token(user["id"], user["role"], settings.jwt_secret)
-    return TokenResponse(access_token=token, role=user["role"], name=user["name"])
+    return TokenResponse(access_token=token, role=user["role"], name=user["name"], email=user["email"])
+
+
+@app.get("/auth/profile", response_model=UserOut)
+async def get_profile(user: dict = Depends(get_current_user)):
+    """Return the current user's profile."""
+    return UserOut(**{k: v for k, v in user.items() if k != "password_hash"})
+
+
+@app.patch("/auth/profile", response_model=UserOut)
+async def update_profile(req: ProfileUpdateRequest, user: dict = Depends(get_current_user)):
+    """Update current user's name, email, or password."""
+    if not verify_password(req.current_password, user["password_hash"]):
+        raise HTTPException(403, "Current password is incorrect")
+
+    kwargs: dict = {}
+    if req.name is not None:
+        kwargs["name"] = req.name
+    if req.email is not None and req.email != user["email"]:
+        existing = get_user_by_email(settings.db_path, req.email)
+        if existing and existing["id"] != user["id"]:
+            raise HTTPException(409, "Email already in use by another account")
+        kwargs["email"] = req.email
+    if req.new_password is not None:
+        kwargs["password_hash"] = hash_password(req.new_password)
+
+    updated = update_user_profile(settings.db_path, user["id"], **kwargs)
+    return UserOut(**{k: v for k, v in updated.items() if k != "password_hash"})
 
 
 # ── Admin endpoints ──────────────────────────────────────────────────
