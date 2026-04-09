@@ -74,6 +74,10 @@ class ChatResponse(BaseModel):
     reply: str
 
 
+class MfaRequest(BaseModel):
+    code: str
+
+
 # ── Endpoints ────────────────────────────────────────────────────────
 
 
@@ -86,11 +90,24 @@ async def login(req: LoginRequest):
         raise HTTPException(400, "Garmin credentials required (body or env vars)")
     _garmin = GarminClient(email, password, settings.garmin_token_dir)
     try:
-        _garmin.login()
+        result = _garmin.login()
     except Exception as e:
         _garmin = None
         raise HTTPException(401, f"Garmin login failed: {e}") from e
+    if result == "mfa_required":
+        return {"status": "mfa_required", "message": "Enter the MFA code sent to your email"}
     return {"status": "ok", "message": "Authenticated with Garmin Connect"}
+
+
+@app.post("/auth/mfa")
+async def submit_mfa(req: MfaRequest):
+    if not _garmin:
+        raise HTTPException(401, "Not logged in. Call /auth/login first.")
+    try:
+        _garmin.complete_mfa(req.code)
+    except Exception as e:
+        raise HTTPException(401, f"MFA verification failed: {e}") from e
+    return {"status": "ok", "message": "MFA verified — authenticated with Garmin Connect"}
 
 
 @app.get("/profile", response_model=UserFitnessProfile)

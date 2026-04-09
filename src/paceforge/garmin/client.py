@@ -49,16 +49,36 @@ class GarminClient:
         self._token_dir = token_dir
         self._prompt_mfa = prompt_mfa or (lambda: input("MFA code: "))
         self._client: Garmin | None = None
+        self._mfa_state: dict | None = None
 
-    def login(self) -> None:
+    def login(self) -> str | None:
+        """Authenticate with Garmin Connect.
+
+        Returns None on success, or "mfa_required" if an MFA code is needed
+        (call complete_mfa() with the code to finish).
+        """
         self._client = Garmin(
             self._email,
             self._password,
-            prompt_mfa=self._prompt_mfa,
+            return_on_mfa=True,
         )
         logger.info("Authenticating with Garmin Connect (may take 30-45s on first login)...")
-        self._client.login(self._token_dir)
+        result = self._client.login(self._token_dir)
+        # result is (needs_mfa, legacy_token) — needs_mfa is truthy when MFA required
+        if result and result[0]:
+            self._mfa_state = result[0] if isinstance(result[0], dict) else {}
+            logger.info("MFA required — waiting for code")
+            return "mfa_required"
         logger.info("Authenticated with Garmin Connect")
+        return None
+
+    def complete_mfa(self, mfa_code: str) -> None:
+        """Submit the MFA code to complete authentication."""
+        if self._client is None:
+            raise RuntimeError("Call login() first before completing MFA.")
+        self._client.resume_login(self._mfa_state or {}, mfa_code)
+        self._mfa_state = None
+        logger.info("MFA verified — authenticated with Garmin Connect")
 
     @property
     def client(self) -> Garmin:

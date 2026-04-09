@@ -18,6 +18,8 @@ st.title("🏃 PaceForge — Running Plan Generator")
 
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
+if "mfa_required" not in st.session_state:
+    st.session_state.mfa_required = False
 if "profile" not in st.session_state:
     st.session_state.profile = None
 if "plan" not in st.session_state:
@@ -30,23 +32,51 @@ with st.sidebar:
     st.header("Garmin Connect")
 
     if not st.session_state.logged_in:
-        email = st.text_input("Email")
-        password = st.text_input("Password", type="password")
-        if st.button("Login", type="primary"):
-            try:
-                r = requests.post(
-                    f"{API_BASE}/auth/login",
-                    json={"email": email, "password": password},
-                    timeout=30,
-                )
-                if r.status_code == 200:
-                    st.session_state.logged_in = True
-                    st.success("Connected to Garmin!")
-                    st.rerun()
-                else:
-                    st.error(f"Login failed: {r.json().get('detail', r.text)}")
-            except requests.ConnectionError:
-                st.error("Cannot reach PaceForge API. Is the server running?")
+        if not st.session_state.mfa_required:
+            email = st.text_input("Email")
+            password = st.text_input("Password", type="password")
+            if st.button("Login", type="primary"):
+                try:
+                    with st.spinner("Authenticating with Garmin (may take up to 90s)..."):
+                        r = requests.post(
+                            f"{API_BASE}/auth/login",
+                            json={"email": email, "password": password},
+                            timeout=120,
+                        )
+                    data = r.json()
+                    if r.status_code == 200 and data.get("status") == "mfa_required":
+                        st.session_state.mfa_required = True
+                        st.info("Check your email for the verification code.")
+                        st.rerun()
+                    elif r.status_code == 200:
+                        st.session_state.logged_in = True
+                        st.success("Connected to Garmin!")
+                        st.rerun()
+                    else:
+                        st.error(f"Login failed: {data.get('detail', r.text)}")
+                except requests.ReadTimeout:
+                    st.error("Login timed out. Garmin may be rate-limiting. Wait a few minutes and retry.")
+                except requests.ConnectionError:
+                    st.error("Cannot reach PaceForge API. Is the server running?")
+        else:
+            st.info("Garmin sent a verification code to your email.")
+            mfa_code = st.text_input("MFA Code", placeholder="123456")
+            if st.button("Submit Code", type="primary"):
+                try:
+                    r = requests.post(
+                        f"{API_BASE}/auth/mfa",
+                        json={"code": mfa_code},
+                        timeout=30,
+                    )
+                    if r.status_code == 200:
+                        st.session_state.mfa_required = False
+                        st.session_state.logged_in = True
+                        st.success("MFA verified — connected to Garmin!")
+                        st.rerun()
+                    else:
+                        st.error(f"MFA failed: {r.json().get('detail', r.text)}")
+                except requests.ConnectionError:
+                    st.error("Cannot reach PaceForge API. Is the server running?")
     else:
         st.success("Connected to Garmin Connect")
         if st.button("Refresh Profile"):
