@@ -67,6 +67,22 @@ class ExperienceLevel(str, Enum):
     ADVANCED = "advanced"
 
 
+_ALL_DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+
+_DEFAULT_DAYS: dict[int, list[str]] = {
+    3: ["tuesday", "thursday", "sunday"],
+    4: ["tuesday", "thursday", "saturday", "sunday"],
+    5: ["tuesday", "wednesday", "thursday", "saturday", "sunday"],
+    6: ["monday", "tuesday", "wednesday", "thursday", "saturday", "sunday"],
+    7: _ALL_DAYS,
+}
+
+
+def default_training_days(n: int = 5) -> list[str]:
+    """Return a sensible default set of training days for *n* days/week."""
+    return list(_DEFAULT_DAYS.get(n, _DEFAULT_DAYS[5]))
+
+
 class TrainingGoal(BaseModel):
     goal_type: GoalType
     target_date: date
@@ -74,5 +90,12 @@ class TrainingGoal(BaseModel):
         None, description="Target finish time in seconds (optional)"
     )
     experience_level: ExperienceLevel | None = None
-    max_days_per_week: int = Field(default=5, ge=3, le=7)
+    training_days: list[str] = Field(
+        default_factory=lambda: default_training_days(5),
+        description="Which days of the week to train (e.g. ['monday','wednesday','friday','saturday','sunday'])",
+    )
     long_run_day: str = Field(default="sunday", description="Preferred long run day")
+
+    @property
+    def max_days_per_week(self) -> int:
+        return len(self.training_days)

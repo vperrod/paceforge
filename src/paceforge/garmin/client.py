@@ -8,7 +8,11 @@ from pathlib import Path
 
 from garminconnect import Garmin
 from garminconnect.workout import (
+    ConditionType,
+    ExecutableStep,
     RunningWorkout,
+    StepType,
+    TargetType,
     WorkoutSegment,
     create_cooldown_step,
     create_interval_step,
@@ -216,8 +220,8 @@ class GarminClient:
     def push_workout(self, workout: Workout, schedule_date: date | None = None) -> dict:
         """Upload a structured running workout to Garmin Connect and optionally schedule it."""
         garmin_steps = []
-        for step in workout.steps:
-            garmin_steps.append(_to_garmin_step(step))
+        for i, step in enumerate(workout.steps):
+            garmin_steps.append(_to_garmin_step(step, order=i + 1))
 
         garmin_workout = RunningWorkout(
             workoutName=workout.name,
@@ -259,21 +263,89 @@ def _meters_per_sec_to_sec_per_km(speed: float | None) -> float | None:
     return round(1000.0 / speed, 1)
 
 
-def _to_garmin_step(step):  # noqa: ANN001
-    """Convert a PaceForge WorkoutStep to a garminconnect workout step dict."""
-    duration = step.duration_seconds or 600.0
+def _to_garmin_step(step, order: int = 1):  # noqa: ANN001
+    """Convert a PaceForge WorkoutStep to a garminconnect workout step dict.
 
-    if step.step_type == WorkoutStepType.WARMUP:
-        return create_warmup_step(duration)
-    elif step.step_type == WorkoutStepType.COOLDOWN:
-        return create_cooldown_step(duration)
-    elif step.step_type == WorkoutStepType.RECOVERY:
-        return create_recovery_step(duration)
-    elif step.step_type == WorkoutStepType.INTERVAL:
-        return create_interval_step(duration)
-    elif step.repeat_count and step.steps:
-        sub_steps = [_to_garmin_step(s) for s in step.steps]
-        return create_repeat_group(step.repeat_count, sub_steps)
+    Handles pace targets (sec/km → m/s speed zone) and distance-based
+    end conditions so the Garmin watch guides each segment.
+    """
+    # ── Repeat groups must be checked first ──────────────────────────
+    if step.repeat_count and step.steps:
+        sub_steps = [_to_garmin_step(s, i + 1) for i, s in enumerate(step.steps)]
+        return create_repeat_group(step.repeat_count, sub_steps, order)
+
+    # ── Build pace target if available ───────────────────────────────
+    target = None
+    if (
+        step.target_low is not None
+        and step.target_high is not None
+        and step.target_low > 0
+        and step.target_high > 0
+    ):
+        # Convert sec/km → m/s.  target_low (slower pace) → lower speed,
+        # target_high (faster pace) → higher speed.
+        speed_low = round(1000.0 / step.target_low, 4)   # slower pace = lower m/s
+        speed_high = round(1000.0 / step.target_high, 4)  # faster pace = higher m/s
+        target = {
+            "workoutTargetTypeId": TargetType.SPEED,
+            "workoutTargetTypeKey": "speed.zone",
+            "displayOrder": 5,
+        }
+        # Garmin expects targetValueOne <= targetValueTwo
+        target_val_one = min(speed_low, speed_high)
+        target_val_two = max(speed_low, speed_high)
     else:
-        # Default to interval step for active/other types
-        return create_interval_step(duration)
+        target_val_one = None
+        target_val_two = None
+
+    # ── Build end condition (distance or time) ───────────────────────
+    if step.distance_meters and step.distance_meters > 0:
+        end_condition = {
+            "conditionTypeId": ConditionType.DISTANCE,
+            "conditionTypeKey": "distance",
+            "displayOrder": 1,
+            "displayable": True,
+        }
+        end_value = step.distance_meters
+    else:
+        end_condition = {
+            "conditionTypeId": ConditionType.TIME,
+            "conditionTypeKey": "time",
+            "displayOrder": 2,
+            "displayable": True,
+        }
+        end_value = step.duration_seconds or 600.0
+
+    # ── Map step type ────────────────────────────────────────────────
+    step_type_map = {
+        WorkoutStepType.WARMUP: (StepType.WARMUP, "warmup", 1),
+        WorkoutStepType.COOLDOWN: (StepType.COOLDOWN, "cooldown", 2),
+        WorkoutStepType.RECOVERY: (StepType.RECOVERY, "recovery", 4),
+        WorkoutStepType.INTERVAL: (StepType.INTERVAL, "interval", 3),
+    }
+    type_id, type_key, type_order = step_type_map.get(
+        step.step_type, (StepType.INTERVAL, "interval", 3)
+    )
+
+    garmin_step = ExecutableStep(
+        stepOrder=order,
+        stepType={
+            "stepTypeId": type_id,
+            "stepTypeKey": type_key,
+            "displayOrder": type_order,
+        },
+        endCondition=end_condition,
+        endConditionValue=end_value,
+        targetType=target or {
+            "workoutTargetTypeId": TargetType.NO_TARGET,
+            "workoutTargetTypeKey": "no.target",
+            "displayOrder": 1,
+        },
+    )
+
+    # Add speed target values (ExecutableStep has extra="allow")
+    if target_val_one is not None:
+        garmin_step.targetValueOne = target_val_one  # type: ignore[attr-defined]
+        garmin_step.targetValueTwo = target_val_two  # type: ignore[attr-defined]
+
+    return garmin_step

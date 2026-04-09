@@ -94,8 +94,8 @@ if not st.session_state.logged_in:
 
 # ── Tabs ─────────────────────────────────────────────────────────────
 
-tab_profile, tab_plan, tab_push, tab_coach = st.tabs(
-    ["📊 Fitness Profile", "📅 Training Plan", "⬆️ Push to Garmin", "💬 AI Coach"]
+tab_profile, tab_plan, tab_calendar, tab_push, tab_coach = st.tabs(
+    ["📊 Fitness Profile", "📅 Training Plan", "🗓️ Calendar", "⬆️ Push to Garmin", "💬 AI Coach"]
 )
 
 
@@ -170,11 +170,29 @@ with tab_plan:
         target_time_m = st.number_input("Target time — minutes", 0, 59, 45)
     with col2:
         experience = st.selectbox("Experience Level", ["intermediate", "beginner", "advanced"])
-        long_run_day = st.selectbox("Long Run Day", ["sunday", "saturday"])
+
+    ALL_DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    DAY_LABELS = {d: d.capitalize() for d in ALL_DAYS}
+
+    training_days = st.multiselect(
+        "Training Days",
+        options=ALL_DAYS,
+        default=["tuesday", "wednesday", "thursday", "saturday", "sunday"],
+        format_func=lambda d: DAY_LABELS[d],
+    )
+    if len(training_days) < 3:
+        st.warning("Select at least 3 training days.")
+
+    long_run_day = st.selectbox(
+        "Long Run Day",
+        options=training_days if training_days else ["sunday"],
+        index=len(training_days) - 1 if training_days else 0,
+        format_func=lambda d: DAY_LABELS.get(d, d),
+    )
 
     target_secs = (target_time_h * 3600 + target_time_m * 60) if (target_time_h + target_time_m) > 0 else None
 
-    if st.button("Generate Plan", type="primary"):
+    if st.button("Generate Plan", type="primary") and len(training_days) >= 3:
         with st.spinner("Building your personalized plan..."):
             r = requests.post(
                 f"{API_BASE}/plan/generate",
@@ -183,6 +201,7 @@ with tab_plan:
                     "target_date": str(target_date),
                     "target_time_seconds": target_secs,
                     "experience_level": experience,
+                    "training_days": training_days,
                     "long_run_day": long_run_day,
                 },
                 timeout=30,
@@ -245,7 +264,113 @@ with tab_plan:
                     st.error(f"Error: {r.json().get('detail', r.text)}")
 
 
-# ── Tab 3: Push to Garmin ────────────────────────────────────────────
+# ── Tab 3: Calendar ──────────────────────────────────────────────────
+
+_WORKOUT_COLORS = {
+    "easy_run": "#4CAF50",
+    "recovery_run": "#81C784",
+    "easy_with_strides": "#66BB6A",
+    "long_run": "#2196F3",
+    "long_run_progressive": "#1976D2",
+    "long_run_with_race_pace": "#1565C0",
+    "tempo": "#FF9800",
+    "threshold": "#F57C00",
+    "intervals": "#F44336",
+    "vo2max": "#D32F2F",
+    "speed": "#E53935",
+    "hills": "#C62828",
+    "fartlek": "#FF7043",
+    "progressive": "#FFA726",
+    "race_pace": "#EF6C00",
+    "rest": "#9E9E9E",
+}
+
+with tab_calendar:
+    plan = st.session_state.plan
+    if not plan:
+        st.info("Generate a plan first on the Training Plan tab.")
+    else:
+        st.subheader("Plan Calendar")
+        st.caption("Drag workouts to reschedule them.")
+
+        # Build FullCalendar events from all weeks
+        cal_events = []
+        for week in plan.get("weeks", []):
+            for i, w in enumerate(week.get("workouts", [])):
+                wtype = w.get("workout_type", "rest")
+                if wtype == "rest":
+                    continue
+                dist = round(w.get("estimated_distance_meters", 0) / 1000, 1)
+                cal_events.append({
+                    "id": f"w{week['week_number']}_{i}",
+                    "title": f"{w['name']} ({dist}km)",
+                    "start": w.get("scheduled_date", ""),
+                    "allDay": True,
+                    "backgroundColor": _WORKOUT_COLORS.get(wtype, "#607D8B"),
+                    "borderColor": _WORKOUT_COLORS.get(wtype, "#607D8B"),
+                    "extendedProps": {
+                        "workout_type": wtype,
+                        "purpose": w.get("purpose", ""),
+                        "name": w["name"],
+                    },
+                })
+
+        cal_options = {
+            "editable": True,
+            "selectable": False,
+            "headerToolbar": {
+                "left": "today prev,next",
+                "center": "title",
+                "right": "dayGridMonth,dayGridWeek",
+            },
+            "initialView": "dayGridMonth",
+            "initialDate": plan.get("weeks", [{}])[0].get("workouts", [{}])[0].get("scheduled_date", str(date.today())),
+        }
+
+        cal_css = """
+            .fc-event { cursor: grab; font-size: 0.85em; }
+            .fc-event-title { font-weight: 600; }
+        """
+
+        from streamlit_calendar import calendar as st_calendar
+
+        result = st_calendar(
+            events=cal_events,
+            options=cal_options,
+            custom_css=cal_css,
+            key="plan_calendar",
+        )
+
+        if result and result.get("callback") == "eventChange":
+            ev = result["eventChange"]
+            old_start = ev["oldEvent"]["start"]
+            new_start = ev["event"]["start"]
+            wk_name = ev["event"].get("extendedProps", {}).get("name", ev["event"]["title"])
+            r = requests.post(
+                f"{API_BASE}/plan/reschedule",
+                json={
+                    "workout_name": wk_name,
+                    "old_date": old_start[:10],
+                    "new_date": new_start[:10],
+                },
+                timeout=10,
+            )
+            if r.status_code == 200:
+                st.success(f"Moved to {new_start[:10]}")
+            else:
+                st.error("Failed to reschedule")
+
+        if result and result.get("callback") == "eventClick":
+            ev_data = result["eventClick"]["event"]
+            props = ev_data.get("extendedProps", {})
+            st.divider()
+            st.markdown(f"**{ev_data.get('title', '')}**")
+            if props.get("purpose"):
+                st.write(f"Purpose: {props['purpose']}")
+            st.write(f"Date: {ev_data.get('start', '')[:10]}")
+
+
+# ── Tab 4: Push to Garmin ────────────────────────────────────────────
 
 with tab_push:
     plan = st.session_state.plan
@@ -273,7 +398,7 @@ with tab_push:
                     st.error(f"Error: {r.json().get('detail', r.text)}")
 
 
-# ── Tab 4: AI Coach ──────────────────────────────────────────────────
+# ── Tab 5: AI Coach ──────────────────────────────────────────────────
 
 with tab_coach:
     st.subheader("AI Running Coach")

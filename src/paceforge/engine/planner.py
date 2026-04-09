@@ -169,6 +169,7 @@ def generate_plan(
             wk_idx=wk_idx,
             long_run_day=goal.long_run_day,
             max_days=goal.max_days_per_week,
+            training_days=goal.training_days,
         )
 
         focus = _get_focus(phase, wk_idx)
@@ -218,25 +219,32 @@ def _build_varied_week(
     wk_idx: int,
     long_run_day: str,
     max_days: int = 5,
+    training_days: list[str] | None = None,
 ) -> list[Workout]:
-    """Build a week of workouts with variety based on phase and rotation index."""
-    workouts: list[Workout] = []
+    """Build a week of workouts distributed across chosen training days.
 
-    # Distance allocation fractions
+    If *training_days* is provided the workouts are placed on those exact days;
+    otherwise a backwards-compatible default is derived from *max_days*.
+    """
+    from paceforge.models.profile import default_training_days as _default_days
+
+    days = training_days or _default_days(max_days)
+    num_run_days = len(days)
+
+    # ── Distance allocation ──────────────────────────────────────────
     long_frac = 0.35
     q1_frac = 0.15
     q2_frac = 0.17
-    easy_frac = 0.15
 
     long_km = round(week_km * long_frac, 1)
     q1_km = round(week_km * q1_frac, 1)
     q2_km = round(week_km * q2_frac, 1)
-    easy1_km = round(week_km * easy_frac, 1)
-    easy2_km = round(week_km * (1 - long_frac - q1_frac - q2_frac - easy_frac), 1)
-    if easy2_km < 0:
-        easy2_km = 3
 
-    # Pick workout types from rotation pools
+    easy_slots = max(num_run_days - 3, 1)  # long + q1 + q2 = 3 "core" slots
+    remaining_frac = max(1 - long_frac - q1_frac - q2_frac, 0.1)
+    per_easy_km = round(week_km * remaining_frac / easy_slots, 1)
+
+    # ── Pick workout types from rotation pools ───────────────────────
     q1_pool = {
         "Base": _Q1_BASE, "Build": _Q1_BUILD, "Peak": _Q1_PEAK, "Taper": _Q1_TAPER,
     }.get(phase, _Q1_BUILD)
@@ -252,64 +260,72 @@ def _build_varied_week(
     lr_type = lr_pool[wk_idx % len(lr_pool)]
     easy_type = _EASY_ROTATION[wk_idx % len(_EASY_ROTATION)]
 
-    # Monday: Rest
-    workouts.append(Workout(
-        workout_type=WorkoutType.REST,
-        name="Rest Day",
-        scheduled_date=week_start + timedelta(days=0),
-    ))
+    # ── Assign roles to training days ────────────────────────────────
+    sorted_days = sorted(days, key=lambda d: _DAY_OFFSETS[d])
+    role_map: dict[str, str] = {}
 
-    # Tuesday: Quality 1
-    q1 = _make_q1(factory, q1_type, q1_km)
-    q1.scheduled_date = week_start + timedelta(days=1)
-    workouts.append(q1)
+    # 1. Long run
+    lr_day = long_run_day if long_run_day in sorted_days else sorted_days[-1]
+    role_map[lr_day] = "long_run"
 
-    # Wednesday: Easy / Easy+Strides
-    if easy_type == "easy_with_strides":
-        e1 = factory.easy_with_strides(easy1_km)
-    else:
-        e1 = factory.easy_run(easy1_km)
-    e1.scheduled_date = week_start + timedelta(days=2)
-    workouts.append(e1)
+    # 2. Place Q1 and Q2 with maximum separation (not calendar-adjacent)
+    remaining = [d for d in sorted_days if d not in role_map]
+    if len(remaining) >= 2:
+        best_q1, best_q2 = remaining[0], remaining[-1]
+        max_gap = 0
+        for i, d1 in enumerate(remaining):
+            for d2 in remaining[i + 1:]:
+                gap = _DAY_OFFSETS[d2] - _DAY_OFFSETS[d1]
+                if gap > max_gap and gap > 1:
+                    max_gap = gap
+                    best_q1, best_q2 = d1, d2
+        if max_gap == 0:
+            best_q1, best_q2 = remaining[0], remaining[-1]
+        role_map[best_q1] = "q1"
+        role_map[best_q2] = "q2"
+    elif len(remaining) == 1:
+        role_map[remaining[0]] = "q1"
 
-    # Thursday: Quality 2
-    q2 = _make_q2(factory, q2_type, q2_km)
-    q2.scheduled_date = week_start + timedelta(days=3)
-    workouts.append(q2)
+    # 3. Fill remaining training days with easy runs
+    easy_idx = 0
+    for d in sorted_days:
+        if d not in role_map:
+            role_map[d] = f"easy_{easy_idx}"
+            easy_idx += 1
 
-    # Friday: Rest
-    workouts.append(Workout(
-        workout_type=WorkoutType.REST,
-        name="Rest Day",
-        scheduled_date=week_start + timedelta(days=4),
-    ))
+    # ── Generate all 7 days ──────────────────────────────────────────
+    all_day_names = list(_DAY_OFFSETS.keys())
+    training_set = set(days)
+    workouts: list[Workout] = []
 
-    # Long run + easy: respect long_run_day preference
-    lr_offset = _DAY_OFFSETS.get(long_run_day, 6)
-    easy2_offset = 5 if lr_offset == 6 else 6
+    for offset in range(7):
+        day_name = all_day_names[offset]
+        workout_date = week_start + timedelta(days=offset)
 
-    e2 = (
-        factory.easy_with_strides(easy2_km)
-        if easy_type == "easy"
-        else factory.easy_run(easy2_km)
-    )
-    e2.scheduled_date = week_start + timedelta(days=easy2_offset)
-    workouts.append(e2)
-
-    lr = _make_long_run(factory, lr_type, long_km)
-    lr.scheduled_date = week_start + timedelta(days=lr_offset)
-    workouts.append(lr)
-
-    # Reduce running days if needed
-    if max_days < 5:
-        drop_count = 5 - max_days
-        drop_indices = [5, 2][:drop_count]
-        for idx in sorted(drop_indices, reverse=True):
-            workouts[idx] = Workout(
+        if day_name not in training_set:
+            workouts.append(Workout(
                 workout_type=WorkoutType.REST,
                 name="Rest Day",
-                scheduled_date=workouts[idx].scheduled_date,
-            )
+                scheduled_date=workout_date,
+            ))
+            continue
+
+        role = role_map.get(day_name, "easy_0")
+
+        if role == "long_run":
+            w = _make_long_run(factory, lr_type, long_km)
+        elif role == "q1":
+            w = _make_q1(factory, q1_type, q1_km)
+        elif role == "q2":
+            w = _make_q2(factory, q2_type, q2_km)
+        else:
+            if easy_type == "easy_with_strides":
+                w = factory.easy_with_strides(per_easy_km)
+            else:
+                w = factory.easy_run(per_easy_km)
+
+        w.scheduled_date = workout_date
+        workouts.append(w)
 
     return workouts
 

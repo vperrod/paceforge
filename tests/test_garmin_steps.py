@@ -1,0 +1,73 @@
+"""Tests for Garmin workout step conversion with pace targets."""
+
+from paceforge.garmin.client import _to_garmin_step
+from paceforge.models.plan import IntensityTarget, WorkoutStep, WorkoutStepType
+
+
+class TestGarminStepConversion:
+    def test_warmup_step_time_based(self):
+        step = WorkoutStep(step_type=WorkoutStepType.WARMUP, duration_seconds=600)
+        result = _to_garmin_step(step)
+        assert result.stepType["stepTypeKey"] == "warmup"
+        assert result.endCondition["conditionTypeKey"] == "time"
+        assert result.endConditionValue == 600
+
+    def test_interval_with_pace_target(self):
+        step = WorkoutStep(
+            step_type=WorkoutStepType.INTERVAL,
+            duration_seconds=210,
+            target_type=IntensityTarget.PACE,
+            target_low=240.0,   # 4:00/km
+            target_high=250.0,  # 4:10/km
+        )
+        result = _to_garmin_step(step)
+        assert result.targetType["workoutTargetTypeId"] == 5  # SPEED
+        # 1000/250 = 4.0 m/s (faster pace = higher speed)
+        # 1000/240 ≈ 4.1667 m/s
+        assert hasattr(result, "targetValueOne")
+        assert hasattr(result, "targetValueTwo")
+        assert result.targetValueOne < result.targetValueTwo
+
+    def test_distance_based_step(self):
+        step = WorkoutStep(
+            step_type=WorkoutStepType.ACTIVE,
+            distance_meters=5000,
+            target_low=330.0,
+            target_high=350.0,
+        )
+        result = _to_garmin_step(step)
+        assert result.endCondition["conditionTypeId"] == 1  # DISTANCE
+        assert result.endConditionValue == 5000
+
+    def test_repeat_group(self):
+        sub1 = WorkoutStep(
+            step_type=WorkoutStepType.INTERVAL,
+            duration_seconds=210,
+            target_low=240.0,
+            target_high=250.0,
+        )
+        sub2 = WorkoutStep(
+            step_type=WorkoutStepType.RECOVERY,
+            duration_seconds=120,
+        )
+        group = WorkoutStep(
+            step_type=WorkoutStepType.INTERVAL,
+            repeat_count=5,
+            steps=[sub1, sub2],
+        )
+        result = _to_garmin_step(group)
+        assert result.numberOfIterations == 5
+        assert len(result.workoutSteps) == 2
+
+    def test_no_target_when_no_pace(self):
+        step = WorkoutStep(
+            step_type=WorkoutStepType.ACTIVE,
+            duration_seconds=1800,
+        )
+        result = _to_garmin_step(step)
+        assert result.targetType["workoutTargetTypeId"] == 1  # NO_TARGET
+
+    def test_step_order_passed(self):
+        step = WorkoutStep(step_type=WorkoutStepType.COOLDOWN, duration_seconds=600)
+        result = _to_garmin_step(step, order=3)
+        assert result.stepOrder == 3

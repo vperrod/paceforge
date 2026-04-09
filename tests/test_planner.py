@@ -2,7 +2,7 @@
 
 from datetime import date, timedelta
 
-from paceforge.engine.planner import generate_plan
+from paceforge.engine.planner import generate_plan, _DAY_OFFSETS
 from paceforge.models.plan import WorkoutType
 from paceforge.models.profile import (
     ExperienceLevel,
@@ -24,11 +24,15 @@ def _make_profile(vo2_max: float = 45.0) -> UserFitnessProfile:
 def _make_goal(
     goal_type: GoalType = GoalType.HALF_MARATHON,
     weeks_out: int = 14,
+    training_days: list[str] | None = None,
+    long_run_day: str = "sunday",
 ) -> TrainingGoal:
     return TrainingGoal(
         goal_type=goal_type,
         target_date=date.today() + timedelta(weeks=weeks_out),
         experience_level=ExperienceLevel.INTERMEDIATE,
+        training_days=training_days or ["tuesday", "wednesday", "thursday", "saturday", "sunday"],
+        long_run_day=long_run_day,
     )
 
 
@@ -113,3 +117,47 @@ class TestPlanGeneration:
         plan = generate_plan(_make_profile(), _make_goal())
         for week in plan.weeks:
             assert week.focus, f"Week {week.week_number} has empty focus"
+
+    # ── Day-selection tests ──────────────────────────────────────────
+
+    def test_3_day_plan_has_rest_on_other_days(self):
+        """With 3 training days, exactly 4 rest days per non-race week."""
+        goal = _make_goal(training_days=["tuesday", "thursday", "sunday"], long_run_day="sunday")
+        plan = generate_plan(_make_profile(), goal)
+        week = plan.weeks[0]
+        rest = [w for w in week.workouts if w.workout_type == WorkoutType.REST]
+        run = [w for w in week.workouts if w.workout_type != WorkoutType.REST]
+        assert len(rest) == 4, f"Expected 4 rest days, got {len(rest)}"
+        assert len(run) == 3, f"Expected 3 run days, got {len(run)}"
+
+    def test_5_day_custom_days(self):
+        """Workouts placed only on chosen training days."""
+        chosen = ["monday", "wednesday", "friday", "saturday", "sunday"]
+        goal = _make_goal(training_days=chosen, long_run_day="sunday")
+        plan = generate_plan(_make_profile(), goal)
+        week = plan.weeks[0]
+        for w in week.workouts:
+            if w.workout_type != WorkoutType.REST:
+                day_name = list(_DAY_OFFSETS.keys())[w.scheduled_date.weekday()]
+                assert day_name in chosen, f"{w.name} on {day_name} not in {chosen}"
+
+    def test_long_run_on_chosen_day(self):
+        """Long run must be on the specified long_run_day."""
+        goal = _make_goal(training_days=["tuesday", "thursday", "saturday", "sunday"],
+                         long_run_day="saturday")
+        plan = generate_plan(_make_profile(), goal)
+        for week in plan.weeks[:-1]:  # skip race week
+            lr = [w for w in week.workouts if "Long" in w.name]
+            if lr:
+                assert lr[0].scheduled_date.weekday() == 5, (  # 5 = Saturday
+                    f"Long run on weekday {lr[0].scheduled_date.weekday()}, expected 5"
+                )
+
+    def test_7_day_plan_no_rest(self):
+        """A 7-day plan should have zero rest days (non-race weeks)."""
+        all_days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+        goal = _make_goal(training_days=all_days, long_run_day="sunday")
+        plan = generate_plan(_make_profile(), goal)
+        week = plan.weeks[0]
+        rest = [w for w in week.workouts if w.workout_type == WorkoutType.REST]
+        assert len(rest) == 0, f"Expected 0 rest days in 7-day plan, got {len(rest)}"

@@ -20,6 +20,7 @@ from paceforge.models.profile import (
     GoalType,
     TrainingGoal,
     UserFitnessProfile,
+    default_training_days,
 )
 
 logging.basicConfig(level=settings.log_level)
@@ -58,6 +59,7 @@ class GeneratePlanRequest(BaseModel):
     target_date: date
     target_time_seconds: float | None = None
     experience_level: ExperienceLevel | None = None
+    training_days: list[str] | None = None
     max_days_per_week: int = 5
     long_run_day: str = "sunday"
 
@@ -132,7 +134,7 @@ async def generate(req: GeneratePlanRequest):
         target_date=req.target_date,
         target_time_seconds=req.target_time_seconds,
         experience_level=req.experience_level,
-        max_days_per_week=req.max_days_per_week,
+        training_days=req.training_days or default_training_days(req.max_days_per_week),
         long_run_day=req.long_run_day,
     )
 
@@ -164,6 +166,24 @@ async def push_plan(req: PushPlanRequest):
         total_pushed += len(results)
 
     return {"status": "ok", "workouts_pushed": total_pushed}
+
+
+class RescheduleRequest(BaseModel):
+    workout_name: str
+    old_date: str
+    new_date: str
+
+
+@app.post("/plan/reschedule")
+async def reschedule_workout(req: RescheduleRequest):
+    if not _cached_plan:
+        raise HTTPException(404, "No plan generated yet")
+    for week in _cached_plan.weeks:
+        for w in week.workouts:
+            if w.name == req.workout_name and str(w.scheduled_date) == req.old_date:
+                w.scheduled_date = date.fromisoformat(req.new_date)
+                return {"status": "ok", "message": f"Moved '{w.name}' to {req.new_date}"}
+    raise HTTPException(404, "Workout not found")
 
 
 @app.post("/coach/chat", response_model=ChatResponse)
