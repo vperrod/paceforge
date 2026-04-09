@@ -43,6 +43,7 @@ from paceforge.models.plan import TrainingPlan
 from paceforge.models.profile import (
     ExperienceLevel,
     GoalType,
+    RecentActivity,
     TrainingGoal,
     UserFitnessProfile,
     default_training_days,
@@ -275,6 +276,19 @@ async def get_profile(user: dict = Depends(get_current_user)):
         raise HTTPException(401, "Not logged in to Garmin")
     _user_profile[uid] = garmin.get_fitness_profile()
     return _user_profile[uid]
+
+
+@app.get("/activities", response_model=list[RecentActivity])
+async def get_activities(
+    days: int = 90, user: dict = Depends(get_current_user)
+):
+    """Return running activities from the last N days (default 90)."""
+    uid = user["id"]
+    garmin = _user_garmin.get(uid)
+    if not garmin:
+        raise HTTPException(401, "Not logged in to Garmin")
+    profile = garmin.get_fitness_profile(lookback_days=min(days, 365))
+    return profile.recent_activities
 
 
 @app.post("/plan/generate", response_model=TrainingPlan)

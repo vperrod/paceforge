@@ -546,6 +546,14 @@ def _logout():
     st.session_state.page = "login"
 
 
+def _error_detail(r: requests.Response) -> str:
+    """Safely extract error detail from a response."""
+    try:
+        return r.json().get("detail", r.text)
+    except Exception:
+        return r.text or f"HTTP {r.status_code}"
+
+
 # ═══════════════════════════════════════════════════════════════════════
 # AUTH GATE
 # ═══════════════════════════════════════════════════════════════════════
@@ -600,7 +608,7 @@ if st.session_state.jwt is None:
                         elif r.status_code == 409:
                             st.error("An account with this email already exists.")
                         else:
-                            st.error(f"Registration failed: {r.json().get('detail', r.text)}")
+                            st.error(f"Registration failed: {_error_detail(r)}")
                     except requests.ConnectionError:
                         st.error("Cannot reach PaceForge API. Is the server running?")
 
@@ -633,9 +641,9 @@ if st.session_state.jwt is None:
                         st.session_state.page = "app"
                         st.rerun()
                     elif r.status_code == 403:
-                        st.warning(r.json().get("detail", "Account not yet approved."))
+                        st.warning(_error_detail(r))
                     else:
-                        st.error(r.json().get("detail", "Login failed."))
+                        st.error(_error_detail(r))
                 except requests.ConnectionError:
                     st.error("Cannot reach PaceForge API. Is the server running?")
 
@@ -733,7 +741,7 @@ with st.sidebar:
                         st.success("Verified — connected!")
                         st.rerun()
                     else:
-                        st.error(f"MFA failed: {r.json().get('detail', r.text)}")
+                        st.error(f"MFA failed: {_error_detail(r)}")
                 except requests.ConnectionError:
                     st.error("Cannot reach API.")
     else:
@@ -1001,7 +1009,7 @@ with tab_plan:
                     st.session_state.plan = r.json()
                     st.success("Plan generated!")
                 else:
-                    st.error(f"Error: {r.json().get('detail', r.text)}")
+                    st.error(f"Error: {_error_detail(r)}")
 
         plan = st.session_state.plan
         if plan:
@@ -1110,110 +1118,208 @@ with tab_plan:
                         st.success("Plan adapted!")
                         st.rerun()
                     else:
-                        st.error(f"Error: {r.json().get('detail', r.text)}")
+                        st.error(f"Error: {_error_detail(r)}")
 
 
 # ── Tab 3: Calendar ──────────────────────────────────────────────────
 
 with tab_calendar:
-    plan = st.session_state.plan
-    if not plan:
-        st.info("Generate a plan first on the Training Plan tab.")
+    st.markdown('<div class="pf-section-header">Training Calendar</div>', unsafe_allow_html=True)
+
+    if not st.session_state.garmin_logged_in:
+        st.info("Connect to Garmin using the sidebar to view your activities.")
     else:
-        st.markdown('<div class="pf-section-header">Plan Calendar</div>', unsafe_allow_html=True)
-        st.caption("Drag workouts to reschedule them.")
+        # Fetch Garmin activities
+        if st.button("Sync Activities from Garmin", type="primary", key="sync_activities_btn"):
+            with st.spinner("Fetching activities from Garmin Connect..."):
+                try:
+                    r = requests.get(
+                        f"{API_BASE}/activities?days=90",
+                        headers=_auth_headers(),
+                        timeout=60,
+                    )
+                    if r.status_code == 200:
+                        st.session_state["garmin_activities"] = r.json()
+                        st.success(f"Synced {len(r.json())} activities!")
+                    else:
+                        st.error(f"Failed to sync: {_error_detail(r)}")
+                except requests.ConnectionError:
+                    st.error("Cannot reach API.")
 
         cal_events = []
-        for week in plan.get("weeks", []):
-            for i, w in enumerate(week.get("workouts", [])):
-                wtype = w.get("workout_type", "rest")
-                if wtype == "rest":
-                    continue
-                dist = round(w.get("estimated_distance_meters", 0) / 1000, 1)
-                cal_events.append({
-                    "id": f"w{week['week_number']}_{i}",
-                    "title": f"{w['name']} ({dist}km)",
-                    "start": w.get("scheduled_date", ""),
-                    "allDay": True,
-                    "backgroundColor": _WORKOUT_COLORS.get(wtype, "#607D8B"),
-                    "borderColor": _WORKOUT_COLORS.get(wtype, "#607D8B"),
-                    "extendedProps": {
-                        "workout_type": wtype,
-                        "purpose": w.get("purpose", ""),
-                        "name": w["name"],
-                    },
-                })
 
-        cal_options = {
-            "editable": True,
-            "selectable": False,
-            "headerToolbar": {
-                "left": "today prev,next",
-                "center": "title",
-                "right": "dayGridMonth,dayGridWeek",
-            },
-            "initialView": "dayGridMonth",
-            "initialDate": plan.get("weeks", [{}])[0].get("workouts", [{}])[0].get("scheduled_date", str(date.today())),
-        }
+        # ── Past activities from Garmin ──
+        garmin_acts = st.session_state.get("garmin_activities", [])
+        for i, act in enumerate(garmin_acts):
+            dist = round(act.get("distance_meters", 0) / 1000, 1)
+            pace = act.get("avg_pace_sec_per_km")
+            pace_str = ""
+            if pace:
+                pm, ps = divmod(int(pace), 60)
+                pace_str = f" @ {pm}:{ps:02d}/km"
 
-        cal_css = """
-            .fc { background: #1A1D23; color: #FAFAFA; border: none; }
-            .fc-theme-standard td, .fc-theme-standard th { border-color: #2D3139; }
-            .fc-theme-standard .fc-scrollgrid { border-color: #2D3139; }
-            .fc-col-header-cell { background: #242830; }
-            .fc-col-header-cell-cushion { color: #8B92A5; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; }
-            .fc-daygrid-day-number { color: #8B92A5; font-size: 0.85rem; }
-            .fc-day-today { background: rgba(0,210,106,0.06) !important; }
-            .fc-event { cursor: grab; font-size: 0.8em; border-radius: 6px; padding: 2px 6px; border: none !important; }
-            .fc-event-title { font-weight: 600; }
-            .fc-button { background: #242830 !important; border: 1px solid #3A3F4B !important; color: #FAFAFA !important; font-size: 0.85rem !important; }
-            .fc-button:hover { background: #2D3139 !important; }
-            .fc-button-active { background: #00D26A !important; color: #1A1D23 !important; border-color: #00D26A !important; }
-            .fc-toolbar-title { font-size: 1.1rem !important; font-weight: 700; color: #FAFAFA; }
-        """
+            # Parse date from start_time
+            start_raw = act.get("start_time", "")
+            start_date = start_raw[:10] if start_raw else ""
 
-        from streamlit_calendar import calendar as st_calendar
-
-        result = st_calendar(
-            events=cal_events,
-            options=cal_options,
-            custom_css=cal_css,
-            key="plan_calendar",
-        )
-
-        if result and result.get("callback") == "eventChange":
-            ev = result["eventChange"]
-            old_start = ev["oldEvent"]["start"]
-            new_start = ev["event"]["start"]
-            wk_name = ev["event"].get("extendedProps", {}).get("name", ev["event"]["title"])
-            r = requests.post(
-                f"{API_BASE}/plan/reschedule",
-                json={
-                    "workout_name": wk_name,
-                    "old_date": old_start[:10],
-                    "new_date": new_start[:10],
+            cal_events.append({
+                "id": f"act_{i}",
+                "title": f"✓ {act.get('name', 'Activity')} ({dist}km{pace_str})",
+                "start": start_date,
+                "allDay": True,
+                "backgroundColor": "#00D26A",
+                "borderColor": "#00D26A",
+                "editable": False,
+                "extendedProps": {
+                    "source": "garmin",
+                    "distance_km": dist,
+                    "pace": pace_str,
+                    "duration_seconds": act.get("duration_seconds", 0),
+                    "avg_hr": act.get("avg_hr"),
                 },
-                headers=_auth_headers(),
-                timeout=10,
-            )
-            if r.status_code == 200:
-                st.success(f"Moved to {new_start[:10]}")
-            else:
-                st.error("Failed to reschedule")
+            })
 
-        if result and result.get("callback") == "eventClick":
-            ev_data = result["eventClick"]["event"]
-            props = ev_data.get("extendedProps", {})
+        # ── Planned workouts from generated plan ──
+        plan = st.session_state.plan
+        if plan:
+            for week in plan.get("weeks", []):
+                for j, w in enumerate(week.get("workouts", [])):
+                    wtype = w.get("workout_type", "rest")
+                    if wtype == "rest":
+                        continue
+                    dist = round(w.get("estimated_distance_meters", 0) / 1000, 1)
+                    cal_events.append({
+                        "id": f"plan_w{week['week_number']}_{j}",
+                        "title": f"📋 {w['name']} ({dist}km)",
+                        "start": w.get("scheduled_date", ""),
+                        "allDay": True,
+                        "backgroundColor": _WORKOUT_COLORS.get(wtype, "#607D8B"),
+                        "borderColor": _WORKOUT_COLORS.get(wtype, "#607D8B"),
+                        "editable": True,
+                        "extendedProps": {
+                            "source": "plan",
+                            "workout_type": wtype,
+                            "purpose": w.get("purpose", ""),
+                            "name": w["name"],
+                        },
+                    })
+
+        if not cal_events:
             st.markdown(
-                f"""<div class="pf-card" style="margin-top:1rem;">
-                    <div style="font-weight:700;font-size:1rem;margin-bottom:0.5rem;">{ev_data.get('title', '')}</div>
-                    <div style="color:#8B92A5;font-size:0.85rem;">
-                        Date: {ev_data.get('start', '')[:10]}
-                        {f"<br>Purpose: {props['purpose']}" if props.get('purpose') else ""}
-                    </div>
-                </div>""",
+                '<p style="color:#8B92A5;text-align:center;margin:2rem 0;">'
+                'Click <b>Sync Activities from Garmin</b> to load your workout history, '
+                'or generate a training plan to see future workouts.</p>',
                 unsafe_allow_html=True,
             )
+        else:
+            # Legend
+            st.markdown(
+                '<div style="display:flex;gap:1.5rem;margin-bottom:0.75rem;font-size:0.8rem;">'
+                '<span style="color:#00D26A;">● Completed (Garmin)</span>'
+                '<span style="color:#2196F3;">● Planned (Long Run)</span>'
+                '<span style="color:#4CAF50;">● Planned (Easy)</span>'
+                '<span style="color:#FF9800;">● Planned (Tempo)</span>'
+                '<span style="color:#F44336;">● Planned (Speed)</span>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+
+            if plan:
+                st.caption("Drag planned workouts (📋) to reschedule them.")
+
+            cal_options = {
+                "editable": True,
+                "selectable": False,
+                "headerToolbar": {
+                    "left": "today prev,next",
+                    "center": "title",
+                    "right": "dayGridMonth,dayGridWeek",
+                },
+                "initialView": "dayGridMonth",
+                "initialDate": str(date.today()),
+            }
+
+            cal_css = """
+                .fc { background: #1A1D23; color: #FAFAFA; border: none; }
+                .fc-theme-standard td, .fc-theme-standard th { border-color: #2D3139; }
+                .fc-theme-standard .fc-scrollgrid { border-color: #2D3139; }
+                .fc-col-header-cell { background: #242830; }
+                .fc-col-header-cell-cushion { color: #8B92A5; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; }
+                .fc-daygrid-day-number { color: #8B92A5; font-size: 0.85rem; }
+                .fc-day-today { background: rgba(0,210,106,0.06) !important; }
+                .fc-event { cursor: grab; font-size: 0.8em; border-radius: 6px; padding: 2px 6px; border: none !important; }
+                .fc-event-title { font-weight: 600; }
+                .fc-button { background: #242830 !important; border: 1px solid #3A3F4B !important; color: #FAFAFA !important; font-size: 0.85rem !important; }
+                .fc-button:hover { background: #2D3139 !important; }
+                .fc-button-active { background: #00D26A !important; color: #1A1D23 !important; border-color: #00D26A !important; }
+                .fc-toolbar-title { font-size: 1.1rem !important; font-weight: 700; color: #FAFAFA; }
+            """
+
+            from streamlit_calendar import calendar as st_calendar
+
+            result = st_calendar(
+                events=cal_events,
+                options=cal_options,
+                custom_css=cal_css,
+                key="plan_calendar",
+            )
+
+            if result and result.get("callback") == "eventChange":
+                ev = result["eventChange"]
+                ev_props = ev["event"].get("extendedProps", {})
+                if ev_props.get("source") == "plan":
+                    old_start = ev["oldEvent"]["start"]
+                    new_start = ev["event"]["start"]
+                    wk_name = ev_props.get("name", ev["event"]["title"])
+                    r = requests.post(
+                        f"{API_BASE}/plan/reschedule",
+                        json={
+                            "workout_name": wk_name,
+                            "old_date": old_start[:10],
+                            "new_date": new_start[:10],
+                        },
+                        headers=_auth_headers(),
+                        timeout=10,
+                    )
+                    if r.status_code == 200:
+                        st.success(f"Moved to {new_start[:10]}")
+                    else:
+                        st.error("Failed to reschedule")
+
+            if result and result.get("callback") == "eventClick":
+                ev_data = result["eventClick"]["event"]
+                props = ev_data.get("extendedProps", {})
+                if props.get("source") == "garmin":
+                    dur = props.get("duration_seconds", 0)
+                    dur_m, dur_s = divmod(int(dur), 60)
+                    hr_text = f"<br>Avg HR: {props['avg_hr']} bpm" if props.get("avg_hr") else ""
+                    st.markdown(
+                        f"""<div class="pf-card" style="margin-top:1rem;">
+                            <div style="font-weight:700;font-size:1rem;margin-bottom:0.5rem;">
+                                {ev_data.get('title', '')}
+                            </div>
+                            <div style="color:#8B92A5;font-size:0.85rem;">
+                                Date: {ev_data.get('start', '')[:10]}
+                                <br>Duration: {dur_m}:{dur_s:02d}
+                                {hr_text}
+                            </div>
+                        </div>""",
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    purpose = props.get("purpose", "")
+                    st.markdown(
+                        f"""<div class="pf-card" style="margin-top:1rem;">
+                            <div style="font-weight:700;font-size:1rem;margin-bottom:0.5rem;">
+                                {ev_data.get('title', '')}
+                            </div>
+                            <div style="color:#8B92A5;font-size:0.85rem;">
+                                Date: {ev_data.get('start', '')[:10]}
+                                {f"<br>Purpose: {purpose}" if purpose else ""}
+                            </div>
+                        </div>""",
+                        unsafe_allow_html=True,
+                    )
 
 
 # ── Tab 4: Push to Garmin ────────────────────────────────────────────
@@ -1244,10 +1350,13 @@ with tab_push:
                     timeout=120,
                 )
                 if r.status_code == 200:
-                    data = r.json()
-                    st.success(f"Pushed {data['workouts_pushed']} workouts to Garmin Connect!")
+                    try:
+                        data = r.json()
+                        st.success(f"Pushed {data['workouts_pushed']} workouts to Garmin Connect!")
+                    except Exception:
+                        st.success("Workouts pushed to Garmin Connect!")
                 else:
-                    st.error(f"Error: {r.json().get('detail', r.text)}")
+                    st.error(f"Error: {_error_detail(r)}")
 
 
 # ── Tab 5: AI Coach ──────────────────────────────────────────────────
@@ -1310,7 +1419,7 @@ if tab_admin is not None:
                 users = r.json()
             else:
                 users = []
-                st.error(f"Failed to load users: {r.json().get('detail', r.text)}")
+                st.error(f"Failed to load users: {_error_detail(r)}")
         except requests.ConnectionError:
             users = []
             st.error("Cannot reach API")
