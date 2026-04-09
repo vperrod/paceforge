@@ -291,6 +291,16 @@ async def get_activities(
     return profile.recent_activities
 
 
+@app.get("/activities/{activity_id}")
+async def get_activity_detail(activity_id: int, user: dict = Depends(get_current_user)):
+    """Return detailed splits, HR zones, and summary for an activity."""
+    uid = user["id"]
+    garmin = _user_garmin.get(uid)
+    if not garmin:
+        raise HTTPException(401, "Not logged in to Garmin")
+    return garmin.get_activity_detail(activity_id)
+
+
 @app.post("/plan/generate", response_model=TrainingPlan)
 async def generate(req: GeneratePlanRequest, user: dict = Depends(get_current_user)):
     uid = user["id"]

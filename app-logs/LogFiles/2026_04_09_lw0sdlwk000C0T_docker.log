@@ -1,0 +1,851 @@
+2026-04-09T12:20:22.2498778Z State: Starting, Action: EstablishingSiteNetworks, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: , DetailsLevel: INFO
+2026-04-09T12:20:25.2921088Z State: Starting, Action: StartingSiteContainers, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: , DetailsLevel: INFO
+2026-04-09T12:20:25.3325532Z Container start method called.
+2026-04-09T12:20:25.3627116Z State: Starting, Action: PullingImage, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Pulling image paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest for paceforge-app., DetailsLevel: INFO
+2026-04-09T12:20:25.3712647Z Establishing network.
+2026-04-09T12:20:25.3795737Z Pulling image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest.
+2026-04-09T12:20:28.7970166Z Container pull image failed with reason: ImagePullFailure. Revert by terminate.
+2026-04-09T12:20:28.8087768Z Container is terminating. Grace period: 5 seconds.
+2026-04-09T12:20:28.8168034Z Container spec TerminationMessagePolicy  path 
+2026-04-09T12:20:28.8190707Z Container is terminated. Total time elapsed: 10 ms.
+2026-04-09T12:20:28.8192800Z Site container: paceforge-app terminated during site startup.
+2026-04-09T12:20:28.8297193Z State: Stopping, Action: CancellingStartup, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:20:28.8846484Z State: Stopping, Action: CancellingStartup, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:20:28, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:20:28.9059548Z Failed to start site. Revert by stopping site.
+2026-04-09T12:20:28.9324736Z State: Stopping, Action: StoppingSite, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:20:28, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:20:28.9429775Z State: Stopping, Action: StoppingSiteContainers, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:20:28, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:20:28.9445435Z Site: paceforge-app stopped.
+2026-04-09T12:20:28.9831408Z State: Stopping, Action: UnmountingVolumes, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:20:28, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:20:29.2389998Z State: Stopping, Action: StoppingSiteNetworks, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:20:28, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:20:29.8717495Z State: Stopped, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:20:28, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site stopped at 04/09/2026 12:20:29 (UTC), DetailsLevel: ERR
+2026-04-09T12:20:30.6230810Z State: Stopped, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:20:28, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site stopped at 04/09/2026 12:20:29 (UTC), DetailsLevel: ERR
+2026-04-09T12:20:35.9339564Z State: Starting, Action: EstablishingSiteNetworks, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:20:28, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site stopped at 04/09/2026 12:20:29 (UTC), DetailsLevel: ERR
+2026-04-09T12:20:37.9953911Z State: Starting, Action: StartingSiteContainers, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:20:28, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site stopped at 04/09/2026 12:20:29 (UTC), DetailsLevel: ERR
+2026-04-09T12:20:37.9955306Z Container start method called.
+2026-04-09T12:20:37.9955854Z State: Starting, Action: PullingImage, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:20:28, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Pulling image paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest for paceforge-app., DetailsLevel: INFO
+2026-04-09T12:20:38.0129303Z Establishing network.
+2026-04-09T12:20:38.0131205Z Pulling image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest.
+2026-04-09T12:20:41.4742476Z Container pull image failed with reason: ImagePullFailure. Revert by terminate.
+2026-04-09T12:20:41.4745286Z Container is terminating. Grace period: 5 seconds.
+2026-04-09T12:20:41.4747118Z Container spec TerminationMessagePolicy  path 
+2026-04-09T12:20:41.4828235Z Container is terminated. Total time elapsed: 0 ms.
+2026-04-09T12:20:41.4844134Z Site container: paceforge-app terminated during site startup.
+2026-04-09T12:20:41.4845462Z State: Stopping, Action: CancellingStartup, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:20:28, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:20:41.4854848Z State: Stopping, Action: CancellingStartup, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:20:41, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:20:41.5132109Z Failed to start site. Revert by stopping site.
+2026-04-09T12:20:41.5144609Z State: Stopping, Action: StoppingSite, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:20:41, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:20:41.5222758Z State: Stopping, Action: StoppingSiteContainers, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:20:41, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:20:41.5223581Z Site: paceforge-app stopped.
+2026-04-09T12:20:41.5328583Z State: Stopping, Action: UnmountingVolumes, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:20:41, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:20:41.6969193Z State: Stopping, Action: StoppingSiteNetworks, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:20:41, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:20:41.9665445Z Site: paceforge-app will be blocked for 1 minutes till 04/09/2026 12:21:41
+2026-04-09T12:20:41.9671935Z State: Blocked, Action: StoppingSiteNetworks, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:20:41, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site: paceforge-app will be blocked for 1 minutes till 04/09/2026 12:21:41, DetailsLevel: WARN
+2026-04-09T12:20:41.9972334Z State: Stopped, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:20:41, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site stopped at 04/09/2026 12:20:41 (UTC), DetailsLevel: WARN
+2026-04-09T12:20:42.2378873Z State: Stopped, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:20:41, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site stopped at 04/09/2026 12:20:41 (UTC), DetailsLevel: WARN
+2026-04-09T12:21:06.3613018Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:20:41, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:21:41, DetailsLevel: WARN
+2026-04-09T12:21:06.3614351Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:21:11.5887824Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:20:41, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:21:41, DetailsLevel: WARN
+2026-04-09T12:21:11.5888228Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:21:16.8011425Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:20:41, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:21:41, DetailsLevel: WARN
+2026-04-09T12:21:16.8012710Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:21:22.0076267Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:20:41, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:21:41, DetailsLevel: WARN
+2026-04-09T12:21:22.0077536Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:21:27.1770011Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:20:41, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:21:41, DetailsLevel: WARN
+2026-04-09T12:21:27.1776417Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:21:27.9877658Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:20:41, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:21:41, DetailsLevel: WARN
+2026-04-09T12:21:27.9878597Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:21:32.4384011Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:20:41, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:21:41, DetailsLevel: WARN
+2026-04-09T12:21:32.4384775Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:21:37.5539117Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:20:41, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:21:41, DetailsLevel: WARN
+2026-04-09T12:21:37.5539787Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:21:41.9601115Z Site: paceforge-app is unblocked.
+2026-04-09T12:21:42.7440419Z State: Starting, Action: EstablishingSiteNetworks, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:20:41, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:21:41, DetailsLevel: WARN
+2026-04-09T12:21:44.5761797Z State: Starting, Action: StartingSiteContainers, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:20:41, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:21:41, DetailsLevel: WARN
+2026-04-09T12:21:44.5763271Z Container start method called.
+2026-04-09T12:21:44.5763908Z State: Starting, Action: PullingImage, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:20:41, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Pulling image paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest for paceforge-app., DetailsLevel: INFO
+2026-04-09T12:21:44.5764893Z Establishing network.
+2026-04-09T12:21:44.5766137Z Pulling image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest.
+2026-04-09T12:21:48.0159344Z Container pull image failed with reason: ImagePullFailure. Revert by terminate.
+2026-04-09T12:21:48.0222244Z Container is terminating. Grace period: 5 seconds.
+2026-04-09T12:21:48.0225530Z Container spec TerminationMessagePolicy  path 
+2026-04-09T12:21:48.0228053Z Container is terminated. Total time elapsed: 0 ms.
+2026-04-09T12:21:48.0241942Z Site container: paceforge-app terminated during site startup.
+2026-04-09T12:21:48.0368499Z State: Stopping, Action: CancellingStartup, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:20:41, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:21:48.0487348Z State: Stopping, Action: CancellingStartup, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:21:48, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:21:48.0647903Z Failed to start site. Revert by stopping site.
+2026-04-09T12:21:48.0653293Z State: Stopping, Action: StoppingSite, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:21:48, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:21:48.0658722Z State: Stopping, Action: StoppingSiteContainers, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:21:48, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:21:48.0658960Z Site: paceforge-app stopped.
+2026-04-09T12:21:48.0826021Z State: Stopping, Action: UnmountingVolumes, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:21:48, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:21:48.2867671Z State: Stopping, Action: StoppingSiteNetworks, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:21:48, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:21:48.4834235Z Site: paceforge-app will be blocked for 1 minutes till 04/09/2026 12:22:48
+2026-04-09T12:21:48.4845633Z State: Blocked, Action: StoppingSiteNetworks, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:21:48, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site: paceforge-app will be blocked for 1 minutes till 04/09/2026 12:22:48, DetailsLevel: WARN
+2026-04-09T12:21:48.4909465Z State: Stopped, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:21:48, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site stopped at 04/09/2026 12:21:48 (UTC), DetailsLevel: WARN
+2026-04-09T12:21:48.6891498Z State: Stopped, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:21:48, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site stopped at 04/09/2026 12:21:48 (UTC), DetailsLevel: WARN
+2026-04-09T12:21:53.7514840Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:21:48, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:22:48, DetailsLevel: WARN
+2026-04-09T12:21:53.7515139Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:21:58.8851220Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:21:48, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:22:48, DetailsLevel: WARN
+2026-04-09T12:21:58.8851930Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:22:04.2143288Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:21:48, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:22:48, DetailsLevel: WARN
+2026-04-09T12:22:04.2144691Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:22:09.5245961Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:21:48, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:22:48, DetailsLevel: WARN
+2026-04-09T12:22:09.5246752Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:22:14.8533738Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:21:48, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:22:48, DetailsLevel: WARN
+2026-04-09T12:22:14.8534638Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:22:20.2817324Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:21:48, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:22:48, DetailsLevel: WARN
+2026-04-09T12:22:20.2818133Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:22:25.4770181Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:21:48, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:22:48, DetailsLevel: WARN
+2026-04-09T12:22:25.4770511Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:22:30.6124415Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:21:48, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:22:48, DetailsLevel: WARN
+2026-04-09T12:22:30.6129964Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:22:35.7201124Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:21:48, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:22:48, DetailsLevel: WARN
+2026-04-09T12:22:35.7201804Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:22:40.9249648Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:21:48, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:22:48, DetailsLevel: WARN
+2026-04-09T12:22:40.9250525Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:22:46.0288610Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:21:48, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:22:48, DetailsLevel: WARN
+2026-04-09T12:22:46.0288925Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:22:48.4827136Z Site: paceforge-app is unblocked.
+2026-04-09T12:22:51.1094985Z State: Starting, Action: EstablishingSiteNetworks, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:21:48, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:22:48, DetailsLevel: WARN
+2026-04-09T12:22:52.9465415Z State: Starting, Action: StartingSiteContainers, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:21:48, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:22:48, DetailsLevel: WARN
+2026-04-09T12:22:52.9467508Z Container start method called.
+2026-04-09T12:22:52.9552783Z State: Starting, Action: PullingImage, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:21:48, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Pulling image paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest for paceforge-app., DetailsLevel: INFO
+2026-04-09T12:22:52.9564955Z Establishing network.
+2026-04-09T12:22:52.9566989Z Pulling image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest.
+2026-04-09T12:22:55.7548472Z Container pull image failed with reason: ImagePullFailure. Revert by terminate.
+2026-04-09T12:22:55.7554284Z Container is terminating. Grace period: 5 seconds.
+2026-04-09T12:22:55.7572961Z Container spec TerminationMessagePolicy  path 
+2026-04-09T12:22:55.7580425Z Container is terminated. Total time elapsed: 1 ms.
+2026-04-09T12:22:55.7647014Z Site container: paceforge-app terminated during site startup.
+2026-04-09T12:22:55.7650310Z State: Stopping, Action: CancellingStartup, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:21:48, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:22:55.7663027Z State: Stopping, Action: CancellingStartup, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:22:55, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:22:55.7851286Z Failed to start site. Revert by stopping site.
+2026-04-09T12:22:55.7852448Z State: Stopping, Action: StoppingSite, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:22:55, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:22:55.7854506Z State: Stopping, Action: StoppingSiteContainers, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:22:55, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:22:55.7854780Z Site: paceforge-app stopped.
+2026-04-09T12:22:55.7940807Z State: Stopping, Action: UnmountingVolumes, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:22:55, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:22:56.0118439Z State: Stopping, Action: StoppingSiteNetworks, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:22:55, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:22:56.2154901Z Site: paceforge-app will be blocked for 2 minutes till 04/09/2026 12:24:56
+2026-04-09T12:22:56.2170028Z State: Blocked, Action: StoppingSiteNetworks, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:22:55, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site: paceforge-app will be blocked for 2 minutes till 04/09/2026 12:24:56, DetailsLevel: WARN
+2026-04-09T12:22:56.2237905Z State: Stopped, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:22:55, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site stopped at 04/09/2026 12:22:56 (UTC), DetailsLevel: WARN
+2026-04-09T12:22:56.3984547Z State: Stopped, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:22:55, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site stopped at 04/09/2026 12:22:56 (UTC), DetailsLevel: WARN
+2026-04-09T12:23:01.5639795Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:22:55, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:24:56, DetailsLevel: WARN
+2026-04-09T12:23:01.5640554Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:23:06.8326173Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:22:55, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:24:56, DetailsLevel: WARN
+2026-04-09T12:23:06.8329351Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:23:11.9819338Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:22:55, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:24:56, DetailsLevel: WARN
+2026-04-09T12:23:11.9820029Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:23:17.1182573Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:22:55, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:24:56, DetailsLevel: WARN
+2026-04-09T12:23:17.1183569Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:23:22.4120320Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:22:55, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:24:56, DetailsLevel: WARN
+2026-04-09T12:23:22.4120692Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:23:27.6773293Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:22:55, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:24:56, DetailsLevel: WARN
+2026-04-09T12:23:27.6774400Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:23:32.8963940Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:22:55, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:24:56, DetailsLevel: WARN
+2026-04-09T12:23:32.8964263Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:23:38.3359235Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:22:55, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:24:56, DetailsLevel: WARN
+2026-04-09T12:23:38.3359580Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:23:43.5952838Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:22:55, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:24:56, DetailsLevel: WARN
+2026-04-09T12:23:43.5953788Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:23:48.7220403Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:22:55, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:24:56, DetailsLevel: WARN
+2026-04-09T12:23:48.7221728Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:23:53.8918144Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:22:55, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:24:56, DetailsLevel: WARN
+2026-04-09T12:23:53.8918843Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:23:59.1888355Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:22:55, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:24:56, DetailsLevel: WARN
+2026-04-09T12:23:59.1889749Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:24:04.4414986Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:22:55, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:24:56, DetailsLevel: WARN
+2026-04-09T12:24:04.4416363Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:24:09.6105780Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:22:55, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:24:56, DetailsLevel: WARN
+2026-04-09T12:24:09.6106347Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:24:14.7184938Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:22:55, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:24:56, DetailsLevel: WARN
+2026-04-09T12:24:14.7185502Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:24:19.8839774Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:22:55, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:24:56, DetailsLevel: WARN
+2026-04-09T12:24:19.8840360Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:24:24.9986563Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:22:55, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:24:56, DetailsLevel: WARN
+2026-04-09T12:24:24.9986893Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:24:30.1320306Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:22:55, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:24:56, DetailsLevel: WARN
+2026-04-09T12:24:30.1321467Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:24:35.3133988Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:22:55, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:24:56, DetailsLevel: WARN
+2026-04-09T12:24:35.3135403Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:24:40.5789752Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:22:55, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:24:56, DetailsLevel: WARN
+2026-04-09T12:24:40.5790302Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:24:45.7003828Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:22:55, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:24:56, DetailsLevel: WARN
+2026-04-09T12:24:45.7004360Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:24:50.8655283Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:22:55, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:24:56, DetailsLevel: WARN
+2026-04-09T12:24:50.8655879Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:24:56.0042485Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:22:55, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:24:56, DetailsLevel: WARN
+2026-04-09T12:24:56.0043458Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:24:56.2135754Z Site: paceforge-app is unblocked.
+2026-04-09T12:25:01.3145907Z State: Starting, Action: EstablishingSiteNetworks, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:22:55, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:24:56, DetailsLevel: WARN
+2026-04-09T12:25:04.6805462Z State: Starting, Action: StartingSiteContainers, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:22:55, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:24:56, DetailsLevel: WARN
+2026-04-09T12:25:04.6810994Z Container start method called.
+2026-04-09T12:25:04.6811795Z State: Starting, Action: PullingImage, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:22:55, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Pulling image paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest for paceforge-app., DetailsLevel: INFO
+2026-04-09T12:25:04.6841710Z Establishing network.
+2026-04-09T12:25:04.6898153Z Pulling image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest.
+2026-04-09T12:25:08.3777142Z Container pull image failed with reason: ImagePullFailure. Revert by terminate.
+2026-04-09T12:25:08.3849116Z Container is terminating. Grace period: 5 seconds.
+2026-04-09T12:25:08.3850889Z Container spec TerminationMessagePolicy  path 
+2026-04-09T12:25:08.3852962Z Container is terminated. Total time elapsed: 0 ms.
+2026-04-09T12:25:08.3854559Z Site container: paceforge-app terminated during site startup.
+2026-04-09T12:25:08.3936351Z State: Stopping, Action: CancellingStartup, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:22:55, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:25:08.4033493Z State: Stopping, Action: CancellingStartup, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:25:08, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:25:08.4145054Z Failed to start site. Revert by stopping site.
+2026-04-09T12:25:08.4209413Z State: Stopping, Action: StoppingSite, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:25:08, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:25:08.4230016Z State: Stopping, Action: StoppingSiteContainers, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:25:08, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:25:08.4230375Z Site: paceforge-app stopped.
+2026-04-09T12:25:08.4652240Z State: Stopping, Action: UnmountingVolumes, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:25:08, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:25:08.7098173Z State: Stopping, Action: StoppingSiteNetworks, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:25:08, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:25:08.9939670Z Site: paceforge-app will be blocked for 2 minutes till 04/09/2026 12:27:08
+2026-04-09T12:25:08.9952757Z State: Blocked, Action: StoppingSiteNetworks, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:25:08, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site: paceforge-app will be blocked for 2 minutes till 04/09/2026 12:27:08, DetailsLevel: WARN
+2026-04-09T12:25:09.0036119Z State: Stopped, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:25:08, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site stopped at 04/09/2026 12:25:08 (UTC), DetailsLevel: WARN
+2026-04-09T12:25:09.2350873Z State: Stopped, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:25:08, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site stopped at 04/09/2026 12:25:08 (UTC), DetailsLevel: WARN
+2026-04-09T12:25:14.2273710Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:25:08, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:27:08, DetailsLevel: WARN
+2026-04-09T12:25:14.2277089Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:25:19.3126785Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:25:08, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:27:08, DetailsLevel: WARN
+2026-04-09T12:25:19.3127219Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:25:24.4868290Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:25:08, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:27:08, DetailsLevel: WARN
+2026-04-09T12:25:24.4873145Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:25:29.6608028Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:25:08, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:27:08, DetailsLevel: WARN
+2026-04-09T12:25:29.6608414Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:25:34.9126265Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:25:08, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:27:08, DetailsLevel: WARN
+2026-04-09T12:25:34.9127641Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:25:40.2097680Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:25:08, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:27:08, DetailsLevel: WARN
+2026-04-09T12:25:40.2098050Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:25:45.3214484Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:25:08, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:27:08, DetailsLevel: WARN
+2026-04-09T12:25:45.3406914Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:25:50.4336856Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:25:08, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:27:08, DetailsLevel: WARN
+2026-04-09T12:25:50.4337611Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:25:55.6161991Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:25:08, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:27:08, DetailsLevel: WARN
+2026-04-09T12:25:55.6165812Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:26:00.7136288Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:25:08, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:27:08, DetailsLevel: WARN
+2026-04-09T12:26:00.7137366Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:26:05.9484424Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:25:08, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:27:08, DetailsLevel: WARN
+2026-04-09T12:26:05.9484786Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:26:11.2303502Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:25:08, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:27:08, DetailsLevel: WARN
+2026-04-09T12:26:11.2305702Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:26:16.4242951Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:25:08, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:27:08, DetailsLevel: WARN
+2026-04-09T12:26:16.4243959Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:26:22.6149877Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:25:08, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:27:08, DetailsLevel: WARN
+2026-04-09T12:26:22.6150699Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:26:27.9026899Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:25:08, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:27:08, DetailsLevel: WARN
+2026-04-09T12:26:27.9029430Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:26:33.0397858Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:25:08, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:27:08, DetailsLevel: WARN
+2026-04-09T12:26:33.0398244Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:26:38.2582229Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:25:08, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:27:08, DetailsLevel: WARN
+2026-04-09T12:26:38.2582542Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:26:43.4199277Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:25:08, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:27:08, DetailsLevel: WARN
+2026-04-09T12:26:43.4200168Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:26:48.5450240Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:25:08, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:27:08, DetailsLevel: WARN
+2026-04-09T12:26:48.5451129Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:26:53.6297469Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:25:08, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:27:08, DetailsLevel: WARN
+2026-04-09T12:26:53.6298753Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:26:58.7379423Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:25:08, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:27:08, DetailsLevel: WARN
+2026-04-09T12:26:58.7379799Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:27:03.8048053Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:25:08, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:27:08, DetailsLevel: WARN
+2026-04-09T12:27:03.8049020Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:27:08.9407177Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:25:08, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:27:08, DetailsLevel: WARN
+2026-04-09T12:27:08.9409289Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:27:09.0018694Z Site: paceforge-app is unblocked.
+2026-04-09T12:27:14.2830200Z State: Starting, Action: EstablishingSiteNetworks, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:25:08, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:27:08, DetailsLevel: WARN
+2026-04-09T12:27:16.7936359Z State: Starting, Action: StartingSiteContainers, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:25:08, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:27:08, DetailsLevel: WARN
+2026-04-09T12:27:16.7937890Z Container start method called.
+2026-04-09T12:27:16.8141161Z State: Starting, Action: PullingImage, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:25:08, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Pulling image paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest for paceforge-app., DetailsLevel: INFO
+2026-04-09T12:27:16.8143914Z Establishing network.
+2026-04-09T12:27:16.8146264Z Pulling image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest.
+2026-04-09T12:27:24.2770549Z Container pull image failed with reason: ImagePullFailure. Revert by terminate.
+2026-04-09T12:27:24.2885471Z Container is terminating. Grace period: 5 seconds.
+2026-04-09T12:27:24.3138233Z Container spec TerminationMessagePolicy  path 
+2026-04-09T12:27:24.3149339Z Container is terminated. Total time elapsed: 25 ms.
+2026-04-09T12:27:24.3158870Z Site container: paceforge-app terminated during site startup.
+2026-04-09T12:27:24.3229937Z State: Stopping, Action: CancellingStartup, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:25:08, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:27:24.3243845Z State: Stopping, Action: CancellingStartup, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:27:24, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:27:24.3440592Z Failed to start site. Revert by stopping site.
+2026-04-09T12:27:24.3444989Z State: Stopping, Action: StoppingSite, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:27:24, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:27:24.3607891Z State: Stopping, Action: StoppingSiteContainers, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:27:24, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:27:24.3608199Z Site: paceforge-app stopped.
+2026-04-09T12:27:24.3802074Z State: Stopping, Action: UnmountingVolumes, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:27:24, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:27:24.6928224Z State: Stopping, Action: StoppingSiteNetworks, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:27:24, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:27:24.9685828Z Site: paceforge-app will be blocked for 2 minutes till 04/09/2026 12:29:24
+2026-04-09T12:27:24.9968652Z State: Blocked, Action: StoppingSiteNetworks, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:27:24, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site: paceforge-app will be blocked for 2 minutes till 04/09/2026 12:29:24, DetailsLevel: WARN
+2026-04-09T12:27:25.0151890Z State: Stopped, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:27:24, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site stopped at 04/09/2026 12:27:25 (UTC), DetailsLevel: WARN
+2026-04-09T12:27:25.3905165Z State: Stopped, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:27:24, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site stopped at 04/09/2026 12:27:25 (UTC), DetailsLevel: WARN
+2026-04-09T12:27:30.9875276Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:27:24, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:29:24, DetailsLevel: WARN
+2026-04-09T12:27:30.9875998Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:27:36.1368352Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:27:24, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:29:24, DetailsLevel: WARN
+2026-04-09T12:27:36.1368688Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:27:41.2444099Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:27:24, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:29:24, DetailsLevel: WARN
+2026-04-09T12:27:41.2444803Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:27:46.3534639Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:27:24, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:29:24, DetailsLevel: WARN
+2026-04-09T12:27:46.3535734Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:27:51.4750486Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:27:24, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:29:24, DetailsLevel: WARN
+2026-04-09T12:27:51.4751386Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:27:56.5889853Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:27:24, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:29:24, DetailsLevel: WARN
+2026-04-09T12:27:56.5890800Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:28:01.7851341Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:27:24, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:29:24, DetailsLevel: WARN
+2026-04-09T12:28:01.7851708Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:28:06.9264974Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:27:24, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:29:24, DetailsLevel: WARN
+2026-04-09T12:28:06.9265280Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:28:12.0488762Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:27:24, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:29:24, DetailsLevel: WARN
+2026-04-09T12:28:12.0771514Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:28:17.1971447Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:27:24, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:29:24, DetailsLevel: WARN
+2026-04-09T12:28:17.1972831Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:28:22.3321499Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:27:24, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:29:24, DetailsLevel: WARN
+2026-04-09T12:28:22.3328210Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:28:27.5069715Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:27:24, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:29:24, DetailsLevel: WARN
+2026-04-09T12:28:27.5070213Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:28:32.5879597Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:27:24, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:29:24, DetailsLevel: WARN
+2026-04-09T12:28:32.5880531Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:28:37.7338609Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:27:24, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:29:24, DetailsLevel: WARN
+2026-04-09T12:28:37.7339683Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:28:42.8917509Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:27:24, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:29:24, DetailsLevel: WARN
+2026-04-09T12:28:42.8918669Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:28:48.0184585Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:27:24, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:29:24, DetailsLevel: WARN
+2026-04-09T12:28:48.0185598Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:28:53.0932438Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:27:24, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:29:24, DetailsLevel: WARN
+2026-04-09T12:28:53.0932806Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:28:58.2206986Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:27:24, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:29:24, DetailsLevel: WARN
+2026-04-09T12:28:58.2207847Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:29:03.4028088Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:27:24, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:29:24, DetailsLevel: WARN
+2026-04-09T12:29:03.4029179Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:29:08.7791275Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:27:24, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:29:24, DetailsLevel: WARN
+2026-04-09T12:29:08.7792059Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:29:13.8911308Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:27:24, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:29:24, DetailsLevel: WARN
+2026-04-09T12:29:13.8914173Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:29:19.0280372Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:27:24, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:29:24, DetailsLevel: WARN
+2026-04-09T12:29:19.0281109Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:29:24.2302905Z State: Blocked, Action: None, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:27:24, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:29:24, DetailsLevel: WARN
+2026-04-09T12:29:24.2304246Z Start site prohibitted because the site is being blocked.
+2026-04-09T12:29:24.9499793Z Site: paceforge-app is unblocked.
+2026-04-09T12:29:29.3320778Z State: Starting, Action: EstablishingSiteNetworks, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:27:24, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:29:24, DetailsLevel: WARN
+2026-04-09T12:29:30.8881598Z State: Starting, Action: StartingSiteContainers, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:27:24, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:29:24, DetailsLevel: WARN
+2026-04-09T12:29:30.8883146Z Container start method called.
+2026-04-09T12:29:30.8883667Z State: Starting, Action: PullingImage, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:27:24, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Pulling image paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest for paceforge-app., DetailsLevel: INFO
+2026-04-09T12:29:30.8884891Z Establishing network.
+2026-04-09T12:29:30.8886363Z Pulling image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest.
+2026-04-09T12:29:33.7680627Z Container pull image failed with reason: ImagePullFailure. Revert by terminate.
+2026-04-09T12:29:33.7683436Z Container is terminating. Grace period: 5 seconds.
+2026-04-09T12:29:33.7685230Z Container spec TerminationMessagePolicy  path 
+2026-04-09T12:29:33.7834901Z Container is terminated. Total time elapsed: 0 ms.
+2026-04-09T12:29:33.7843084Z Site container: paceforge-app terminated during site startup.
+2026-04-09T12:29:33.7844607Z State: Stopping, Action: CancellingStartup, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:27:24, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:29:33.7868734Z State: Stopping, Action: CancellingStartup, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:29:33, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:29:33.8491283Z Failed to start site. Revert by stopping site.
+2026-04-09T12:29:33.8493411Z State: Stopping, Action: StoppingSite, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:29:33, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:29:33.8497393Z State: Stopping, Action: StoppingSiteContainers, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:29:33, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:29:33.8497583Z Site: paceforge-app stopped.
+2026-04-09T12:59:02.2429027Z State: Starting, Action: EstablishingSiteNetworks, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:29:33, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:31:34, DetailsLevel: WARN
+2026-04-09T12:59:03.5996052Z State: Starting, Action: StartingSiteContainers, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:29:33, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site is blocked due to multiple, consecutive cold start failures. Site scheduled to be unblocked at 04/09/2026 12:31:34, DetailsLevel: WARN
+2026-04-09T12:59:03.5998647Z Container start method called.
+2026-04-09T12:59:03.6072660Z State: Starting, Action: PullingImage, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:29:33, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Pulling image docker.io/library/paceforge:latest for paceforge-app., DetailsLevel: INFO
+2026-04-09T12:59:03.6074467Z Establishing network.
+2026-04-09T12:59:03.6076327Z Pulling image: docker.io/library/paceforge:latest.
+2026-04-09T12:59:09.9001502Z Container pull image failed with reason: ImagePullFailure. Revert by terminate.
+2026-04-09T12:59:09.9005916Z Container is terminating. Grace period: 5 seconds.
+2026-04-09T12:59:09.9007523Z Container spec TerminationMessagePolicy  path 
+2026-04-09T12:59:09.9008690Z Container is terminated. Total time elapsed: 0 ms.
+2026-04-09T12:59:09.9009671Z Site container: paceforge-app terminated during site startup.
+2026-04-09T12:59:09.9017939Z State: Stopping, Action: CancellingStartup, LastError: ImagePullUnauthorizedFailure, LastErrorTimestamp: 04/09/2026 12:29:33, LastErrorDetails: Failed to pull image: paceforgeacr.azurecr.io/paceforgeacr.azurecr.io/paceforge:latest. Image pull failed with forbidden or unauthorized. Check registry credentials., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:59:09.9180800Z State: Stopping, Action: CancellingStartup, LastError: ImageNotFoundFailure, LastErrorTimestamp: 04/09/2026 12:59:09, LastErrorDetails: Failed to pull image: docker.io/library/paceforge:latest. Image pull failed because the image was not found. Check the registry to ensure the image is present or check for any misspellings., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:59:09.9368775Z Failed to start site. Revert by stopping site.
+2026-04-09T12:59:09.9378000Z State: Stopping, Action: StoppingSite, LastError: ImageNotFoundFailure, LastErrorTimestamp: 04/09/2026 12:59:09, LastErrorDetails: Failed to pull image: docker.io/library/paceforge:latest. Image pull failed because the image was not found. Check the registry to ensure the image is present or check for any misspellings., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:59:09.9392070Z State: Stopping, Action: StoppingSiteContainers, LastError: ImageNotFoundFailure, LastErrorTimestamp: 04/09/2026 12:59:09, LastErrorDetails: Failed to pull image: docker.io/library/paceforge:latest. Image pull failed because the image was not found. Check the registry to ensure the image is present or check for any misspellings., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T12:59:09.9392295Z Site: paceforge-app stopped.
+2026-04-09T13:00:27.168Z INFO  - Pulling image: paceforge:latest
+2026-04-09T13:00:29.331Z ERROR - DockerApiException: Docker API responded with status code=InternalServerError, response={"message":"Head \"https://registry-1.docker.io/v2/library/paceforge/manifests/latest\": unauthorized: incorrect username or password"}
+
+2026-04-09T13:00:29.339Z ERROR - Pulling docker image paceforge:latest failed:
+2026-04-09T13:00:31.035Z ERROR - DockerApiException: Docker API responded with status code=NotFound, response={"message":"pull access denied for paceforge, repository does not exist or may require 'docker login': denied: requested access to the resource is denied"}
+
+2026-04-09T13:00:31.036Z WARN  - Image pull failed. Defaulting to local copy if present.
+2026-04-09T13:00:31.094Z ERROR - Image pull failed: Verify docker image configuration and credentials (if using private repository)
+2026-04-09T13:00:31.394Z INFO  - Stopping site paceforge-app because it failed during startup.
+2026-04-09T13:05:29.5327976Z State: Starting, Action: EstablishingSiteNetworks, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: , DetailsLevel: INFO
+2026-04-09T13:05:32.8988416Z State: Starting, Action: StartingSiteContainers, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: , DetailsLevel: INFO
+2026-04-09T13:05:32.9095345Z Container start method called.
+2026-04-09T13:05:32.9290395Z State: Starting, Action: PullingImage, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Pulling image docker.io/library/paceforge:latest for paceforge-app., DetailsLevel: INFO
+2026-04-09T13:05:32.9292459Z Establishing network.
+2026-04-09T13:05:32.9294315Z Pulling image: docker.io/library/paceforge:latest.
+2026-04-09T13:05:42.6932282Z Container pull image failed with reason: ImagePullFailure. Revert by terminate.
+2026-04-09T13:05:42.6942151Z Container is terminating. Grace period: 5 seconds.
+2026-04-09T13:05:42.7132184Z Container spec TerminationMessagePolicy  path 
+2026-04-09T13:05:42.7307695Z Container is terminated. Total time elapsed: 35 ms.
+2026-04-09T13:05:42.7309634Z Site container: paceforge-app terminated during site startup.
+2026-04-09T13:05:42.7510480Z State: Stopping, Action: CancellingStartup, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T13:05:42.7788906Z State: Stopping, Action: CancellingStartup, LastError: ImageNotFoundFailure, LastErrorTimestamp: 04/09/2026 13:05:42, LastErrorDetails: Failed to pull image: docker.io/library/paceforge:latest. Image pull failed because the image was not found. Check the registry to ensure the image is present or check for any misspellings., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T13:05:42.8177271Z Failed to start site. Revert by stopping site.
+2026-04-09T13:05:42.8274720Z State: Stopping, Action: StoppingSite, LastError: ImageNotFoundFailure, LastErrorTimestamp: 04/09/2026 13:05:42, LastErrorDetails: Failed to pull image: docker.io/library/paceforge:latest. Image pull failed because the image was not found. Check the registry to ensure the image is present or check for any misspellings., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T13:05:42.8289137Z State: Stopping, Action: StoppingSiteContainers, LastError: ImageNotFoundFailure, LastErrorTimestamp: 04/09/2026 13:05:42, LastErrorDetails: Failed to pull image: docker.io/library/paceforge:latest. Image pull failed because the image was not found. Check the registry to ensure the image is present or check for any misspellings., Details: Site container: paceforge-app terminated during site startup. Cancelling site startup., DetailsLevel: ERR
+2026-04-09T13:05:42.8289391Z Site: paceforge-app stopped.
+2026-04-09T13:05:47.561Z INFO  - Pulling image: paceforge:latest
+2026-04-09T13:05:49.224Z ERROR - DockerApiException: Docker API responded with status code=InternalServerError, response={"message":"Head \"https://registry-1.docker.io/v2/library/paceforge/manifests/latest\": unauthorized: incorrect username or password"}
+
+2026-04-09T13:05:49.227Z ERROR - Pulling docker image paceforge:latest failed:
+2026-04-09T13:05:50.542Z ERROR - DockerApiException: Docker API responded with status code=NotFound, response={"message":"pull access denied for paceforge, repository does not exist or may require 'docker login': denied: requested access to the resource is denied"}
+
+2026-04-09T13:05:50.543Z WARN  - Image pull failed. Defaulting to local copy if present.
+2026-04-09T13:05:50.553Z ERROR - Image pull failed: Verify docker image configuration and credentials (if using private repository)
+2026-04-09T13:05:50.563Z INFO  - Stopping site paceforge-app because it failed during startup.
+2026-04-09T13:08:21.901Z INFO  - Pulling image: paceforgeacr.azurecr.io/paceforge:latest
+2026-04-09T13:08:22.680Z INFO  - latest Pulling from paceforge
+2026-04-09T13:08:22.690Z INFO  - 9d11882d4b58 Pulling fs layer
+2026-04-09T13:08:22.740Z INFO  - 25981ed25cff Pulling fs layer
+2026-04-09T13:08:22.758Z INFO  - d4c207a1ca27 Pulling fs layer
+2026-04-09T13:08:22.767Z INFO  - f0bdb572205e Pulling fs layer
+2026-04-09T13:08:22.769Z INFO  - 72b430eb139e Pulling fs layer
+2026-04-09T13:08:22.778Z INFO  - d3a22f7599b2 Pulling fs layer
+2026-04-09T13:08:22.780Z INFO  - df0c8a2042e7 Pulling fs layer
+2026-04-09T13:08:22.786Z INFO  - 3d392bfc015d Pulling fs layer
+2026-04-09T13:08:22.788Z INFO  - 6ee7198b55a5 Pulling fs layer
+2026-04-09T13:08:22.789Z INFO  - 1cdb4bbf9c4a Pulling fs layer
+2026-04-09T13:08:22.810Z INFO  - f02490e907bb Pulling fs layer
+2026-04-09T13:08:23.402Z INFO  - 72b430eb139e Downloading 92B / 92B
+2026-04-09T13:08:23.419Z INFO  - 72b430eb139e Verifying Checksum
+2026-04-09T13:08:23.421Z INFO  - 72b430eb139e Download complete
+2026-04-09T13:08:23.477Z INFO  - f02490e907bb Downloading 123B / 123B
+2026-04-09T13:08:23.481Z INFO  - f0bdb572205e Downloading 250B / 250B
+2026-04-09T13:08:23.496Z INFO  - df0c8a2042e7 Downloading 1KB / 1KB
+2026-04-09T13:08:23.506Z INFO  - f02490e907bb Verifying Checksum
+2026-04-09T13:08:23.508Z INFO  - f02490e907bb Download complete
+2026-04-09T13:08:23.526Z INFO  - f0bdb572205e Verifying Checksum
+2026-04-09T13:08:23.529Z INFO  - f0bdb572205e Download complete
+2026-04-09T13:08:23.547Z INFO  - df0c8a2042e7 Verifying Checksum
+2026-04-09T13:08:23.549Z INFO  - df0c8a2042e7 Download complete
+2026-04-09T13:08:23.565Z INFO  - 1cdb4bbf9c4a Downloading 409B / 409B
+2026-04-09T13:08:23.567Z INFO  - 1cdb4bbf9c4a Verifying Checksum
+2026-04-09T13:08:23.569Z INFO  - 1cdb4bbf9c4a Download complete
+2026-04-09T13:08:23.571Z INFO  - 3d392bfc015d Downloading 91KB / 91KB
+2026-04-09T13:08:23.576Z INFO  - 3d392bfc015d Verifying Checksum
+2026-04-09T13:08:23.577Z INFO  - 3d392bfc015d Download complete
+2026-04-09T13:08:23.588Z INFO  - 25981ed25cff Downloading 1MB / 1MB
+2026-04-09T13:08:23.595Z INFO  - 25981ed25cff Verifying Checksum
+2026-04-09T13:08:23.597Z INFO  - 25981ed25cff Download complete
+2026-04-09T13:08:23.599Z INFO  - d4c207a1ca27 Downloading 511KB / 11MB
+2026-04-09T13:08:23.657Z INFO  - 6ee7198b55a5 Downloading 527KB / 152MB
+2026-04-09T13:08:23.711Z INFO  - d3a22f7599b2 Downloading 527KB / 110MB
+2026-04-09T13:08:23.777Z INFO  - d4c207a1ca27 Downloading 1MB / 11MB
+2026-04-09T13:08:23.884Z INFO  - d4c207a1ca27 Downloading 2MB / 11MB
+2026-04-09T13:08:23.990Z INFO  - d4c207a1ca27 Downloading 3MB / 11MB
+2026-04-09T13:08:24.009Z INFO  - d3a22f7599b2 Downloading 3MB / 110MB
+2026-04-09T13:08:24.052Z INFO  - 9d11882d4b58 Downloading 5MB / 29MB
+2026-04-09T13:08:24.071Z INFO  - 6ee7198b55a5 Downloading 3MB / 152MB
+2026-04-09T13:08:24.108Z INFO  - d4c207a1ca27 Downloading 4MB / 11MB
+2026-04-09T13:08:24.260Z INFO  - d3a22f7599b2 Downloading 4MB / 110MB
+2026-04-09T13:08:24.286Z INFO  - d4c207a1ca27 Downloading 4MB / 11MB
+2026-04-09T13:08:24.352Z INFO  - 9d11882d4b58 Downloading 6MB / 29MB
+2026-04-09T13:08:24.564Z INFO  - d4c207a1ca27 Downloading 6MB / 11MB
+2026-04-09T13:08:24.582Z INFO  - d3a22f7599b2 Downloading 7MB / 110MB
+2026-04-09T13:08:24.660Z INFO  - d4c207a1ca27 Downloading 6MB / 11MB
+2026-04-09T13:08:24.673Z INFO  - 9d11882d4b58 Downloading 8MB / 29MB
+2026-04-09T13:08:24.711Z INFO  - 6ee7198b55a5 Downloading 6MB / 152MB
+2026-04-09T13:08:24.729Z INFO  - d3a22f7599b2 Downloading 7MB / 110MB
+2026-04-09T13:08:24.770Z INFO  - d4c207a1ca27 Downloading 7MB / 11MB
+2026-04-09T13:08:24.796Z INFO  - 9d11882d4b58 Downloading 10MB / 29MB
+2026-04-09T13:08:24.817Z INFO  - 6ee7198b55a5 Downloading 6MB / 152MB
+2026-04-09T13:08:24.930Z INFO  - 9d11882d4b58 Downloading 11MB / 29MB
+2026-04-09T13:08:24.959Z INFO  - d3a22f7599b2 Downloading 9MB / 110MB
+2026-04-09T13:08:25.081Z INFO  - d4c207a1ca27 Downloading 9MB / 11MB
+2026-04-09T13:08:25.185Z INFO  - 6ee7198b55a5 Downloading 9MB / 152MB
+2026-04-09T13:08:25.195Z INFO  - d4c207a1ca27 Downloading 10MB / 11MB
+2026-04-09T13:08:25.250Z INFO  - d3a22f7599b2 Downloading 11MB / 110MB
+2026-04-09T13:08:25.299Z INFO  - d4c207a1ca27 Verifying Checksum
+2026-04-09T13:08:25.299Z INFO  - d4c207a1ca27 Download complete
+2026-04-09T13:08:25.466Z INFO  - 9d11882d4b58 Downloading 16MB / 29MB
+2026-04-09T13:08:25.497Z INFO  - d3a22f7599b2 Downloading 13MB / 110MB
+2026-04-09T13:08:25.523Z INFO  - 6ee7198b55a5 Downloading 12MB / 152MB
+2026-04-09T13:08:25.701Z INFO  - 9d11882d4b58 Downloading 20MB / 29MB
+2026-04-09T13:08:25.798Z INFO  - 6ee7198b55a5 Downloading 15MB / 152MB
+2026-04-09T13:08:25.817Z INFO  - d3a22f7599b2 Downloading 15MB / 110MB
+2026-04-09T13:08:25.837Z INFO  - 9d11882d4b58 Downloading 21MB / 29MB
+2026-04-09T13:08:25.914Z INFO  - d3a22f7599b2 Downloading 16MB / 110MB
+2026-04-09T13:08:25.955Z INFO  - 9d11882d4b58 Downloading 22MB / 29MB
+2026-04-09T13:08:26.064Z INFO  - 6ee7198b55a5 Downloading 19MB / 152MB
+2026-04-09T13:08:26.092Z INFO  - 9d11882d4b58 Downloading 23MB / 29MB
+2026-04-09T13:08:26.190Z INFO  - 9d11882d4b58 Downloading 24MB / 29MB
+2026-04-09T13:08:26.295Z INFO  - 9d11882d4b58 Downloading 27MB / 29MB
+2026-04-09T13:08:26.336Z INFO  - d3a22f7599b2 Downloading 20MB / 110MB
+2026-04-09T13:08:26.431Z INFO  - 9d11882d4b58 Verifying Checksum
+2026-04-09T13:08:26.431Z INFO  - 9d11882d4b58 Download complete
+2026-04-09T13:08:26.539Z INFO  - 6ee7198b55a5 Downloading 22MB / 152MB
+2026-04-09T13:08:26.807Z INFO  - 6ee7198b55a5 Downloading 24MB / 152MB
+2026-04-09T13:08:27.029Z INFO  - d3a22f7599b2 Downloading 22MB / 110MB
+2026-04-09T13:08:27.050Z INFO  - 6ee7198b55a5 Downloading 25MB / 152MB
+2026-04-09T13:08:27.177Z INFO  - d3a22f7599b2 Downloading 22MB / 110MB
+2026-04-09T13:08:27.274Z INFO  - 6ee7198b55a5 Downloading 27MB / 152MB
+2026-04-09T13:08:27.496Z INFO  - d3a22f7599b2 Downloading 24MB / 110MB
+2026-04-09T13:08:27.590Z INFO  - 6ee7198b55a5 Downloading 28MB / 152MB
+2026-04-09T13:08:27.898Z INFO  - d3a22f7599b2 Downloading 27MB / 110MB
+2026-04-09T13:08:27.935Z INFO  - 9d11882d4b58 Extracting 1MB / 29MB
+2026-04-09T13:08:27.994Z INFO  - d3a22f7599b2 Downloading 28MB / 110MB
+2026-04-09T13:08:28.100Z INFO  - 6ee7198b55a5 Downloading 31MB / 152MB
+2026-04-09T13:08:28.224Z INFO  - 6ee7198b55a5 Downloading 31MB / 152MB
+2026-04-09T13:08:28.268Z INFO  - 9d11882d4b58 Extracting 1MB / 29MB
+2026-04-09T13:08:28.268Z INFO  - d3a22f7599b2 Downloading 30MB / 110MB
+2026-04-09T13:08:28.403Z INFO  - d3a22f7599b2 Downloading 31MB / 110MB
+2026-04-09T13:08:28.597Z INFO  - 9d11882d4b58 Extracting 2MB / 29MB
+2026-04-09T13:08:28.861Z INFO  - 6ee7198b55a5 Downloading 34MB / 152MB
+2026-04-09T13:08:28.939Z INFO  - d3a22f7599b2 Downloading 33MB / 110MB
+2026-04-09T13:08:28.999Z INFO  - 9d11882d4b58 Extracting 3MB / 29MB
+2026-04-09T13:08:29.087Z INFO  - d3a22f7599b2 Downloading 34MB / 110MB
+2026-04-09T13:08:29.525Z INFO  - 9d11882d4b58 Extracting 3MB / 29MB
+2026-04-09T13:08:29.545Z INFO  - d3a22f7599b2 Downloading 36MB / 110MB
+2026-04-09T13:08:29.595Z INFO  - 6ee7198b55a5 Downloading 37MB / 152MB
+2026-04-09T13:08:29.867Z INFO  - 9d11882d4b58 Extracting 4MB / 29MB
+2026-04-09T13:08:30.074Z INFO  - d3a22f7599b2 Downloading 37MB / 110MB
+2026-04-09T13:08:30.201Z INFO  - d3a22f7599b2 Downloading 38MB / 110MB
+2026-04-09T13:08:30.411Z INFO  - 6ee7198b55a5 Downloading 40MB / 152MB
+2026-04-09T13:08:30.870Z INFO  - 6ee7198b55a5 Downloading 40MB / 152MB
+2026-04-09T13:08:30.930Z INFO  - d3a22f7599b2 Downloading 40MB / 110MB
+2026-04-09T13:08:30.971Z INFO  - 9d11882d4b58 Extracting 5MB / 29MB
+2026-04-09T13:08:31.206Z INFO  - 6ee7198b55a5 Downloading 42MB / 152MB
+2026-04-09T13:08:31.225Z INFO  - d3a22f7599b2 Downloading 42MB / 110MB
+2026-04-09T13:08:31.359Z INFO  - 9d11882d4b58 Extracting 5MB / 29MB
+2026-04-09T13:08:31.388Z INFO  - d3a22f7599b2 Downloading 42MB / 110MB
+2026-04-09T13:08:31.629Z INFO  - d3a22f7599b2 Downloading 44MB / 110MB
+2026-04-09T13:08:31.794Z INFO  - 6ee7198b55a5 Downloading 46MB / 152MB
+2026-04-09T13:08:31.879Z INFO  - d3a22f7599b2 Downloading 44MB / 110MB
+2026-04-09T13:08:31.988Z INFO  - 6ee7198b55a5 Downloading 46MB / 152MB
+2026-04-09T13:08:32.233Z INFO  - d3a22f7599b2 Downloading 46MB / 110MB
+2026-04-09T13:08:32.324Z INFO  - 9d11882d4b58 Extracting 6MB / 29MB
+2026-04-09T13:08:32.489Z INFO  - 6ee7198b55a5 Downloading 48MB / 152MB
+2026-04-09T13:08:32.630Z INFO  - 6ee7198b55a5 Downloading 50MB / 152MB
+2026-04-09T13:08:32.940Z INFO  - d3a22f7599b2 Downloading 48MB / 110MB
+2026-04-09T13:08:33.036Z INFO  - 9d11882d4b58 Extracting 8MB / 29MB
+2026-04-09T13:08:33.484Z INFO  - 6ee7198b55a5 Downloading 52MB / 152MB
+2026-04-09T13:08:33.853Z INFO  - d3a22f7599b2 Downloading 53MB / 110MB
+2026-04-09T13:08:33.865Z INFO  - 6ee7198b55a5 Downloading 56MB / 152MB
+2026-04-09T13:08:33.991Z INFO  - 9d11882d4b58 Extracting 10MB / 29MB
+2026-04-09T13:08:34.111Z INFO  - 6ee7198b55a5 Downloading 59MB / 152MB
+2026-04-09T13:08:34.209Z INFO  - d3a22f7599b2 Downloading 55MB / 110MB
+2026-04-09T13:08:34.392Z INFO  - d3a22f7599b2 Downloading 56MB / 110MB
+2026-04-09T13:08:34.393Z INFO  - 6ee7198b55a5 Downloading 61MB / 152MB
+2026-04-09T13:08:34.453Z INFO  - d3a22f7599b2 Downloading 57MB / 110MB
+2026-04-09T13:08:34.520Z INFO  - 6ee7198b55a5 Downloading 62MB / 152MB
+2026-04-09T13:08:34.558Z INFO  - 9d11882d4b58 Extracting 11MB / 29MB
+2026-04-09T13:08:34.697Z INFO  - d3a22f7599b2 Downloading 59MB / 110MB
+2026-04-09T13:08:34.743Z INFO  - 9d11882d4b58 Extracting 12MB / 29MB
+2026-04-09T13:08:34.821Z INFO  - 6ee7198b55a5 Downloading 64MB / 152MB
+2026-04-09T13:08:34.908Z INFO  - d3a22f7599b2 Downloading 61MB / 110MB
+2026-04-09T13:08:35.037Z INFO  - 9d11882d4b58 Extracting 13MB / 29MB
+2026-04-09T13:08:35.060Z INFO  - 6ee7198b55a5 Downloading 68MB / 152MB
+2026-04-09T13:08:35.149Z INFO  - d3a22f7599b2 Downloading 64MB / 110MB
+2026-04-09T13:08:35.335Z INFO  - 6ee7198b55a5 Downloading 70MB / 152MB
+2026-04-09T13:08:35.526Z INFO  - d3a22f7599b2 Downloading 68MB / 110MB
+2026-04-09T13:08:35.719Z INFO  - 9d11882d4b58 Extracting 14MB / 29MB
+2026-04-09T13:08:35.720Z INFO  - 6ee7198b55a5 Downloading 73MB / 152MB
+2026-04-09T13:08:35.798Z INFO  - 9d11882d4b58 Extracting 14MB / 29MB
+2026-04-09T13:08:35.825Z INFO  - d3a22f7599b2 Downloading 70MB / 110MB
+2026-04-09T13:08:35.980Z INFO  - 6ee7198b55a5 Downloading 77MB / 152MB
+2026-04-09T13:08:36.061Z INFO  - 9d11882d4b58 Extracting 15MB / 29MB
+2026-04-09T13:08:36.101Z INFO  - d3a22f7599b2 Downloading 73MB / 110MB
+2026-04-09T13:08:36.187Z INFO  - 6ee7198b55a5 Downloading 79MB / 152MB
+2026-04-09T13:08:36.279Z INFO  - d3a22f7599b2 Downloading 73MB / 110MB
+2026-04-09T13:08:36.383Z INFO  - 6ee7198b55a5 Downloading 79MB / 152MB
+2026-04-09T13:08:36.431Z INFO  - d3a22f7599b2 Downloading 75MB / 110MB
+2026-04-09T13:08:36.498Z INFO  - 9d11882d4b58 Extracting 15MB / 29MB
+2026-04-09T13:08:36.637Z INFO  - 6ee7198b55a5 Downloading 82MB / 152MB
+2026-04-09T13:08:36.743Z INFO  - 6ee7198b55a5 Downloading 83MB / 152MB
+2026-04-09T13:08:36.860Z INFO  - d3a22f7599b2 Downloading 77MB / 110MB
+2026-04-09T13:08:36.916Z INFO  - 6ee7198b55a5 Downloading 86MB / 152MB
+2026-04-09T13:08:37.054Z INFO  - 9d11882d4b58 Extracting 17MB / 29MB
+2026-04-09T13:08:37.193Z INFO  - 9d11882d4b58 Extracting 17MB / 29MB
+2026-04-09T13:08:37.300Z INFO  - 6ee7198b55a5 Downloading 89MB / 152MB
+2026-04-09T13:08:37.360Z INFO  - d3a22f7599b2 Downloading 82MB / 110MB
+2026-04-09T13:08:37.391Z INFO  - 9d11882d4b58 Extracting 18MB / 29MB
+2026-04-09T13:08:37.708Z INFO  - 9d11882d4b58 Extracting 19MB / 29MB
+2026-04-09T13:08:37.747Z INFO  - 6ee7198b55a5 Downloading 92MB / 152MB
+2026-04-09T13:08:37.777Z INFO  - d3a22f7599b2 Downloading 84MB / 110MB
+2026-04-09T13:08:37.837Z INFO  - 9d11882d4b58 Extracting 19MB / 29MB
+2026-04-09T13:08:38.000Z INFO  - 6ee7198b55a5 Downloading 94MB / 152MB
+2026-04-09T13:08:38.168Z INFO  - d3a22f7599b2 Downloading 88MB / 110MB
+2026-04-09T13:08:38.239Z INFO  - 9d11882d4b58 Extracting 20MB / 29MB
+2026-04-09T13:08:38.344Z INFO  - 6ee7198b55a5 Downloading 97MB / 152MB
+2026-04-09T13:08:38.498Z INFO  - 9d11882d4b58 Extracting 22MB / 29MB
+2026-04-09T13:08:38.540Z INFO  - 6ee7198b55a5 Downloading 97MB / 152MB
+2026-04-09T13:08:38.765Z INFO  - 9d11882d4b58 Extracting 23MB / 29MB
+2026-04-09T13:08:38.801Z INFO  - 6ee7198b55a5 Downloading 101MB / 152MB
+2026-04-09T13:08:38.880Z INFO  - d3a22f7599b2 Downloading 92MB / 110MB
+2026-04-09T13:08:38.927Z INFO  - 6ee7198b55a5 Downloading 101MB / 152MB
+2026-04-09T13:08:39.958Z INFO  - d3a22f7599b2 Downloading 95MB / 110MB
+2026-04-09T13:08:39.958Z INFO  - 6ee7198b55a5 Downloading 103MB / 152MB
+2026-04-09T13:08:39.958Z INFO  - 9d11882d4b58 Extracting 24MB / 29MB
+2026-04-09T13:08:39.958Z INFO  - d3a22f7599b2 Downloading 99MB / 110MB
+2026-04-09T13:08:39.958Z INFO  - 6ee7198b55a5 Downloading 106MB / 152MB
+2026-04-09T13:08:39.958Z INFO  - 6ee7198b55a5 Downloading 107MB / 152MB
+2026-04-09T13:08:39.958Z INFO  - 6ee7198b55a5 Downloading 109MB / 152MB
+2026-04-09T13:08:39.958Z INFO  - d3a22f7599b2 Downloading 102MB / 110MB
+2026-04-09T13:08:39.958Z INFO  - 9d11882d4b58 Extracting 25MB / 29MB
+2026-04-09T13:08:40.383Z INFO  - 6ee7198b55a5 Downloading 113MB / 152MB
+2026-04-09T13:08:40.497Z INFO  - d3a22f7599b2 Downloading 104MB / 110MB
+2026-04-09T13:08:40.537Z INFO  - 6ee7198b55a5 Downloading 113MB / 152MB
+2026-04-09T13:08:40.637Z INFO  - 6ee7198b55a5 Downloading 116MB / 152MB
+2026-04-09T13:08:41.465Z INFO  - d3a22f7599b2 Downloading 106MB / 110MB
+2026-04-09T13:08:41.465Z INFO  - 6ee7198b55a5 Downloading 116MB / 152MB
+2026-04-09T13:08:41.465Z INFO  - d3a22f7599b2 Downloading 108MB / 110MB
+2026-04-09T13:08:41.465Z INFO  - d3a22f7599b2 Verifying Checksum
+2026-04-09T13:08:41.465Z INFO  - d3a22f7599b2 Download complete
+2026-04-09T13:08:41.465Z INFO  - 6ee7198b55a5 Downloading 119MB / 152MB
+2026-04-09T13:08:41.465Z INFO  - 6ee7198b55a5 Downloading 120MB / 152MB
+2026-04-09T13:08:41.465Z INFO  - 6ee7198b55a5 Downloading 122MB / 152MB
+2026-04-09T13:08:42.467Z INFO  - 9d11882d4b58 Extracting 25MB / 29MB
+2026-04-09T13:08:42.467Z INFO  - 6ee7198b55a5 Downloading 125MB / 152MB
+2026-04-09T13:08:42.468Z INFO  - 6ee7198b55a5 Downloading 125MB / 152MB
+2026-04-09T13:08:42.468Z INFO  - 9d11882d4b58 Extracting 27MB / 29MB
+2026-04-09T13:08:42.468Z INFO  - 6ee7198b55a5 Downloading 130MB / 152MB
+2026-04-09T13:08:42.504Z INFO  - 6ee7198b55a5 Downloading 131MB / 152MB
+2026-04-09T13:08:42.647Z INFO  - 6ee7198b55a5 Downloading 134MB / 152MB
+2026-04-09T13:08:43.089Z INFO  - 6ee7198b55a5 Downloading 138MB / 152MB
+2026-04-09T13:08:43.448Z INFO  - 6ee7198b55a5 Downloading 143MB / 152MB
+2026-04-09T13:08:43.644Z INFO  - 6ee7198b55a5 Downloading 144MB / 152MB
+2026-04-09T13:08:43.773Z INFO  - 9d11882d4b58 Extracting 28MB / 29MB
+2026-04-09T13:08:43.890Z INFO  - 6ee7198b55a5 Downloading 147MB / 152MB
+2026-04-09T13:08:44.567Z INFO  - 9d11882d4b58 Pull complete
+2026-04-09T13:08:44.591Z INFO  - 6ee7198b55a5 Verifying Checksum
+2026-04-09T13:08:44.592Z INFO  - 6ee7198b55a5 Download complete
+2026-04-09T13:08:44.593Z INFO  - 25981ed25cff Extracting 32KB / 1MB
+2026-04-09T13:08:44.826Z INFO  - 25981ed25cff Extracting 640KB / 1MB
+2026-04-09T13:08:44.971Z INFO  - 25981ed25cff Extracting 736KB / 1MB
+2026-04-09T13:08:45.078Z INFO  - 25981ed25cff Extracting 992KB / 1MB
+2026-04-09T13:08:45.325Z INFO  - 25981ed25cff Extracting 1MB / 1MB
+2026-04-09T13:08:45.432Z INFO  - 25981ed25cff Pull complete
+2026-04-09T13:08:45.616Z INFO  - d4c207a1ca27 Extracting 512KB / 11MB
+2026-04-09T13:08:45.834Z INFO  - d4c207a1ca27 Extracting 1MB / 11MB
+2026-04-09T13:08:45.931Z INFO  - d4c207a1ca27 Extracting 2MB / 11MB
+2026-04-09T13:08:46.677Z INFO  - d4c207a1ca27 Extracting 5MB / 11MB
+2026-04-09T13:08:46.926Z INFO  - d4c207a1ca27 Extracting 6MB / 11MB
+2026-04-09T13:08:47.178Z INFO  - d4c207a1ca27 Extracting 7MB / 11MB
+2026-04-09T13:08:47.280Z INFO  - d4c207a1ca27 Extracting 7MB / 11MB
+2026-04-09T13:08:48.050Z INFO  - d4c207a1ca27 Extracting 9MB / 11MB
+2026-04-09T13:08:48.549Z INFO  - d4c207a1ca27 Extracting 10MB / 11MB
+2026-04-09T13:08:48.797Z INFO  - d4c207a1ca27 Extracting 10MB / 11MB
+2026-04-09T13:08:48.939Z INFO  - d4c207a1ca27 Extracting 11MB / 11MB
+2026-04-09T13:08:48.989Z INFO  - d4c207a1ca27 Extracting 11MB / 11MB
+2026-04-09T13:08:49.048Z INFO  - d4c207a1ca27 Pull complete
+2026-04-09T13:08:49.066Z INFO  - f0bdb572205e Extracting 250B / 250B
+2026-04-09T13:08:49.158Z INFO  - f0bdb572205e Extracting 250B / 250B
+2026-04-09T13:08:49.257Z INFO  - f0bdb572205e Pull complete
+2026-04-09T13:08:49.264Z INFO  - 72b430eb139e Extracting 92B / 92B
+2026-04-09T13:08:49.301Z INFO  - 72b430eb139e Extracting 92B / 92B
+2026-04-09T13:08:49.350Z INFO  - 72b430eb139e Pull complete
+2026-04-09T13:08:49.601Z INFO  - d3a22f7599b2 Extracting 544KB / 110MB
+2026-04-09T13:08:49.700Z INFO  - d3a22f7599b2 Extracting 1MB / 110MB
+2026-04-09T13:08:49.950Z INFO  - d3a22f7599b2 Extracting 3MB / 110MB
+2026-04-09T13:08:50.610Z INFO  - d3a22f7599b2 Extracting 5MB / 110MB
+2026-04-09T13:08:50.803Z INFO  - d3a22f7599b2 Extracting 7MB / 110MB
+2026-04-09T13:08:51.049Z INFO  - d3a22f7599b2 Extracting 9MB / 110MB
+2026-04-09T13:08:51.357Z INFO  - d3a22f7599b2 Extracting 11MB / 110MB
+2026-04-09T13:08:51.659Z INFO  - d3a22f7599b2 Extracting 13MB / 110MB
+2026-04-09T13:08:51.924Z INFO  - d3a22f7599b2 Extracting 15MB / 110MB
+2026-04-09T13:08:52.204Z INFO  - d3a22f7599b2 Extracting 18MB / 110MB
+2026-04-09T13:08:52.563Z INFO  - d3a22f7599b2 Extracting 20MB / 110MB
+2026-04-09T13:08:52.670Z INFO  - d3a22f7599b2 Extracting 20MB / 110MB
+2026-04-09T13:08:52.963Z INFO  - d3a22f7599b2 Extracting 22MB / 110MB
+2026-04-09T13:08:53.914Z INFO  - d3a22f7599b2 Extracting 24MB / 110MB
+2026-04-09T13:08:54.491Z INFO  - d3a22f7599b2 Extracting 29MB / 110MB
+2026-04-09T13:08:54.678Z INFO  - d3a22f7599b2 Extracting 31MB / 110MB
+2026-04-09T13:08:55.163Z INFO  - d3a22f7599b2 Extracting 35MB / 110MB
+2026-04-09T13:08:55.537Z INFO  - d3a22f7599b2 Extracting 37MB / 110MB
+2026-04-09T13:08:55.812Z INFO  - d3a22f7599b2 Extracting 39MB / 110MB
+2026-04-09T13:08:56.060Z INFO  - d3a22f7599b2 Extracting 41MB / 110MB
+2026-04-09T13:08:56.907Z INFO  - d3a22f7599b2 Extracting 44MB / 110MB
+2026-04-09T13:08:57.087Z INFO  - d3a22f7599b2 Extracting 45MB / 110MB
+2026-04-09T13:08:57.736Z INFO  - d3a22f7599b2 Extracting 47MB / 110MB
+2026-04-09T13:08:58.338Z INFO  - d3a22f7599b2 Extracting 49MB / 110MB
+2026-04-09T13:08:59.180Z INFO  - d3a22f7599b2 Extracting 51MB / 110MB
+2026-04-09T13:09:00.310Z INFO  - d3a22f7599b2 Extracting 58MB / 110MB
+2026-04-09T13:09:02.095Z INFO  - d3a22f7599b2 Extracting 64MB / 110MB
+2026-04-09T13:09:03.096Z INFO  - d3a22f7599b2 Extracting 71MB / 110MB
+2026-04-09T13:09:03.096Z INFO  - d3a22f7599b2 Extracting 73MB / 110MB
+2026-04-09T13:09:03.484Z INFO  - d3a22f7599b2 Extracting 75MB / 110MB
+2026-04-09T13:09:04.160Z INFO  - d3a22f7599b2 Extracting 79MB / 110MB
+2026-04-09T13:09:04.315Z INFO  - d3a22f7599b2 Extracting 81MB / 110MB
+2026-04-09T13:09:04.815Z INFO  - d3a22f7599b2 Extracting 83MB / 110MB
+2026-04-09T13:09:05.079Z INFO  - d3a22f7599b2 Extracting 86MB / 110MB
+2026-04-09T13:09:06.686Z INFO  - d3a22f7599b2 Extracting 95MB / 110MB
+2026-04-09T13:09:06.962Z INFO  - d3a22f7599b2 Extracting 97MB / 110MB
+2026-04-09T13:09:07.213Z INFO  - d3a22f7599b2 Extracting 99MB / 110MB
+2026-04-09T13:09:08.569Z INFO  - d3a22f7599b2 Extracting 106MB / 110MB
+2026-04-09T13:09:09.079Z INFO  - d3a22f7599b2 Extracting 108MB / 110MB
+2026-04-09T13:09:09.208Z INFO  - d3a22f7599b2 Extracting 108MB / 110MB
+2026-04-09T13:09:10.600Z INFO  - d3a22f7599b2 Extracting 110MB / 110MB
+2026-04-09T13:09:10.762Z INFO  - d3a22f7599b2 Pull complete
+2026-04-09T13:09:10.804Z INFO  - df0c8a2042e7 Extracting 1KB / 1KB
+2026-04-09T13:09:10.898Z INFO  - df0c8a2042e7 Extracting 1KB / 1KB
+2026-04-09T13:09:10.950Z INFO  - df0c8a2042e7 Pull complete
+2026-04-09T13:09:10.954Z INFO  - 3d392bfc015d Extracting 32KB / 91KB
+2026-04-09T13:09:11.091Z INFO  - 3d392bfc015d Extracting 91KB / 91KB
+2026-04-09T13:09:11.115Z INFO  - 3d392bfc015d Pull complete
+2026-04-09T13:09:11.274Z INFO  - 6ee7198b55a5 Extracting 544KB / 152MB
+2026-04-09T13:09:11.946Z INFO  - 6ee7198b55a5 Extracting 3MB / 152MB
+2026-04-09T13:09:12.092Z INFO  - 6ee7198b55a5 Extracting 4MB / 152MB
+2026-04-09T13:09:13.040Z INFO  - 6ee7198b55a5 Extracting 6MB / 152MB
+2026-04-09T13:09:13.234Z INFO  - 6ee7198b55a5 Extracting 7MB / 152MB
+2026-04-09T13:09:14.152Z INFO  - 6ee7198b55a5 Extracting 13MB / 152MB
+2026-04-09T13:09:14.269Z INFO  - 6ee7198b55a5 Extracting 15MB / 152MB
+2026-04-09T13:09:15.069Z INFO  - 6ee7198b55a5 Extracting 18MB / 152MB
+2026-04-09T13:09:15.525Z INFO  - 6ee7198b55a5 Extracting 19MB / 152MB
+2026-04-09T13:09:16.898Z INFO  - 6ee7198b55a5 Extracting 22MB / 152MB
+2026-04-09T13:09:17.548Z INFO  - 6ee7198b55a5 Extracting 24MB / 152MB
+2026-04-09T13:09:18.003Z INFO  - 6ee7198b55a5 Extracting 24MB / 152MB
+2026-04-09T13:09:19.008Z INFO  - 6ee7198b55a5 Extracting 28MB / 152MB
+2026-04-09T13:09:19.686Z INFO  - 6ee7198b55a5 Extracting 28MB / 152MB
+2026-04-09T13:09:19.809Z INFO  - 6ee7198b55a5 Extracting 30MB / 152MB
+2026-04-09T13:09:20.358Z INFO  - 6ee7198b55a5 Extracting 31MB / 152MB
+2026-04-09T13:09:22.207Z INFO  - 6ee7198b55a5 Extracting 37MB / 152MB
+2026-04-09T13:09:22.208Z INFO  - 6ee7198b55a5 Extracting 37MB / 152MB
+2026-04-09T13:09:23.348Z INFO  - 6ee7198b55a5 Extracting 39MB / 152MB
+2026-04-09T13:09:24.170Z INFO  - 6ee7198b55a5 Extracting 40MB / 152MB
+2026-04-09T13:09:24.903Z INFO  - 6ee7198b55a5 Extracting 40MB / 152MB
+2026-04-09T13:09:26.114Z INFO  - 6ee7198b55a5 Extracting 43MB / 152MB
+2026-04-09T13:09:26.381Z INFO  - 6ee7198b55a5 Extracting 44MB / 152MB
+2026-04-09T13:09:29.971Z INFO  - 6ee7198b55a5 Extracting 45MB / 152MB
+2026-04-09T13:09:30.197Z INFO  - 6ee7198b55a5 Extracting 46MB / 152MB
+2026-04-09T13:09:30.332Z INFO  - 6ee7198b55a5 Extracting 46MB / 152MB
+2026-04-09T13:09:31.227Z INFO  - 6ee7198b55a5 Extracting 48MB / 152MB
+2026-04-09T13:09:31.394Z INFO  - 6ee7198b55a5 Extracting 49MB / 152MB
+2026-04-09T13:09:32.057Z INFO  - 6ee7198b55a5 Extracting 52MB / 152MB
+2026-04-09T13:09:33.447Z INFO  - 6ee7198b55a5 Extracting 55MB / 152MB
+2026-04-09T13:09:34.741Z INFO  - 6ee7198b55a5 Extracting 56MB / 152MB
+2026-04-09T13:09:36.062Z INFO  - 6ee7198b55a5 Extracting 58MB / 152MB
+2026-04-09T13:09:36.062Z INFO  - 6ee7198b55a5 Extracting 58MB / 152MB
+2026-04-09T13:09:37.777Z INFO  - 6ee7198b55a5 Extracting 61MB / 152MB
+2026-04-09T13:09:37.986Z INFO  - 6ee7198b55a5 Extracting 61MB / 152MB
+2026-04-09T13:09:38.332Z INFO  - 6ee7198b55a5 Extracting 62MB / 152MB
+2026-04-09T13:09:39.081Z INFO  - 6ee7198b55a5 Extracting 64MB / 152MB
+2026-04-09T13:09:39.678Z INFO  - 6ee7198b55a5 Extracting 65MB / 152MB
+2026-04-09T13:09:39.965Z INFO  - 6ee7198b55a5 Extracting 67MB / 152MB
+2026-04-09T13:09:40.416Z INFO  - 6ee7198b55a5 Extracting 70MB / 152MB
+2026-04-09T13:09:40.768Z INFO  - 6ee7198b55a5 Extracting 70MB / 152MB
+2026-04-09T13:09:40.956Z INFO  - 6ee7198b55a5 Extracting 71MB / 152MB
+2026-04-09T13:09:42.058Z INFO  - 6ee7198b55a5 Extracting 74MB / 152MB
+2026-04-09T13:09:43.065Z INFO  - 6ee7198b55a5 Extracting 77MB / 152MB
+2026-04-09T13:09:43.483Z INFO  - 6ee7198b55a5 Extracting 79MB / 152MB
+2026-04-09T13:09:43.629Z INFO  - 6ee7198b55a5 Extracting 82MB / 152MB
+2026-04-09T13:09:43.759Z INFO  - 6ee7198b55a5 Extracting 82MB / 152MB
+2026-04-09T13:09:43.874Z INFO  - 6ee7198b55a5 Extracting 83MB / 152MB
+2026-04-09T13:09:44.171Z INFO  - 6ee7198b55a5 Extracting 85MB / 152MB
+2026-04-09T13:09:44.279Z INFO  - 6ee7198b55a5 Extracting 86MB / 152MB
+2026-04-09T13:09:44.757Z INFO  - 6ee7198b55a5 Extracting 89MB / 152MB
+2026-04-09T13:09:45.030Z INFO  - 6ee7198b55a5 Extracting 91MB / 152MB
+2026-04-09T13:09:45.189Z INFO  - 6ee7198b55a5 Extracting 91MB / 152MB
+2026-04-09T13:09:45.298Z INFO  - 6ee7198b55a5 Extracting 92MB / 152MB
+2026-04-09T13:09:45.693Z INFO  - 6ee7198b55a5 Extracting 94MB / 152MB
+2026-04-09T13:09:45.862Z INFO  - 6ee7198b55a5 Extracting 95MB / 152MB
+2026-04-09T13:09:46.357Z INFO  - 6ee7198b55a5 Extracting 98MB / 152MB
+2026-04-09T13:09:46.903Z INFO  - 6ee7198b55a5 Extracting 100MB / 152MB
+2026-04-09T13:09:47.381Z INFO  - 6ee7198b55a5 Extracting 103MB / 152MB
+2026-04-09T13:09:47.506Z INFO  - 6ee7198b55a5 Extracting 104MB / 152MB
+2026-04-09T13:09:47.788Z INFO  - 6ee7198b55a5 Extracting 106MB / 152MB
+2026-04-09T13:09:47.916Z INFO  - 6ee7198b55a5 Extracting 107MB / 152MB
+2026-04-09T13:09:48.381Z INFO  - 6ee7198b55a5 Extracting 109MB / 152MB
+2026-04-09T13:09:48.523Z INFO  - 6ee7198b55a5 Extracting 110MB / 152MB
+2026-04-09T13:09:49.149Z INFO  - 6ee7198b55a5 Extracting 113MB / 152MB
+2026-04-09T13:09:49.983Z INFO  - 6ee7198b55a5 Extracting 116MB / 152MB
+2026-04-09T13:09:50.573Z INFO  - 6ee7198b55a5 Extracting 119MB / 152MB
+2026-04-09T13:09:52.173Z INFO  - 6ee7198b55a5 Extracting 119MB / 152MB
+2026-04-09T13:09:52.173Z INFO  - 6ee7198b55a5 Extracting 120MB / 152MB
+2026-04-09T13:09:52.173Z INFO  - 6ee7198b55a5 Extracting 122MB / 152MB
+2026-04-09T13:09:52.173Z INFO  - 6ee7198b55a5 Extracting 124MB / 152MB
+2026-04-09T13:09:53.682Z INFO  - 6ee7198b55a5 Extracting 128MB / 152MB
+2026-04-09T13:09:53.683Z INFO  - 6ee7198b55a5 Extracting 129MB / 152MB
+2026-04-09T13:09:54.568Z INFO  - 6ee7198b55a5 Extracting 131MB / 152MB
+2026-04-09T13:09:55.171Z INFO  - 6ee7198b55a5 Extracting 132MB / 152MB
+2026-04-09T13:09:55.790Z INFO  - 6ee7198b55a5 Extracting 135MB / 152MB
+2026-04-09T13:09:56.951Z INFO  - 6ee7198b55a5 Extracting 140MB / 152MB
+2026-04-09T13:09:57.660Z INFO  - 6ee7198b55a5 Extracting 143MB / 152MB
+2026-04-09T13:09:58.942Z INFO  - 6ee7198b55a5 Extracting 149MB / 152MB
+2026-04-09T13:09:59.193Z INFO  - 6ee7198b55a5 Extracting 150MB / 152MB
+2026-04-09T13:09:59.462Z INFO  - 6ee7198b55a5 Extracting 152MB / 152MB
+2026-04-09T13:09:59.654Z INFO  - 6ee7198b55a5 Pull complete
+2026-04-09T13:09:59.691Z INFO  - 1cdb4bbf9c4a Extracting 409B / 409B
+2026-04-09T13:09:59.810Z INFO  - 1cdb4bbf9c4a Extracting 409B / 409B
+2026-04-09T13:09:59.858Z INFO  - 1cdb4bbf9c4a Pull complete
+2026-04-09T13:09:59.866Z INFO  - f02490e907bb Extracting 123B / 123B
+2026-04-09T13:09:59.916Z INFO  - f02490e907bb Extracting 123B / 123B
+2026-04-09T13:10:00.022Z INFO  - f02490e907bb Pull complete
+2026-04-09T13:10:00.144Z INFO  -  Digest: sha256:faaa9d30443326c7728262b605c396c7d0c502b71fe87aa4d801defe701be808
+2026-04-09T13:10:00.159Z INFO  -  Status: Downloaded newer image for paceforgeacr.azurecr.io/paceforge:latest
+2026-04-09T13:10:00.204Z INFO  - Pull Image successful, Time taken: 98 Seconds
+2026-04-09T13:10:00.574Z INFO  - Starting container for site
+2026-04-09T13:10:00.574Z INFO  - docker run -d --expose=8501 --name paceforge-app_0_8262ffec -e WEBSITE_USE_DIAGNOSTIC_SERVER=false -e WEBSITES_ENABLE_APP_SERVICE_STORAGE=true -e WEBSITES_PORT=8501 -e WEBSITE_SITE_NAME=paceforge-app -e WEBSITE_AUTH_ENABLED=False -e WEBSITE_ROLE_INSTANCE_ID=0 -e WEBSITE_HOSTNAME=paceforge-app.azurewebsites.net -e WEBSITE_INSTANCE_ID=2ddc320b3ce56068eef7d30467cf47281e2049dbabf0cdd575a97ac496677136 -e HTTP_LOGGING_ENABLED=1 paceforgeacr.azurecr.io/paceforge:latest 
+2026-04-09T13:10:07.003Z INFO  - Initiating warmup request to container paceforge-app_0_8262ffec for site paceforge-app
+2026-04-09T13:10:16.628Z INFO  - Container paceforge-app_0_8262ffec for site paceforge-app initialized successfully and is ready to serve requests.
+2026-04-09T13:15:44.455Z INFO  - Pulling image: paceforgeacr.azurecr.io/paceforge:latest
+2026-04-09T13:15:45.074Z INFO  - latest Pulling from paceforge
+2026-04-09T13:15:45.097Z INFO  -  Digest: sha256:faaa9d30443326c7728262b605c396c7d0c502b71fe87aa4d801defe701be808
+2026-04-09T13:15:45.099Z INFO  -  Status: Image is up to date for paceforgeacr.azurecr.io/paceforge:latest
+2026-04-09T13:15:45.131Z INFO  - Pull Image successful, Time taken: 0 Seconds
+2026-04-09T13:15:45.298Z INFO  - Starting container for site
+2026-04-09T13:15:45.305Z INFO  - docker run -d --expose=8501 --name paceforge-app_0_e04408db -e WEBSITE_USE_DIAGNOSTIC_SERVER=false -e WEBSITES_ENABLE_APP_SERVICE_STORAGE=true -e WEBSITES_PORT=8501 -e WEBSITE_SITE_NAME=paceforge-app -e WEBSITE_AUTH_ENABLED=False -e WEBSITE_ROLE_INSTANCE_ID=0 -e WEBSITE_HOSTNAME=paceforge-app.azurewebsites.net -e WEBSITE_INSTANCE_ID=2ddc320b3ce56068eef7d30467cf47281e2049dbabf0cdd575a97ac496677136 -e HTTP_LOGGING_ENABLED=1 paceforgeacr.azurecr.io/paceforge:latest 
+2026-04-09T13:15:48.514Z INFO  - Initiating warmup request to container paceforge-app_0_e04408db for site paceforge-app
+2026-04-09T13:15:57.606Z INFO  - Container paceforge-app_0_e04408db for site paceforge-app initialized successfully and is ready to serve requests.
+2026-04-09T13:17:31.947Z INFO  - Recycling container because of AppSettingsChange and isMainSite = True
+2026-04-09T13:17:32.732Z INFO  - Pulling image: paceforgeacr.azurecr.io/paceforge:latest
+2026-04-09T13:17:34.165Z INFO  - latest Pulling from paceforge
+2026-04-09T13:17:34.704Z INFO  -  Digest: sha256:faaa9d30443326c7728262b605c396c7d0c502b71fe87aa4d801defe701be808
+2026-04-09T13:17:34.706Z INFO  -  Status: Image is up to date for paceforgeacr.azurecr.io/paceforge:latest
+2026-04-09T13:17:34.772Z INFO  - Pull Image successful, Time taken: 2 Seconds
+2026-04-09T13:17:35.176Z INFO  - Starting container for site
+2026-04-09T13:17:35.180Z INFO  - docker run -d --expose=8501 --name paceforge-app_1_e47efc63 -e WEBSITE_USE_DIAGNOSTIC_SERVER=false -e WEBSITES_ENABLE_APP_SERVICE_STORAGE=true -e WEBSITES_PORT=8501 -e WEBSITE_SITE_NAME=paceforge-app -e WEBSITE_AUTH_ENABLED=False -e WEBSITE_ROLE_INSTANCE_ID=0 -e WEBSITE_HOSTNAME=paceforge-app.azurewebsites.net -e WEBSITE_INSTANCE_ID=2ddc320b3ce56068eef7d30467cf47281e2049dbabf0cdd575a97ac496677136 -e HTTP_LOGGING_ENABLED=1 paceforgeacr.azurecr.io/paceforge:latest 
+2026-04-09T13:17:43.088Z INFO  - Initiating warmup request to container paceforge-app_1_e47efc63 for site paceforge-app
+2026-04-09T13:18:01.342Z INFO  - Waiting for response to warmup request for container paceforge-app_1_e47efc63. Elapsed time = 18.2540198 sec
+2026-04-09T13:18:12.564Z INFO  - Container paceforge-app_1_e47efc63 for site paceforge-app initialized successfully and is ready to serve requests.
+2026-04-09T13:18:12.826Z INFO  - Recycling container because of AppSettingsChange and isMainSite = True
+2026-04-09T13:18:13.222Z INFO  - Pulling image: paceforgeacr.azurecr.io/paceforge:latest
+2026-04-09T13:18:14.562Z INFO  - latest Pulling from paceforge
+2026-04-09T13:18:14.618Z INFO  -  Digest: sha256:faaa9d30443326c7728262b605c396c7d0c502b71fe87aa4d801defe701be808
+2026-04-09T13:18:14.627Z INFO  -  Status: Image is up to date for paceforgeacr.azurecr.io/paceforge:latest
+2026-04-09T13:18:14.678Z INFO  - Pull Image successful, Time taken: 1 Seconds
+2026-04-09T13:18:15.326Z INFO  - Starting container for site
+2026-04-09T13:18:15.335Z INFO  - docker run -d --expose=8501 --name paceforge-app_2_f084f54f -e WEBSITE_USE_DIAGNOSTIC_SERVER=false -e WEBSITES_ENABLE_APP_SERVICE_STORAGE=true -e WEBSITES_PORT=8501 -e WEBSITE_SITE_NAME=paceforge-app -e WEBSITE_AUTH_ENABLED=False -e WEBSITE_ROLE_INSTANCE_ID=0 -e WEBSITE_HOSTNAME=paceforge-app.azurewebsites.net -e WEBSITE_INSTANCE_ID=2ddc320b3ce56068eef7d30467cf47281e2049dbabf0cdd575a97ac496677136 -e HTTP_LOGGING_ENABLED=1 paceforgeacr.azurecr.io/paceforge:latest 
+2026-04-09T13:18:28.725Z INFO  - Initiating warmup request to container paceforge-app_2_f084f54f for site paceforge-app
+2026-04-09T13:18:46.335Z INFO  - Waiting for response to warmup request for container paceforge-app_2_f084f54f. Elapsed time = 17.6102654 sec
+2026-04-09T13:19:02.943Z INFO  - Waiting for response to warmup request for container paceforge-app_2_f084f54f. Elapsed time = 34.2181673 sec
+2026-04-09T13:19:09.435Z INFO  - Container paceforge-app_2_f084f54f for site paceforge-app initialized successfully and is ready to serve requests.
+2026-04-09T13:19:10.117Z INFO  - Pulling image: paceforgeacr.azurecr.io/paceforge:latest
+2026-04-09T13:19:12.057Z INFO  - latest Pulling from paceforge
+2026-04-09T13:19:12.282Z INFO  -  Digest: sha256:faaa9d30443326c7728262b605c396c7d0c502b71fe87aa4d801defe701be808
+2026-04-09T13:19:12.284Z INFO  -  Status: Image is up to date for paceforgeacr.azurecr.io/paceforge:latest
+2026-04-09T13:19:12.417Z INFO  - Pull Image successful, Time taken: 2 Seconds
+2026-04-09T13:19:13.112Z INFO  - Starting container for site
+2026-04-09T13:19:13.112Z INFO  - docker run -d --expose=8501 --name paceforge-app_3_408dca40 -e WEBSITE_USE_DIAGNOSTIC_SERVER=false -e WEBSITES_ENABLE_APP_SERVICE_STORAGE=true -e WEBSITES_PORT=8501 -e WEBSITE_SITE_NAME=paceforge-app -e WEBSITE_AUTH_ENABLED=False -e WEBSITE_ROLE_INSTANCE_ID=0 -e WEBSITE_HOSTNAME=paceforge-app.azurewebsites.net -e WEBSITE_INSTANCE_ID=2ddc320b3ce56068eef7d30467cf47281e2049dbabf0cdd575a97ac496677136 -e HTTP_LOGGING_ENABLED=1 paceforgeacr.azurecr.io/paceforge:latest 
+2026-04-09T13:19:32.836Z INFO  - Initiating warmup request to container paceforge-app_3_408dca40 for site paceforge-app
+2026-04-09T13:19:53.841Z INFO  - Waiting for response to warmup request for container paceforge-app_3_408dca40. Elapsed time = 21.0047826 sec
+2026-04-09T13:20:13.789Z INFO  - Waiting for response to warmup request for container paceforge-app_3_408dca40. Elapsed time = 40.9534895 sec
+2026-04-09T13:20:23.932Z INFO  - Container paceforge-app_3_408dca40 for site paceforge-app initialized successfully and is ready to serve requests.
+ErrorDetails: , Details: Pulling image paceforgeacr.azurecr.io/paceforge:latest for paceforge-app., DetailsLevel: INFO
+2026-04-09T13:19:27.5241854Z Establishing network.
+2026-04-09T13:19:27.5398528Z Pulling image: paceforgeacr.azurecr.io/paceforge:latest.
+2026-04-09T13:21:15.4260904Z Image paceforgeacr.azurecr.io/paceforge:latest is pulled from registry paceforgeacr.azurecr.io
+2026-04-09T13:21:15.4469226Z Container is starting.
+2026-04-09T13:21:15.4671526Z State: Starting, Action: MountingVolumes, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Mounting volumes for paceforge-app., DetailsLevel: INFO
+2026-04-09T13:21:15.4681184Z Establishing user namespace if not established already.
+2026-04-09T13:21:15.4685539Z Establishing network if not established already.
+2026-04-09T13:21:15.4730533Z Mounting volumes.
+2026-04-09T13:21:15.4836424Z Nested mountpoint 
+2026-04-09T13:21:15.6434954Z Nested mountpoint volatile/logs
+2026-04-09T13:21:15.7766595Z Nested mountpoint 
+2026-04-09T13:21:15.8792733Z State: Starting, Action: CreatingContainer, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Finished pulling container image and mounting volumes for paceforge-app. Allocatinng the rest of the container resources to finish container creation., DetailsLevel: INFO
+2026-04-09T13:21:15.8812262Z Creating container.
+2026-04-09T13:21:15.8818203Z Creating pipes for streaming container io.
+2026-04-09T13:21:15.8881536Z Creating stdout named pipe at /podr/container/pipe/4505dcb05109_paceforge-app/stdout_fdd9811d6a084d6c967cb2dfdb61fb1a.
+2026-04-09T13:21:15.9208912Z Successfully created stdout named pipe at: /podr/container/pipe/4505dcb05109_paceforge-app/stdout_fdd9811d6a084d6c967cb2dfdb61fb1a.
+2026-04-09T13:21:15.9407612Z Opening named pipe /podr/container/pipe/4505dcb05109_paceforge-app/stdout_fdd9811d6a084d6c967cb2dfdb61fb1a for reading in non-blocking mode.
+2026-04-09T13:21:15.9416727Z Successfully opened named pipe: /podr/container/pipe/4505dcb05109_paceforge-app/stdout_fdd9811d6a084d6c967cb2dfdb61fb1a.
+2026-04-09T13:21:15.9491607Z Successfully removed non-blocking flag from /podr/container/pipe/4505dcb05109_paceforge-app/stdout_fdd9811d6a084d6c967cb2dfdb61fb1a.
+2026-04-09T13:21:15.9589326Z Creating stderr named pipe at /podr/container/pipe/4505dcb05109_paceforge-app/stderr_80362e29daaa413e82e635d895a91ae5.
+2026-04-09T13:21:15.9592003Z Successfully created stderr named pipe at: /podr/container/pipe/4505dcb05109_paceforge-app/stderr_80362e29daaa413e82e635d895a91ae5.
+2026-04-09T13:21:15.9593771Z Opening named pipe /podr/container/pipe/4505dcb05109_paceforge-app/stderr_80362e29daaa413e82e635d895a91ae5 for reading in non-blocking mode.
+2026-04-09T13:21:15.9599184Z Successfully opened named pipe: /podr/container/pipe/4505dcb05109_paceforge-app/stderr_80362e29daaa413e82e635d895a91ae5.
+2026-04-09T13:21:15.9604019Z Successfully removed non-blocking flag from /podr/container/pipe/4505dcb05109_paceforge-app/stderr_80362e29daaa413e82e635d895a91ae5.
+2026-04-09T13:21:15.9871603Z Creating container with image: paceforgeacr.azurecr.io/paceforge:latest from registry: paceforgeacr.azurecr.io and fully qualified image name: paceforgeacr.azurecr.io/paceforge:latest
+2026-04-09T13:21:19.4901188Z Starting container: 4505dcb05109_paceforge-app.
+2026-04-09T13:21:19.8870841Z Starting watchers and probes.
+2026-04-09T13:21:19.9072349Z Starting metrics collection.
+2026-04-09T13:21:19.9181892Z Container is running.
+2026-04-09T13:21:19.9244820Z State: Starting, Action: CreatingContainer, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Container paceforge-app successfully created and is running., DetailsLevel: INFO
+2026-04-09T13:21:20.1883294Z Container start method finished after 112680 ms.
+2026-04-09T13:21:20.1977842Z State: Starting, Action: InitiatingSiteWarmUpProbe, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Container paceforge-app successfully created and is running., DetailsLevel: INFO
+2026-04-09T13:21:20.1999733Z State: Starting, Action: WaitingForSiteWarmUpProbeSuccess, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Pinging warmup path to ensure container is ready to receive requests., DetailsLevel: INFO
+2026-04-09T13:21:34.1429654Z Site startup probe succeeded after 13.865521 seconds.
+2026-04-09T13:21:34.7141485Z State: Starting, Action: WarmUpProbeSucceeded, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site startup probe succeeded after 13.865521 seconds., DetailsLevel: INFO
+2026-04-09T13:21:35.4022731Z Site started.
+2026-04-09T13:21:35.4103055Z State: Started, Action: None, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site started at 04/09/2026 13:21:35 (UTC), DetailsLevel: INFO

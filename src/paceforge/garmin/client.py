@@ -215,6 +215,32 @@ class GarminClient:
             recent_activities=activities,
         )
 
+    # ── Activity detail ──────────────────────────────────────────────
+
+    def get_activity_detail(self, activity_id: int) -> dict:
+        """Fetch detailed data for a specific activity (splits, HR zones, summary)."""
+        result: dict = {"activity_id": activity_id}
+
+        try:
+            result["splits"] = self.client.get_activity_splits(activity_id)
+        except Exception:
+            logger.warning("Could not fetch splits for %s", activity_id, exc_info=True)
+            result["splits"] = None
+
+        try:
+            result["hr_zones"] = self.client.get_activity_hr_in_timezones(activity_id)
+        except Exception:
+            logger.warning("Could not fetch HR zones for %s", activity_id, exc_info=True)
+            result["hr_zones"] = None
+
+        try:
+            result["summary"] = self.client.get_activity(activity_id)
+        except Exception:
+            logger.warning("Could not fetch summary for %s", activity_id, exc_info=True)
+            result["summary"] = None
+
+        return result
+
     # ── Write operations ─────────────────────────────────────────────
 
     def push_workout(self, workout: Workout, schedule_date: date | None = None) -> dict:

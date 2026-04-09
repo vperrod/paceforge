@@ -1,0 +1,155 @@
+2026-04-09T13:10:06.324408435Z 2026-04-09 13:10:06,267 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2026-04-09T13:10:06.326859134Z 2026-04-09 13:10:06,267 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2026-04-09T13:10:06.379102220Z 2026-04-09 13:10:06,359 INFO supervisord started with pid 1
+2026-04-09T13:10:06.379120420Z 2026-04-09 13:10:06,359 INFO supervisord started with pid 1
+2026-04-09T13:10:07.392156960Z 2026-04-09 13:10:07,374 INFO spawned: 'api' with pid 13
+2026-04-09T13:10:07.392206360Z 2026-04-09 13:10:07,374 INFO spawned: 'api' with pid 13
+2026-04-09T13:10:07.472284649Z 2026-04-09 13:10:07,471 INFO spawned: 'dashboard' with pid 15
+2026-04-09T13:10:07.502133644Z 2026-04-09 13:10:07,471 INFO spawned: 'dashboard' with pid 15
+2026-04-09T13:10:08.528455400Z 2026-04-09 13:10:08,528 INFO success: api entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-04-09T13:10:08.538128699Z 2026-04-09 13:10:08,528 INFO success: api entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-04-09T13:10:08.538148499Z 2026-04-09 13:10:08,536 INFO success: dashboard entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-04-09T13:10:08.538152699Z 2026-04-09 13:10:08,536 INFO success: dashboard entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-04-09T13:10:12.670730719Z 
+2026-04-09T13:10:12.670769019Z Collecting usage statistics. To deactivate, set browser.gatherUsageStats to false.
+2026-04-09T13:10:12.670774519Z 
+2026-04-09T13:10:16.578150720Z 
+2026-04-09T13:10:16.587799717Z   You can now view your Streamlit app in your browser.
+2026-04-09T13:10:16.587820117Z 
+2026-04-09T13:10:16.587824517Z   Local URL: http://localhost:8501
+2026-04-09T13:10:16.587828017Z   Network URL: http://169.254.129.2:8501
+2026-04-09T13:10:16.587831617Z   External URL: http://20.13.114.10:8501
+2026-04-09T13:10:16.587839217Z 
+2026-04-09T13:10:20.747451396Z INFO:     Started server process [13]
+2026-04-09T13:10:20.748738695Z INFO:     Waiting for application startup.
+
+2026-04-09T13:10:22.603543206Z INFO:paceforge.api.app:Admin user seeded: vperrod@hotmail.com
+2026-04-09T13:10:22.604971906Z INFO:     Application startup complete.
+2026-04-09T13:10:22.614081303Z INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+
+2026-04-09T13:15:48.083549692Z 2026-04-09 13:15:48,082 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2026-04-09T13:15:48.083597992Z 2026-04-09 13:15:48,082 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2026-04-09T13:15:48.111535784Z 2026-04-09 13:15:48,111 INFO supervisord started with pid 1
+2026-04-09T13:15:48.111552984Z 2026-04-09 13:15:48,111 INFO supervisord started with pid 1
+2026-04-09T13:15:49.118889211Z 2026-04-09 13:15:49,118 INFO spawned: 'api' with pid 21
+2026-04-09T13:15:49.160606500Z 2026-04-09 13:15:49,118 INFO spawned: 'api' with pid 21
+2026-04-09T13:15:49.202036088Z 2026-04-09 13:15:49,200 INFO spawned: 'dashboard' with pid 22
+2026-04-09T13:15:49.210550486Z 2026-04-09 13:15:49,200 INFO spawned: 'dashboard' with pid 22
+2026-04-09T13:15:50.231712609Z 2026-04-09 13:15:50,231 INFO success: api entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-04-09T13:15:50.239325307Z 2026-04-09 13:15:50,231 INFO success: api entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-04-09T13:15:50.248518405Z 2026-04-09 13:15:50,240 INFO success: dashboard entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-04-09T13:15:50.248533705Z 2026-04-09 13:15:50,240 INFO success: dashboard entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-04-09T13:15:54.041407266Z 
+2026-04-09T13:15:54.041448966Z Collecting usage statistics. To deactivate, set browser.gatherUsageStats to false.
+2026-04-09T13:15:54.041454466Z 
+2026-04-09T13:15:57.587832509Z 
+2026-04-09T13:15:57.632299992Z   You can now view your Streamlit app in your browser.
+2026-04-09T13:15:57.632316192Z 
+2026-04-09T13:15:57.632320092Z   Local URL: http://localhost:8501
+2026-04-09T13:15:57.632323792Z   Network URL: http://169.254.129.2:8501
+2026-04-09T13:15:57.632328092Z   External URL: http://20.13.114.10:8501
+2026-04-09T13:15:57.632331692Z 
+
+2026-04-09T13:16:08.970878941Z INFO:     Started server process [21]
+2026-04-09T13:16:08.970966342Z INFO:     Waiting for application startup.
+2026-04-09T13:16:09.019703000Z INFO:     Application startup complete.
+2026-04-09T13:16:09.022578815Z INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+
+2026-04-09T13:17:45.626566416Z 2026-04-09 13:17:45,607 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2026-04-09T13:17:45.626606416Z 2026-04-09 13:17:45,607 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2026-04-09T13:17:45.666401599Z 2026-04-09 13:17:45,648 INFO supervisord started with pid 1
+2026-04-09T13:17:45.666424299Z 2026-04-09 13:17:45,648 INFO supervisord started with pid 1
+2026-04-09T13:17:46.740117828Z 2026-04-09 13:17:46,655 INFO spawned: 'api' with pid 20
+2026-04-09T13:17:46.740145728Z 2026-04-09 13:17:46,655 INFO spawned: 'api' with pid 20
+2026-04-09T13:17:46.781119710Z 2026-04-09 13:17:46,780 INFO spawned: 'dashboard' with pid 21
+2026-04-09T13:17:46.818867293Z 2026-04-09 13:17:46,780 INFO spawned: 'dashboard' with pid 21
+2026-04-09T13:17:47.809220559Z 2026-04-09 13:17:47,808 INFO success: api entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-04-09T13:17:47.827985451Z 2026-04-09 13:17:47,808 INFO success: api entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-04-09T13:17:47.828006251Z 2026-04-09 13:17:47,809 INFO success: dashboard entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-04-09T13:17:47.828011251Z 2026-04-09 13:17:47,809 INFO success: dashboard entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-04-09T13:17:59.726368791Z 
+2026-04-09T13:17:59.726418691Z Collecting usage statistics. To deactivate, set browser.gatherUsageStats to false.
+2026-04-09T13:17:59.726423891Z 
+2026-04-09T13:18:12.503971499Z 
+2026-04-09T13:18:12.512699699Z   You can now view your Streamlit app in your browser.
+2026-04-09T13:18:12.512717199Z 
+2026-04-09T13:18:12.512721199Z   Local URL: http://localhost:8501
+2026-04-09T13:18:12.514971298Z   Network URL: http://169.254.129.5:8501
+2026-04-09T13:18:12.542600996Z   External URL: http://20.13.114.10:8501
+2026-04-09T13:18:12.542689096Z 
+
+2026-04-09T13:18:52.403907605Z INFO:     Started server process [20]
+2026-04-09T13:18:52.403965005Z INFO:     Waiting for application startup.
+2026-04-09T13:18:52.606704664Z INFO:     Application startup complete.
+
+2026-04-09T13:18:52.754183034Z INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2026-04-09T13:18:57.668017934Z INFO:     127.0.0.1:56322 - "POST /auth/login HTTP/1.1" 401 Unauthorized
+
+2026-04-09T13:19:33.744537232Z 2026-04-09 13:19:33,737 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2026-04-09T13:19:33.806609084Z 2026-04-09 13:19:33,737 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2026-04-09T13:19:33.978281505Z 2026-04-09 13:19:33,950 INFO supervisord started with pid 1
+2026-04-09T13:19:33.978307505Z 2026-04-09 13:19:33,950 INFO supervisord started with pid 1
+2026-04-09T13:19:35.217735543Z 2026-04-09 13:19:35,009 INFO spawned: 'api' with pid 19
+2026-04-09T13:19:35.217763643Z 2026-04-09 13:19:35,009 INFO spawned: 'api' with pid 19
+2026-04-09T13:19:35.419808839Z 2026-04-09 13:19:35,341 INFO spawned: 'dashboard' with pid 20
+2026-04-09T13:19:35.423605048Z 2026-04-09 13:19:35,341 INFO spawned: 'dashboard' with pid 20
+2026-04-09T13:19:36.444558948Z 2026-04-09 13:19:36,427 INFO success: api entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-04-09T13:19:36.444603748Z 2026-04-09 13:19:36,427 INFO success: api entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-04-09T13:19:36.444607948Z 2026-04-09 13:19:36,428 INFO success: dashboard entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-04-09T13:19:36.444610848Z 2026-04-09 13:19:36,428 INFO success: dashboard entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-04-09T13:20:04.914662366Z 
+2026-04-09T13:20:04.915054567Z Collecting usage statistics. To deactivate, set browser.gatherUsageStats to false.
+2026-04-09T13:20:04.915066267Z 
+2026-04-09T13:20:23.871537106Z 
+2026-04-09T13:20:23.871567706Z   You can now view your Streamlit app in your browser.
+2026-04-09T13:20:23.871572806Z 
+2026-04-09T13:20:23.871576106Z   Local URL: http://localhost:8501
+2026-04-09T13:20:23.871579706Z   Network URL: http://169.254.129.3:8501
+2026-04-09T13:20:23.871583406Z   External URL: http://20.13.114.10:8501
+2026-04-09T13:20:23.871586706Z 
+
+2026-04-09T13:20:38.599918111Z INFO:     Started server process [19]
+2026-04-09T13:20:38.601442013Z INFO:     Waiting for application startup.
+
+2026-04-09T13:20:41.158000173Z INFO:paceforge.api.app:Admin user seeded: vperrod@gmail.com
+2026-04-09T13:20:41.158431474Z INFO:     Application startup complete.
+2026-04-09T13:20:41.200184217Z INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+
+2026-04-09T13:21:11.615826501Z INFO:     127.0.0.1:49856 - "POST /auth/login HTTP/1.1" 200 OK
+2026-04-09T13:21:12.082758762Z INFO:     127.0.0.1:49870 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+
+2026-04-09T13:21:18.575389758Z INFO:     127.0.0.1:49872 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+
+2026-04-09T13:21:21.356495702Z INFO:     127.0.0.1:40066 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+
+dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2026-04-09T13:21:21.8399297Z 2026-04-09 13:21:21,823 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2026-04-09T13:21:21.8986600Z 2026-04-09 13:21:21,898 INFO supervisord started with pid 1
+2026-04-09T13:21:21.9184339Z 2026-04-09 13:21:21,898 INFO supervisord started with pid 1
+2026-04-09T13:21:22.9273397Z 2026-04-09 13:21:22,926 INFO spawned: 'api' with pid 7
+2026-04-09T13:21:22.9284512Z 2026-04-09 13:21:22,926 INFO spawned: 'api' with pid 7
+2026-04-09T13:21:22.9664115Z 2026-04-09 13:21:22,957 INFO spawned: 'dashboard' with pid 8
+2026-04-09T13:21:22.9664827Z 2026-04-09 13:21:22,957 INFO spawned: 'dashboard' with pid 8
+2026-04-09T13:21:23.9696065Z 2026-04-09 13:21:23,969 INFO success: api entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-04-09T13:21:23.9700683Z 2026-04-09 13:21:23,969 INFO success: api entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-04-09T13:21:23.9702508Z 2026-04-09 13:21:23,970 INFO success: dashboard entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-04-09T13:21:23.9703809Z 2026-04-09 13:21:23,970 INFO success: dashboard entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-04-09T13:21:27.7560915Z 
+2026-04-09T13:21:27.7561893Z Collecting usage statistics. To deactivate, set browser.gatherUsageStats to false.
+2026-04-09T13:21:27.7561950Z 
+2026-04-09T13:21:33.9681108Z 
+2026-04-09T13:21:33.9682241Z   You can now view your Streamlit app in your browser.
+2026-04-09T13:21:33.9863936Z 
+2026-04-09T13:21:33.9865041Z   Local URL: http://localhost:8501
+2026-04-09T13:21:33.9865116Z   Network URL: http://169.254.131.2:8501
+2026-04-09T13:21:34.0357191Z   External URL: http://20.13.114.10:8501
+2026-04-09T13:21:34.0357893Z 
+2026-04-09T13:21:56.7045067Z INFO:     Started server process [7]
+2026-04-09T13:21:56.7205852Z INFO:     Waiting for application startup.
+2026-04-09T13:21:56.8661464Z INFO:     Application startup complete.
+2026-04-09T13:21:56.8692729Z INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2026-04-09T13:22:11.7197295Z INFO:     127.0.0.1:54174 - "POST /auth/login HTTP/1.1" 200 OK
+2026-04-09T13:22:12.1963122Z INFO:     127.0.0.1:45462 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-09T13:22:15.5914359Z INFO:     127.0.0.1:45464 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-09T13:22:19.6498436Z INFO:paceforge.garmin.client:Authenticating with Garmin Connect (may take 30-45s on first login)...
+2026-04-09T13:22:21.0033048Z WARNING:garminconnect.client:Login strategy widget+cffi failed: Widget login: credential POST returned HTTP 401

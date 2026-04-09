@@ -554,6 +554,244 @@ def _error_detail(r: requests.Response) -> str:
         return r.text or f"HTTP {r.status_code}"
 
 
+def _fmt_pace(sec_per_km: float | int | None) -> str:
+    """Convert seconds-per-km to 'M:SS/km' string."""
+    if not sec_per_km:
+        return "—"
+    m = int(sec_per_km) // 60
+    s = int(sec_per_km) % 60
+    return f"{m}:{s:02d}/km"
+
+
+def _fmt_duration(seconds: float | int | None) -> str:
+    if not seconds:
+        return "—"
+    seconds = int(seconds)
+    if seconds >= 3600:
+        h, rem = divmod(seconds, 3600)
+        m, s = divmod(rem, 60)
+        return f"{h}:{m:02d}:{s:02d}"
+    m, s = divmod(seconds, 60)
+    return f"{m}:{s:02d}"
+
+
+def _fmt_dist(meters: float | int | None) -> str:
+    if not meters:
+        return "—"
+    km = meters / 1000
+    return f"{km:.1f}km" if km >= 1 else f"{int(meters)}m"
+
+
+def _render_step_line(step: dict) -> str:
+    """Render a single workout step as a human-readable line."""
+    stype = step.get("step_type", "active").lower()
+    dist = step.get("distance_meters")
+    dur = step.get("duration_seconds")
+    target_type = (step.get("target_type") or "").lower()
+    target_low = step.get("target_low")
+
+    dist_str = _fmt_dist(dist) if dist else (_fmt_duration(dur) if dur else "")
+
+    if stype == "warmup":
+        pace_hint = f" (no faster than {_fmt_pace(target_low)})" if target_low else ""
+        return f"🟢 <b>{dist_str}</b> warm up at a conversational pace{pace_hint}"
+    elif stype == "cooldown":
+        return f"🔵 <b>{dist_str}</b> cool down at a conversational pace (or slower!)"
+    elif stype == "recovery":
+        return f"⚪ <b>{dist_str}</b> recovery jog"
+    elif stype == "rest":
+        return f"⚪ <b>{dist_str}</b> walking rest"
+    else:  # active / interval leaf
+        if target_type == "pace" and target_low:
+            return f"🔴 <b>{dist_str}</b> at {_fmt_pace(target_low)}"
+        elif target_type == "open" or not target_low:
+            return f"🟢 <b>{dist_str}</b> at an easy, conversational pace"
+        else:
+            return f"🟠 <b>{dist_str}</b> at {_fmt_pace(target_low)}"
+
+
+def _render_workout_detail(workout: dict, plan_paces: dict | None = None) -> str:
+    """Render a structured workout description as HTML."""
+    steps = workout.get("steps", [])
+    name = workout.get("name", "Workout")
+    purpose = workout.get("purpose", "")
+    wtype = workout.get("workout_type", "")
+    est_dist = _fmt_dist(workout.get("estimated_distance_meters"))
+    est_dur = _fmt_duration(workout.get("estimated_duration_seconds"))
+    notes = workout.get("notes", "")
+
+    lines = []
+    lines.append(f'<div style="font-weight:700;font-size:1.1rem;margin-bottom:0.5rem;">{name}</div>')
+    if purpose:
+        lines.append(f'<div style="color:#8B92A5;margin-bottom:0.75rem;font-size:0.85rem;">{purpose}</div>')
+
+    # Summary badges
+    badges = []
+    if est_dist and est_dist != "—":
+        badges.append(f'<span style="background:#242830;padding:4px 10px;border-radius:12px;font-size:0.8rem;margin-right:6px;">📏 {est_dist}</span>')
+    if est_dur and est_dur != "—":
+        badges.append(f'<span style="background:#242830;padding:4px 10px;border-radius:12px;font-size:0.8rem;margin-right:6px;">⏱ {est_dur}</span>')
+    if badges:
+        lines.append(f'<div style="margin-bottom:0.75rem;">{"".join(badges)}</div>')
+
+    if not steps:
+        lines.append('<div style="color:#8B92A5;">No structured steps available.</div>')
+    else:
+        lines.append('<div style="font-weight:600;font-size:0.9rem;margin-bottom:0.5rem;color:#00D26A;">Workout Structure</div>')
+        for step in steps:
+            rc = step.get("repeat_count")
+            nested = step.get("steps", [])
+            if rc and nested:
+                lines.append(
+                    f'<div style="margin:0.5rem 0;padding:0.5rem 0.75rem;border-left:3px solid #FF9800;background:#242830;border-radius:0 8px 8px 0;">'
+                    f'<div style="font-weight:600;color:#FF9800;margin-bottom:0.25rem;">Repeat {rc}×</div>'
+                )
+                for sub in nested:
+                    lines.append(f'<div style="padding:2px 0;">{_render_step_line(sub)}</div>')
+                lines.append("</div>")
+            else:
+                lines.append(f'<div style="padding:3px 0;">{_render_step_line(step)}</div>')
+
+    if notes:
+        lines.append(f'<div style="margin-top:0.75rem;color:#8B92A5;font-size:0.8rem;font-style:italic;">💡 {notes}</div>')
+
+    return f'<div class="pf-card" style="margin-top:1rem;">{"".join(lines)}</div>'
+
+
+def _render_garmin_activity_detail(detail: dict) -> None:
+    """Render Garmin activity detail with splits, charts, and HR zones."""
+    import plotly.graph_objects as go
+
+    summary = detail.get("summary") or {}
+    splits_data = detail.get("splits") or {}
+    hr_zones_data = detail.get("hr_zones") or {}
+
+    # ── Summary metric cards ──
+    total_dist = summary.get("distance", 0)
+    total_dur = summary.get("duration", 0)
+    avg_speed = summary.get("averageSpeed", 0)
+    avg_pace = (1000 / avg_speed) if avg_speed else 0
+    avg_hr = summary.get("averageHR")
+    max_hr = summary.get("maxHR")
+    calories = summary.get("calories")
+    elevation = summary.get("elevationGain")
+
+    cards_html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:0.5rem;margin-bottom:1rem;">'
+    metric_data = [
+        ("Distance", _fmt_dist(total_dist), "📏"),
+        ("Duration", _fmt_duration(total_dur / 1000 if total_dur > 10000 else total_dur), "⏱"),
+        ("Avg Pace", _fmt_pace(avg_pace) if avg_pace else "—", "🏃"),
+    ]
+    if avg_hr:
+        metric_data.append(("Avg HR", f"{int(avg_hr)} bpm", "❤️"))
+    if max_hr:
+        metric_data.append(("Max HR", f"{int(max_hr)} bpm", "💓"))
+    if calories:
+        metric_data.append(("Calories", f"{int(calories)}", "🔥"))
+    if elevation:
+        metric_data.append(("Elevation", f"{int(elevation)}m", "⛰️"))
+
+    for label, val, icon in metric_data:
+        cards_html += (
+            f'<div style="background:#242830;border-radius:10px;padding:0.6rem;text-align:center;">'
+            f'<div style="font-size:0.7rem;color:#8B92A5;">{icon} {label}</div>'
+            f'<div style="font-size:1rem;font-weight:700;color:#FAFAFA;">{val}</div>'
+            f'</div>'
+        )
+    cards_html += '</div>'
+    st.markdown(cards_html, unsafe_allow_html=True)
+
+    # ── Splits ──
+    laps = splits_data.get("lapDTOs") or []
+    if laps:
+        st.markdown('<div style="font-weight:600;font-size:0.9rem;margin-bottom:0.5rem;color:#00D26A;">Splits</div>', unsafe_allow_html=True)
+
+        split_nums = []
+        paces = []
+        hrs = []
+        rows_html = '<table style="width:100%;border-collapse:collapse;font-size:0.8rem;"><tr style="color:#8B92A5;border-bottom:1px solid #2D3139;"><th style="text-align:left;padding:4px;">Split</th><th>Distance</th><th>Pace</th><th>Avg HR</th></tr>'
+
+        for i, lap in enumerate(laps, 1):
+            lap_dist = lap.get("distance", 0)
+            lap_speed = lap.get("averageSpeed", 0)
+            lap_pace = (1000 / lap_speed) if lap_speed else 0
+            lap_hr = lap.get("averageHR", 0)
+
+            split_nums.append(i)
+            paces.append(lap_pace)
+            hrs.append(lap_hr)
+
+            rows_html += (
+                f'<tr style="border-bottom:1px solid #2D3139;">'
+                f'<td style="padding:4px;font-weight:600;">{i}</td>'
+                f'<td style="text-align:center;">{_fmt_dist(lap_dist)}</td>'
+                f'<td style="text-align:center;">{_fmt_pace(lap_pace)}</td>'
+                f'<td style="text-align:center;">{int(lap_hr) if lap_hr else "—"} bpm</td>'
+                f'</tr>'
+            )
+        rows_html += '</table>'
+        st.markdown(f'<div class="pf-card" style="margin-bottom:1rem;">{rows_html}</div>', unsafe_allow_html=True)
+
+        # Splits bar chart
+        if paces:
+            avg_p = sum(paces) / len(paces) if paces else 0
+            colors = ["#00D26A" if p <= avg_p else "#FF5252" for p in paces]
+            pace_labels = [_fmt_pace(p) for p in paces]
+
+            fig = go.Figure(go.Bar(
+                x=split_nums, y=paces,
+                marker_color=colors,
+                text=pace_labels,
+                textposition="outside",
+                textfont=dict(color="#FAFAFA", size=10),
+            ))
+            fig.update_layout(
+                plot_bgcolor="#1A1D23",
+                paper_bgcolor="#1A1D23",
+                font_color="#FAFAFA",
+                margin=dict(l=40, r=20, t=30, b=40),
+                height=280,
+                xaxis_title="Split",
+                yaxis=dict(autorange="reversed", title="Pace (sec/km)", gridcolor="#2D3139"),
+                xaxis=dict(gridcolor="#2D3139", dtick=1),
+                bargap=0.3,
+            )
+            st.plotly_chart(fig, use_container_width=True, key="splits_chart")
+
+    # ── HR Zones ──
+    hr_list = hr_zones_data if isinstance(hr_zones_data, list) else hr_zones_data.get("hrTimeInZones", [])
+    if hr_list:
+        st.markdown('<div style="font-weight:600;font-size:0.9rem;margin-bottom:0.5rem;color:#00D26A;">Heart Rate Zones</div>', unsafe_allow_html=True)
+        zone_labels = []
+        zone_seconds = []
+        zone_colors_list = ["#3F51B5", "#2196F3", "#4CAF50", "#FF9800", "#F44336"]
+        for zd in hr_list:
+            zn = zd.get("zoneNumber") or zd.get("zone", 0)
+            secs = zd.get("secsInZone", 0)
+            zone_labels.append(f"Zone {zn}")
+            zone_seconds.append(secs)
+
+        fig_hr = go.Figure(go.Bar(
+            y=zone_labels, x=zone_seconds,
+            orientation="h",
+            marker_color=zone_colors_list[:len(zone_labels)],
+            text=[_fmt_duration(s) for s in zone_seconds],
+            textposition="auto",
+            textfont=dict(color="#FAFAFA", size=10),
+        ))
+        fig_hr.update_layout(
+            plot_bgcolor="#1A1D23",
+            paper_bgcolor="#1A1D23",
+            font_color="#FAFAFA",
+            margin=dict(l=60, r=20, t=20, b=30),
+            height=200,
+            xaxis=dict(title="Time (seconds)", gridcolor="#2D3139"),
+            yaxis=dict(gridcolor="#2D3139"),
+            bargap=0.3,
+        )
+        st.plotly_chart(fig_hr, use_container_width=True, key="hr_zones_chart")
+
+
 # ═══════════════════════════════════════════════════════════════════════
 # AUTH GATE
 # ═══════════════════════════════════════════════════════════════════════
@@ -1172,6 +1410,7 @@ with tab_calendar:
                 "editable": False,
                 "extendedProps": {
                     "source": "garmin",
+                    "activity_id": act.get("activity_id"),
                     "distance_km": dist,
                     "pace": pace_str,
                     "duration_seconds": act.get("duration_seconds", 0),
@@ -1201,6 +1440,10 @@ with tab_calendar:
                             "workout_type": wtype,
                             "purpose": w.get("purpose", ""),
                             "name": w["name"],
+                            "steps": json.dumps(w.get("steps", [])),
+                            "notes": w.get("notes", ""),
+                            "estimated_distance_meters": w.get("estimated_distance_meters", 0),
+                            "estimated_duration_seconds": w.get("estimated_duration_seconds", 0),
                         },
                     })
 
@@ -1290,34 +1533,59 @@ with tab_calendar:
                 ev_data = result["eventClick"]["event"]
                 props = ev_data.get("extendedProps", {})
                 if props.get("source") == "garmin":
-                    dur = props.get("duration_seconds", 0)
-                    dur_m, dur_s = divmod(int(dur), 60)
-                    hr_text = f"<br>Avg HR: {props['avg_hr']} bpm" if props.get("avg_hr") else ""
+                    activity_id = props.get("activity_id")
                     st.markdown(
-                        f"""<div class="pf-card" style="margin-top:1rem;">
-                            <div style="font-weight:700;font-size:1rem;margin-bottom:0.5rem;">
-                                {ev_data.get('title', '')}
-                            </div>
-                            <div style="color:#8B92A5;font-size:0.85rem;">
-                                Date: {ev_data.get('start', '')[:10]}
-                                <br>Duration: {dur_m}:{dur_s:02d}
-                                {hr_text}
-                            </div>
-                        </div>""",
+                        f'<div style="font-weight:700;font-size:1.1rem;margin:1rem 0 0.5rem;">✓ {ev_data.get("title", "Activity")}</div>'
+                        f'<div style="color:#8B92A5;font-size:0.85rem;margin-bottom:0.5rem;">Date: {ev_data.get("start", "")[:10]}</div>',
                         unsafe_allow_html=True,
                     )
+                    if activity_id:
+                        with st.spinner("Loading activity details..."):
+                            try:
+                                r = requests.get(
+                                    f"{API_BASE}/activities/{activity_id}",
+                                    headers=_auth_headers(),
+                                    timeout=30,
+                                )
+                                if r.status_code == 200:
+                                    _render_garmin_activity_detail(r.json())
+                                else:
+                                    st.warning(f"Could not load details: {_error_detail(r)}")
+                            except requests.ConnectionError:
+                                st.error("Cannot reach API.")
+                    else:
+                        # Fallback for activities without an ID
+                        dur = props.get("duration_seconds", 0)
+                        dur_m, dur_s = divmod(int(dur), 60)
+                        hr_text = f" · Avg HR: {props['avg_hr']} bpm" if props.get("avg_hr") else ""
+                        st.markdown(
+                            f'<div class="pf-card"><span style="color:#8B92A5;">Duration: {dur_m}:{dur_s:02d}{hr_text}</span></div>',
+                            unsafe_allow_html=True,
+                        )
                 else:
-                    purpose = props.get("purpose", "")
+                    # Planned workout — render structured description
+                    steps_json = props.get("steps", "[]")
+                    try:
+                        steps_list = json.loads(steps_json) if isinstance(steps_json, str) else steps_json
+                    except (json.JSONDecodeError, TypeError):
+                        steps_list = []
+                    workout_dict = {
+                        "name": props.get("name", ev_data.get("title", "Workout")),
+                        "workout_type": props.get("workout_type", ""),
+                        "purpose": props.get("purpose", ""),
+                        "notes": props.get("notes", ""),
+                        "steps": steps_list,
+                        "estimated_distance_meters": props.get("estimated_distance_meters", 0),
+                        "estimated_duration_seconds": props.get("estimated_duration_seconds", 0),
+                    }
+                    plan_paces = None
+                    if st.session_state.plan:
+                        plan_paces = {
+                            k: st.session_state.plan.get(k)
+                            for k in ("easy_pace", "marathon_pace", "threshold_pace", "interval_pace", "repetition_pace")
+                        }
                     st.markdown(
-                        f"""<div class="pf-card" style="margin-top:1rem;">
-                            <div style="font-weight:700;font-size:1rem;margin-bottom:0.5rem;">
-                                {ev_data.get('title', '')}
-                            </div>
-                            <div style="color:#8B92A5;font-size:0.85rem;">
-                                Date: {ev_data.get('start', '')[:10]}
-                                {f"<br>Purpose: {purpose}" if purpose else ""}
-                            </div>
-                        </div>""",
+                        _render_workout_detail(workout_dict, plan_paces),
                         unsafe_allow_html=True,
                     )
 
