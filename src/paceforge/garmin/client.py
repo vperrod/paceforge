@@ -56,6 +56,7 @@ class GarminClient:
             self._password,
             prompt_mfa=self._prompt_mfa,
         )
+        logger.info("Authenticating with Garmin Connect (may take 30-45s on first login)...")
         self._client.login(self._token_dir)
         logger.info("Authenticated with Garmin Connect")
 

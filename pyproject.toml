@@ -9,7 +9,8 @@ authors = [{ name = "vipe" }]
 dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.34",
-    "garminconnect[workout]>=0.3",
+    "garminconnect[workout] @ git+https://github.com/diegoscarabelli/python-garminconnect.git@feat/widget-cffi-login-strategy",
+    "curl_cffi>=0.7",
     "pydantic>=2.0",
     "pydantic-settings>=2.0",
     "pyyaml>=6.0",
