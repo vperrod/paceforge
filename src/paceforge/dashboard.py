@@ -694,7 +694,9 @@ def _render_garmin_activity_detail(detail: dict) -> None:
     import plotly.graph_objects as go
     from plotly.subplots import make_subplots
 
-    summary = detail.get("summary") or {}
+    raw_summary = detail.get("summary") or {}
+    # Garmin nests metrics inside summaryDTO; fall back to top-level if absent
+    summary = raw_summary.get("summaryDTO") or raw_summary
     splits_data = detail.get("splits") or {}
     hr_zones_data = detail.get("hr_zones") or {}
     weather_data = detail.get("weather") or {}
@@ -1016,6 +1018,16 @@ if not st.session_state._restored:
             )
             if r.status_code == 200:
                 st.session_state["garmin_activities"] = r.json()
+
+        # 4) Restore fitness profile
+        if not st.session_state.get("profile"):
+            r = requests.get(
+                f"{API_BASE}/profile",
+                headers=_auth_headers(),
+                timeout=15,
+            )
+            if r.status_code == 200:
+                st.session_state.profile = r.json()
     except Exception:
         pass  # Non-critical — user can manually sync
 
@@ -1530,11 +1542,12 @@ with tab_plan:
 with tab_calendar:
     st.markdown('<div class="pf-section-header">Training Calendar</div>', unsafe_allow_html=True)
 
-    if not st.session_state.garmin_logged_in:
+    has_cached_data = bool(st.session_state.get("garmin_activities")) or bool(st.session_state.plan)
+    if not st.session_state.garmin_logged_in and not has_cached_data:
         st.info("Connect to Garmin using the sidebar to view your activities.")
     else:
         # Fetch Garmin activities
-        if st.button("Sync Activities from Garmin", type="primary", key="sync_activities_btn"):
+        if st.session_state.garmin_logged_in and st.button("Sync Activities from Garmin", type="primary", key="sync_activities_btn"):
             with st.spinner("Fetching activities from Garmin Connect..."):
                 try:
                     r = requests.get(

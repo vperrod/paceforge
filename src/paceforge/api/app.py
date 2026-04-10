@@ -324,13 +324,22 @@ async def garmin_mfa(req: MfaRequest, user: dict = Depends(get_current_user)):
 
 
 @app.get("/profile", response_model=UserFitnessProfile)
-async def get_profile(user: dict = Depends(get_current_user)):
+async def get_fitness_profile(user: dict = Depends(get_current_user)):
     uid = user["id"]
     garmin = _ensure_garmin(uid)
-    if not garmin:
-        raise HTTPException(401, "Not logged in to Garmin")
-    _user_profile[uid] = garmin.get_fitness_profile()
-    return _user_profile[uid]
+    if garmin:
+        _user_profile[uid] = garmin.get_fitness_profile()
+        save_user_data(settings.db_path, uid, profile_json=_user_profile[uid].model_dump_json())
+        return _user_profile[uid]
+    # Fall back to in-memory or DB-cached profile
+    if uid in _user_profile:
+        return _user_profile[uid]
+    cached = load_user_data(settings.db_path, uid)
+    if cached and cached.get("profile_json"):
+        profile = UserFitnessProfile.model_validate_json(cached["profile_json"])
+        _user_profile[uid] = profile
+        return profile
+    raise HTTPException(401, "Not logged in to Garmin")
 
 
 @app.get("/activities", response_model=list[RecentActivity])
@@ -370,6 +379,8 @@ async def generate(req: GeneratePlanRequest, user: dict = Depends(get_current_us
         raise HTTPException(401, "Not logged in to Garmin")
 
     profile = _user_profile.get(uid) or garmin.get_fitness_profile()
+    _user_profile[uid] = profile
+    save_user_data(settings.db_path, uid, profile_json=profile.model_dump_json())
 
     goal = TrainingGoal(
         goal_type=req.goal_type,
