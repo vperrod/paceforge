@@ -285,7 +285,7 @@ class GarminClient:
         garmin_workout = RunningWorkout(
             workoutName=workout.name,
             description=workout.description,
-            estimatedDurationInSecs=workout.estimated_duration_seconds or 3600,
+            estimatedDurationInSecs=int(workout.estimated_duration_seconds or 3600),
             workoutSegments=[
                 WorkoutSegment(
                     segmentOrder=1,
