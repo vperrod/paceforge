@@ -1,0 +1,302 @@
+2026-04-10T07:59:09.4731572Z INFO:     127.0.0.1:34508 - "POST /auth/login HTTP/1.1" 200 OK
+2026-04-10T07:59:09.8077479Z INFO:     127.0.0.1:56544 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T07:59:13.7907181Z INFO:     127.0.0.1:56558 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T07:59:23.5699793Z INFO:paceforge.garmin.client:Authenticating with Garmin Connect (may take 30-45s on first login)...
+2026-04-10T07:59:25.8477244Z INFO:paceforge.garmin.client:MFA required — waiting for code
+2026-04-10T07:59:25.8599246Z INFO:     127.0.0.1:55434 - "POST /garmin/login HTTP/1.1" 200 OK
+2026-04-10T07:59:26.1954656Z INFO:     127.0.0.1:55442 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T07:59:42.2456349Z INFO:     127.0.0.1:54036 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T07:59:45.0303017Z INFO:paceforge.garmin.client:MFA verified — authenticated with Garmin Connect
+2026-04-10T07:59:45.0312901Z INFO:     127.0.0.1:54042 - "POST /garmin/mfa HTTP/1.1" 200 OK
+2026-04-10T07:59:45.4690477Z INFO:     127.0.0.1:54050 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T07:59:48.0542349Z WARNING:paceforge.garmin.client:Could not fetch training readiness
+2026-04-10T07:59:48.0543069Z Traceback (most recent call last):
+2026-04-10T07:59:48.0543108Z   File "/usr/local/lib/python3.12/site-packages/paceforge/garmin/client.py", line 117, in get_fitness_profile
+2026-04-10T07:59:48.0543130Z     readiness = tr_data.get("score")
+2026-04-10T07:59:48.0543157Z                 ^^^^^^^^^^^
+2026-04-10T07:59:48.0543182Z AttributeError: 'list' object has no attribute 'get'
+2026-04-10T07:59:48.9011481Z INFO:     127.0.0.1:54058 - "GET /profile HTTP/1.1" 200 OK
+2026-04-10T07:59:49.0073276Z INFO:     127.0.0.1:54064 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T07:59:54.8642859Z WARNING:paceforge.garmin.client:Could not fetch training readiness
+2026-04-10T07:59:54.8643485Z Traceback (most recent call last):
+2026-04-10T07:59:54.8643525Z   File "/usr/local/lib/python3.12/site-packages/paceforge/garmin/client.py", line 117, in get_fitness_profile
+2026-04-10T07:59:54.8643548Z     readiness = tr_data.get("score")
+2026-04-10T07:59:54.8643570Z                 ^^^^^^^^^^^
+2026-04-10T07:59:54.8643598Z AttributeError: 'list' object has no attribute 'get'
+2026-04-10T07:59:57.3562417Z INFO:     127.0.0.1:40710 - "GET /activities?days=240 HTTP/1.1" 200 OK
+2026-04-10T07:59:57.6467705Z INFO:     127.0.0.1:40718 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T07:59:59.2781418Z INFO:     127.0.0.1:39568 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T07:59:59.8225129Z INFO:     127.0.0.1:39574 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T08:00:16.4875474Z INFO:     127.0.0.1:47650 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T08:00:18.7861185Z INFO:     127.0.0.1:47660 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T08:00:19.4147126Z INFO:     127.0.0.1:40778 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T08:00:20.3945486Z INFO:     127.0.0.1:40792 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T08:00:22.4799024Z INFO:     127.0.0.1:40806 - "GET /activities/21813208081 HTTP/1.1" 200 OK
+2026-04-10T08:00:22.4844543Z INFO:     127.0.0.1:40820 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T08:00:23.0042387Z INFO:     127.0.0.1:40834 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T08:00:26.1645070Z INFO:     127.0.0.1:40838 - "GET /activities/21992227654 HTTP/1.1" 200 OK
+2026-04-10T08:00:26.1669701Z INFO:     127.0.0.1:40840 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T08:00:26.7072860Z INFO:     127.0.0.1:40848 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T08:00:29.0000726Z INFO:     127.0.0.1:40862 - "GET /activities/22166520458 HTTP/1.1" 200 OK
+2026-04-10T08:00:29.0105323Z INFO:     127.0.0.1:40868 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T08:00:29.6469579Z INFO:     127.0.0.1:40976 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T08:00:31.5488182Z INFO:     127.0.0.1:40990 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T08:00:33.6848090Z INFO:     127.0.0.1:41004 - "GET /activities/22066226382 HTTP/1.1" 200 OK
+2026-04-10T08:00:33.6941897Z INFO:     127.0.0.1:41006 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T08:00:34.4874754Z INFO:     127.0.0.1:41016 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T08:00:37.0976565Z INFO:     127.0.0.1:41028 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T08:00:41.6151081Z INFO:     127.0.0.1:53580 - "GET /activities/22464503082 HTTP/1.1" 200 OK
+2026-04-10T08:00:41.6670250Z 2026-04-10 08:00:41.664 Please replace `use_container_width` with `width`.
+2026-04-10T08:00:41.6670708Z 
+2026-04-10T08:00:41.6670744Z `use_container_width` will be removed after 2025-12-31.
+2026-04-10T08:00:41.6670773Z 
+2026-04-10T08:00:41.6670802Z For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-10T08:00:41.7052833Z 2026-04-10 08:00:41.704 Please replace `use_container_width` with `width`.
+2026-04-10T08:00:41.7053643Z 
+2026-04-10T08:00:41.7053678Z `use_container_width` will be removed after 2025-12-31.
+2026-04-10T08:00:41.7053875Z 
+2026-04-10T08:00:41.7053905Z For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-10T08:00:41.7808874Z INFO:     127.0.0.1:53596 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T08:00:42.8650032Z INFO:     127.0.0.1:53602 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T08:00:43.5929348Z INFO:     127.0.0.1:53614 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T08:00:45.6814038Z INFO:     127.0.0.1:53620 - "GET /activities/22449073226 HTTP/1.1" 200 OK
+2026-04-10T08:00:45.7371578Z 2026-04-10 08:00:45.735 Please replace `use_container_width` with `width`.
+2026-04-10T08:00:45.7372109Z 
+2026-04-10T08:00:45.7372146Z `use_container_width` will be removed after 2025-12-31.
+2026-04-10T08:00:45.7372170Z 
+2026-04-10T08:00:45.7372202Z For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-10T08:00:45.7762070Z 2026-04-10 08:00:45.775 Please replace `use_container_width` with `width`.
+2026-04-10T08:00:45.7762599Z 
+2026-04-10T08:00:45.7762630Z `use_container_width` will be removed after 2025-12-31.
+2026-04-10T08:00:45.7762650Z 
+2026-04-10T08:00:45.7762674Z For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-10T08:00:45.8161399Z INFO:     127.0.0.1:53632 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T08:00:46.2755564Z INFO:     127.0.0.1:53648 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T08:00:46.8140568Z INFO:     127.0.0.1:53664 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T08:16:52.0136223Z 2026-04-10 08:16:51,994 WARN received SIGTERM indicating exit request
+2026-04-10T08:16:52.0169878Z 2026-04-10 08:16:51,994 WARN received SIGTERM indicating exit request
+2026-04-10T08:16:52.0953368Z 2026-04-10 08:16:52,095 INFO waiting for api, dashboard to die
+2026-04-10T08:16:52.0959723Z 2026-04-10 08:16:52,095 INFO waiting for api, dashboard to die
+2026-04-10T08:16:52.1244856Z   Stopping...
+2026-04-10T08:16:54.3097588Z 2026-04-10 08:16:54,309 INFO stopped: dashboard (exit status 0)
+2026-04-10T08:16:54.3098081Z 2026-04-10 08:16:54,309 INFO stopped: dashboard (exit status 0)
+2026-04-10T08:16:54.3602296Z INFO:     Shutting down
+2026-04-10T08:16:54.4675874Z INFO:     Waiting for application shutdown.
+2026-04-10T08:16:54.4797999Z INFO:     Application shutdown complete.
+2026-04-10T08:16:54.4864036Z INFO:     Finished server process [7]
+2026-04-10T08:16:54.5158782Z 2026-04-10 08:16:54,515 WARN stopped: api (terminated by SIGTERM)
+2026-04-10T08:16:54.5163914Z 2026-04-10 08:16:54,515 WARN stopped: api (terminated by SIGTERM)
+2026-04-10T08:18:17.6284111Z 2026-04-10 08:18:17,627 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2026-04-10T08:18:17.6284851Z 2026-04-10 08:18:17,627 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2026-04-10T08:18:17.6511450Z 2026-04-10 08:18:17,650 INFO supervisord started with pid 1
+2026-04-10T08:18:17.6562586Z 2026-04-10 08:18:17,650 INFO supervisord started with pid 1
+2026-04-10T08:18:18.6819977Z 2026-04-10 08:18:18,672 INFO spawned: 'api' with pid 7
+2026-04-10T08:18:18.6820318Z 2026-04-10 08:18:18,672 INFO spawned: 'api' with pid 7
+2026-04-10T08:18:18.7215619Z 2026-04-10 08:18:18,712 INFO spawned: 'dashboard' with pid 8
+2026-04-10T08:18:18.7393368Z 2026-04-10 08:18:18,712 INFO spawned: 'dashboard' with pid 8
+2026-04-10T08:18:19.7407173Z 2026-04-10 08:18:19,732 INFO success: api entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-04-10T08:18:19.7407657Z 2026-04-10 08:18:19,732 INFO success: api entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-04-10T08:18:19.7407691Z 2026-04-10 08:18:19,733 INFO success: dashboard entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-04-10T08:18:19.7407715Z 2026-04-10 08:18:19,733 INFO success: dashboard entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-04-10T08:18:27.9749464Z 
+2026-04-10T08:18:27.9749976Z Collecting usage statistics. To deactivate, set browser.gatherUsageStats to false.
+2026-04-10T08:18:27.9750010Z 
+2026-04-10T08:18:31.7100930Z 
+2026-04-10T08:18:31.7101605Z   You can now view your Streamlit app in your browser.
+2026-04-10T08:18:31.7101637Z 
+2026-04-10T08:18:31.7101659Z   Local URL: http://localhost:8501
+2026-04-10T08:18:31.7101680Z   Network URL: http://169.254.131.2:8501
+2026-04-10T08:18:31.7101702Z   External URL: http://20.13.114.10:8501
+2026-04-10T08:18:31.7101723Z 
+2026-04-10T08:18:35.4397012Z INFO:     Started server process [7]
+2026-04-10T08:18:35.4535700Z INFO:     Waiting for application startup.
+2026-04-10T08:18:35.5388808Z INFO:     Application startup complete.
+2026-04-10T08:18:35.5416397Z INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2026-04-10T08:22:39.2454013Z INFO:     127.0.0.1:47154 - "POST /auth/login HTTP/1.1" 200 OK
+2026-04-10T08:22:39.9091196Z INFO:paceforge.garmin.client:Authenticating with Garmin Connect (may take 30-45s on first login)...
+2026-04-10T08:22:39.9402064Z INFO:paceforge.garmin.client:Garmin reconnect failed — tokens may be expired
+2026-04-10T08:22:39.9557822Z Traceback (most recent call last):
+2026-04-10T08:22:39.9557926Z   File "/usr/local/lib/python3.12/site-packages/paceforge/garmin/client.py", line 96, in try_reconnect
+2026-04-10T08:22:39.9557950Z     result = instance.login()
+2026-04-10T08:22:39.9557976Z              ^^^^^^^^^^^^^^^^
+2026-04-10T08:22:39.9558012Z   File "/usr/local/lib/python3.12/site-packages/paceforge/garmin/client.py", line 70, in login
+2026-04-10T08:22:39.9558036Z     result = self._client.login(self._token_dir)
+2026-04-10T08:22:39.9558058Z              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-04-10T08:22:39.9558085Z   File "/usr/local/lib/python3.12/site-packages/garminconnect/__init__.py", line 462, in login
+2026-04-10T08:22:39.9558171Z     raise GarminConnectAuthenticationError(
+2026-04-10T08:22:39.9558198Z garminconnect.exceptions.GarminConnectAuthenticationError: Username and password are required
+2026-04-10T08:22:39.9561095Z INFO:     127.0.0.1:59062 - "GET /garmin/status HTTP/1.1" 200 OK
+2026-04-10T08:22:40.0038336Z INFO:     127.0.0.1:59070 - "GET /plan HTTP/1.1" 404 Not Found
+2026-04-10T08:22:40.0411801Z INFO:paceforge.garmin.client:Authenticating with Garmin Connect (may take 30-45s on first login)...
+2026-04-10T08:22:40.0517521Z INFO:paceforge.garmin.client:Garmin reconnect failed — tokens may be expired
+2026-04-10T08:22:40.0517881Z Traceback (most recent call last):
+2026-04-10T08:22:40.0517924Z   File "/usr/local/lib/python3.12/site-packages/paceforge/garmin/client.py", line 96, in try_reconnect
+2026-04-10T08:22:40.0517950Z     result = instance.login()
+2026-04-10T08:22:40.0517971Z              ^^^^^^^^^^^^^^^^
+2026-04-10T08:22:40.0517994Z   File "/usr/local/lib/python3.12/site-packages/paceforge/garmin/client.py", line 70, in login
+2026-04-10T08:22:40.0518016Z     result = self._client.login(self._token_dir)
+2026-04-10T08:22:40.0518081Z              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-04-10T08:22:40.0518105Z   File "/usr/local/lib/python3.12/site-packages/garminconnect/__init__.py", line 462, in login
+2026-04-10T08:22:40.0518127Z     raise GarminConnectAuthenticationError(
+2026-04-10T08:22:40.0518150Z garminconnect.exceptions.GarminConnectAuthenticationError: Username and password are required
+2026-04-10T08:22:40.0972366Z INFO:     127.0.0.1:59078 - "GET /activities?days=240 HTTP/1.1" 401 Unauthorized
+2026-04-10T08:22:41.0155714Z INFO:     127.0.0.1:59088 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T08:22:41.9694197Z INFO:     127.0.0.1:59098 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T08:22:44.7044245Z INFO:     127.0.0.1:59106 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T08:22:48.3106117Z INFO:     127.0.0.1:59112 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T08:22:48.6250699Z INFO:paceforge.garmin.client:Authenticating with Garmin Connect (may take 30-45s on first login)...
+2026-04-10T08:22:50.2128851Z INFO:paceforge.garmin.client:MFA required — waiting for code
+2026-04-10T08:22:50.2476927Z INFO:     127.0.0.1:59118 - "POST /garmin/login HTTP/1.1" 200 OK
+2026-04-10T08:22:50.5999178Z INFO:     127.0.0.1:56788 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T08:23:09.0655498Z INFO:     127.0.0.1:59942 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T08:23:11.5290878Z INFO:     127.0.0.1:47082 - "POST /garmin/mfa HTTP/1.1" 200 OK
+2026-04-10T08:23:11.5363661Z INFO:paceforge.garmin.client:MFA verified — authenticated with Garmin Connect
+2026-04-10T08:23:11.9369324Z INFO:     127.0.0.1:47096 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T08:23:14.9138547Z WARNING:paceforge.garmin.client:Could not fetch training readiness
+2026-04-10T08:23:14.9139171Z Traceback (most recent call last):
+2026-04-10T08:23:14.9139302Z   File "/usr/local/lib/python3.12/site-packages/paceforge/garmin/client.py", line 136, in get_fitness_profile
+2026-04-10T08:23:14.9139326Z     readiness = tr_data.get("score")
+2026-04-10T08:23:14.9139350Z                 ^^^^^^^^^^^
+2026-04-10T08:23:14.9139374Z AttributeError: 'list' object has no attribute 'get'
+2026-04-10T08:23:16.0419221Z INFO:     127.0.0.1:47112 - "GET /profile HTTP/1.1" 200 OK
+2026-04-10T08:23:16.1920047Z INFO:     127.0.0.1:47122 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T08:23:20.0709245Z WARNING:paceforge.garmin.client:Could not fetch training readiness
+2026-04-10T08:23:20.0709609Z Traceback (most recent call last):
+2026-04-10T08:23:20.0709643Z   File "/usr/local/lib/python3.12/site-packages/paceforge/garmin/client.py", line 136, in get_fitness_profile
+2026-04-10T08:23:20.0709667Z     readiness = tr_data.get("score")
+2026-04-10T08:23:20.0709691Z                 ^^^^^^^^^^^
+2026-04-10T08:23:20.0709715Z AttributeError: 'list' object has no attribute 'get'
+2026-04-10T08:23:23.3391598Z INFO:     127.0.0.1:47138 - "GET /activities?days=240 HTTP/1.1" 500 Internal Server Error
+2026-04-10T08:23:23.6290047Z ERROR:    Exception in ASGI application
+2026-04-10T08:23:23.6291047Z Traceback (most recent call last):
+2026-04-10T08:23:23.6291095Z   File "/usr/local/lib/python3.12/site-packages/uvicorn/protocols/http/httptools_impl.py", line 420, in run_asgi
+2026-04-10T08:23:23.6291127Z     result = await app(  # type: ignore[func-returns-value]
+2026-04-10T08:23:23.6291150Z              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-04-10T08:23:23.6291259Z   File "/usr/local/lib/python3.12/site-packages/uvicorn/middleware/proxy_headers.py", line 60, in __call__
+2026-04-10T08:23:23.6291286Z     return await self.app(scope, receive, send)
+2026-04-10T08:23:23.6291309Z            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-04-10T08:23:23.6291335Z   File "/usr/local/lib/python3.12/site-packages/fastapi/applications.py", line 1163, in __call__
+2026-04-10T08:23:23.6291358Z     await super().__call__(scope, receive, send)
+2026-04-10T08:23:23.6291382Z   File "/usr/local/lib/python3.12/site-packages/starlette/applications.py", line 90, in __call__
+2026-04-10T08:23:23.6291407Z     await self.middleware_stack(scope, receive, send)
+2026-04-10T08:23:23.6291432Z   File "/usr/local/lib/python3.12/site-packages/starlette/middleware/errors.py", line 186, in __call__
+2026-04-10T08:23:23.6291455Z     raise exc
+2026-04-10T08:23:23.6291480Z   File "/usr/local/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
+2026-04-10T08:23:23.6360081Z     await self.app(scope, receive, _send)
+2026-04-10T08:23:23.6360206Z   File "/usr/local/lib/python3.12/site-packages/starlette/middleware/cors.py", line 88, in __call__
+2026-04-10T08:23:23.6360231Z     await self.app(scope, receive, send)
+2026-04-10T08:23:23.6360257Z   File "/usr/local/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+2026-04-10T08:23:23.6360980Z     await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+2026-04-10T08:23:23.6361032Z   File "/usr/local/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+2026-04-10T08:23:23.6361055Z     raise exc
+2026-04-10T08:23:23.6361080Z   File "/usr/local/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+2026-04-10T08:23:23.6361102Z     await app(scope, receive, sender)
+2026-04-10T08:23:23.6361129Z   File "/usr/local/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+2026-04-10T08:23:23.6361204Z     await self.app(scope, receive, send)
+2026-04-10T08:23:23.6361231Z   File "/usr/local/lib/python3.12/site-packages/starlette/routing.py", line 660, in __call__
+2026-04-10T08:23:23.6361256Z     await self.middleware_stack(scope, receive, send)
+2026-04-10T08:23:23.6361281Z   File "/usr/local/lib/python3.12/site-packages/starlette/routing.py", line 680, in app
+2026-04-10T08:23:23.6361306Z     await route.handle(scope, receive, send)
+2026-04-10T08:23:23.6361332Z   File "/usr/local/lib/python3.12/site-packages/starlette/routing.py", line 276, in handle
+2026-04-10T08:23:23.6361355Z     await self.app(scope, receive, send)
+2026-04-10T08:23:23.6361381Z   File "/usr/local/lib/python3.12/site-packages/fastapi/routing.py", line 134, in app
+2026-04-10T08:23:23.6361405Z     await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+2026-04-10T08:23:23.6361432Z   File "/usr/local/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+2026-04-10T08:23:23.6361455Z     raise exc
+2026-04-10T08:23:23.6361517Z   File "/usr/local/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+2026-04-10T08:23:23.6361540Z     await app(scope, receive, sender)
+2026-04-10T08:23:23.6361564Z   File "/usr/local/lib/python3.12/site-packages/fastapi/routing.py", line 120, in app
+2026-04-10T08:23:23.6361586Z     response = await f(request)
+2026-04-10T08:23:23.6361608Z                ^^^^^^^^^^^^^^^^
+2026-04-10T08:23:23.6361632Z   File "/usr/local/lib/python3.12/site-packages/fastapi/routing.py", line 674, in app
+2026-04-10T08:23:23.6361655Z     raw_response = await run_endpoint_function(
+2026-04-10T08:23:23.6361678Z                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-04-10T08:23:23.6361703Z   File "/usr/local/lib/python3.12/site-packages/fastapi/routing.py", line 328, in run_endpoint_function
+2026-04-10T08:23:23.6361726Z     return await dependant.call(**values)
+2026-04-10T08:23:23.6361775Z            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-04-10T08:23:23.6361802Z   File "/usr/local/lib/python3.12/site-packages/paceforge/api/app.py", line 346, in get_activities
+2026-04-10T08:23:23.6361827Z     save_user_data(settings.db_path, uid, activities_json=json.dumps(activities))
+2026-04-10T08:23:23.6361851Z                                                           ^^^^^^^^^^^^^^^^^^^^^^
+2026-04-10T08:23:23.6361874Z   File "/usr/local/lib/python3.12/json/__init__.py", line 231, in dumps
+2026-04-10T08:23:23.6361898Z     return _default_encoder.encode(obj)
+2026-04-10T08:23:23.6361920Z            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-04-10T08:23:23.6361943Z   File "/usr/local/lib/python3.12/json/encoder.py", line 200, in encode
+2026-04-10T08:23:23.6361965Z     chunks = self.iterencode(o, _one_shot=True)
+2026-04-10T08:23:23.6361987Z              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-04-10T08:23:23.6362011Z   File "/usr/local/lib/python3.12/json/encoder.py", line 258, in iterencode
+2026-04-10T08:23:23.6367465Z     return _iterencode(o, 0)
+2026-04-10T08:23:23.6367526Z            ^^^^^^^^^^^^^^^^^
+2026-04-10T08:23:23.6367551Z   File "/usr/local/lib/python3.12/json/encoder.py", line 180, in default
+2026-04-10T08:23:23.6367575Z     raise TypeError(f'Object of type {o.__class__.__name__} '
+2026-04-10T08:23:23.6367599Z TypeError: Object of type datetime is not JSON serializable
+2026-04-10T08:23:23.7682781Z INFO:     127.0.0.1:59926 - "GET /admin/users?status=pending HTTP/1.1" 200 OK
+2026-04-10T08:23:28.3953393Z WARNING:paceforge.garmin.client:Could not fetch training readiness
+2026-04-10T08:23:28.3953921Z Traceback (most recent call last):
+2026-04-10T08:23:28.3953957Z   File "/usr/local/lib/python3.12/site-packages/paceforge/garmin/client.py", line 136, in get_fitness_profile
+2026-04-10T08:23:28.3953978Z     readiness = tr_data.get("score")
+2026-04-10T08:23:28.3953999Z                 ^^^^^^^^^^^
+2026-04-10T08:23:28.3954107Z AttributeError: 'list' object has no attribute 'get'
+2026-04-10T08:23:30.8998816Z INFO:     127.0.0.1:59930 - "GET /activities?days=240 HTTP/1.1" 500 Internal Server Error
+2026-04-10T08:23:30.9005253Z ERROR:    Exception in ASGI application
+2026-04-10T08:23:30.9005363Z Traceback (most recent call last):
+2026-04-10T08:23:30.9005408Z   File "/usr/local/lib/python3.12/site-packages/uvicorn/protocols/http/httptools_impl.py", line 420, in run_asgi
+2026-04-10T08:23:30.9005437Z     result = await app(  # type: ignore[func-returns-value]
+2026-04-10T08:23:30.9005461Z              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-04-10T08:23:30.9005489Z   File "/usr/local/lib/python3.12/site-packages/uvicorn/middleware/proxy_headers.py", line 60, in __call__
+2026-04-10T08:23:30.9005512Z     return await self.app(scope, receive, send)
+2026-04-10T08:23:30.9005540Z            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-04-10T08:23:30.9005571Z   File "/usr/local/lib/python3.12/site-packages/fastapi/applications.py", line 1163, in __call__
+2026-04-10T08:23:30.9005594Z     await super().__call__(scope, receive, send)
+2026-04-10T08:23:30.9005699Z   File "/usr/local/lib/python3.12/site-packages/starlette/applications.py", line 90, in __call__
+2026-04-10T08:23:30.9005724Z     await self.middleware_stack(scope, receive, send)
+2026-04-10T08:23:30.9005750Z   File "/usr/local/lib/python3.12/site-packages/starlette/middleware/errors.py", line 186, in __call__
+2026-04-10T08:23:30.9005773Z     raise exc
+2026-04-10T08:23:30.9005799Z   File "/usr/local/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
+2026-04-10T08:23:30.9005822Z     await self.app(scope, receive, _send)
+2026-04-10T08:23:30.9005847Z   File "/usr/local/lib/python3.12/site-packages/starlette/middleware/cors.py", line 88, in __call__
+2026-04-10T08:23:30.9005870Z     await self.app(scope, receive, send)
+2026-04-10T08:23:30.9005896Z   File "/usr/local/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+2026-04-10T08:23:30.9005921Z     await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+2026-04-10T08:23:30.9005975Z   File "/usr/local/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+2026-04-10T08:23:30.9005998Z     raise exc
+2026-04-10T08:23:30.9006023Z   File "/usr/local/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+2026-04-10T08:23:30.9006046Z     await app(scope, receive, sender)
+2026-04-10T08:23:30.9006071Z   File "/usr/local/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+2026-04-10T08:23:30.9006094Z     await self.app(scope, receive, send)
+2026-04-10T08:23:30.9006119Z   File "/usr/local/lib/python3.12/site-packages/starlette/routing.py", line 660, in __call__
+2026-04-10T08:23:30.9006142Z     await self.middleware_stack(scope, receive, send)
+2026-04-10T08:23:30.9006167Z   File "/usr/local/lib/python3.12/site-packages/starlette/routing.py", line 680, in app
+2026-04-10T08:23:30.9006191Z     await route.handle(scope, receive, send)
+2026-04-10T08:23:30.9006243Z   File "/usr/local/lib/python3.12/site-packages/starlette/routing.py", line 276, in handle
+2026-04-10T08:23:30.9006266Z     await self.app(scope, receive, send)
+2026-04-10T08:23:30.9006291Z   File "/usr/local/lib/python3.12/site-packages/fastapi/routing.py", line 134, in app
+2026-04-10T08:23:30.9006315Z     await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+2026-04-10T08:23:30.9006340Z   File "/usr/local/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+2026-04-10T08:23:30.9006362Z     raise exc
+2026-04-10T08:23:30.9006386Z   File "/usr/local/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+2026-04-10T08:23:30.9006410Z     await app(scope, receive, sender)
+2026-04-10T08:23:30.9006434Z   File "/usr/local/lib/python3.12/site-packages/fastapi/routing.py", line 120, in app
+2026-04-10T08:23:30.9006457Z     response = await f(request)
+2026-04-10T08:23:30.9006479Z                ^^^^^^^^^^^^^^^^
+2026-04-10T08:23:30.9006535Z   File "/usr/local/lib/python3.12/site-packages/fastapi/routing.py", line 674, in app
+2026-04-10T08:23:30.9006559Z     raw_response = await run_endpoint_function(
+2026-04-10T08:23:30.9006581Z                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-04-10T08:23:30.9006606Z   File "/usr/local/lib/python3.12/site-packages/fastapi/routing.py", line 328, in run_endpoint_function
+2026-04-10T08:23:30.9006630Z     return await dependant.call(**values)
+2026-04-10T08:23:30.9006652Z            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-04-10T08:23:30.9006678Z   File "/usr/local/lib/python3.12/site-packages/paceforge/api/app.py", line 346, in get_activities
+2026-04-10T08:23:30.9006702Z     save_user_data(settings.db_path, uid, activities_json=json.dumps(activities))
+2026-04-10T08:23:30.9006727Z                                                           ^^^^^^^^^^^^^^^^^^^^^^
+2026-04-10T08:23:30.9006751Z   File "/usr/local/lib/python3.12/json/__init__.py", line 231, in dumps
+2026-04-10T08:23:30.9006792Z     return _default_encoder.encode(obj)
+2026-04-10T08:23:30.9006815Z            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-04-10T08:23:30.9006839Z   File "/usr/local/lib/python3.12/json/encoder.py", line 200, in encode
+2026-04-10T08:23:30.9006862Z     chunks = self.iterencode(o, _one_shot=True)
+2026-04-10T08:23:30.9006887Z              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-04-10T08:23:30.9006911Z   File "/usr/local/lib/python3.12/json/encoder.py", line 258, in iterencode
+2026-04-10T08:23:30.9006933Z     return _iterencode(o, 0)
+2026-04-10T08:23:30.9006956Z            ^^^^^^^^^^^^^^^^^
+2026-04-10T08:23:30.9006981Z   File "/usr/local/lib/python3.12/json/encoder.py", line 180, in default
+2026-04-10T08:23:30.9007004Z     raise TypeError(f'Object of type {o.__class__.__name__} '
+2026-04-10T08:23:30.9007028Z TypeError: Object of type datetime is not JSON serializable
+2026-04-10T08:23:30.9674776Z INFO:     127.0.0.1:48950 - "GET /admin/users?status=pending HTTP/1.1" 200 OK

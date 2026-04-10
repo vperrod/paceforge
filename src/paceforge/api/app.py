@@ -342,7 +342,7 @@ async def get_activities(
     garmin = _ensure_garmin(uid)
     if garmin:
         profile = garmin.get_fitness_profile(lookback_days=min(days, 365))
-        activities = [a.model_dump() for a in profile.recent_activities]
+        activities = [a.model_dump(mode="json") for a in profile.recent_activities]
         save_user_data(settings.db_path, uid, activities_json=json.dumps(activities))
         return profile.recent_activities
     # Fall back to cached activities

@@ -849,3 +849,327 @@ ErrorDetails: , Details: Pulling image paceforgeacr.azurecr.io/paceforge:latest 
 2026-04-09T13:21:34.7141485Z State: Starting, Action: WarmUpProbeSucceeded, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site startup probe succeeded after 13.865521 seconds., DetailsLevel: INFO
 2026-04-09T13:21:35.4022731Z Site started.
 2026-04-09T13:21:35.4103055Z State: Started, Action: None, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site started at 04/09/2026 13:21:35 (UTC), DetailsLevel: INFO
+2026-04-09T13:44:13.3180758Z State: Stopping, Action: StoppingSite, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site started at 04/09/2026 13:21:35 (UTC), DetailsLevel: INFO
+2026-04-09T13:44:13.3624263Z State: Stopping, Action: StoppingSiteContainers, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site started at 04/09/2026 13:21:35 (UTC), DetailsLevel: INFO
+2026-04-09T13:44:13.3687965Z Container is terminating. Grace period: 5 seconds.
+2026-04-09T13:44:13.4658294Z Stop and delete container. Retry count = 0
+2026-04-09T13:44:13.4678636Z Stopping container: 4505dcb05109_paceforge-app.
+2026-04-09T13:44:17.5230493Z Deleting container: 4505dcb05109_paceforge-app. Retry count = 0
+2026-04-09T13:44:17.9852241Z Container spec TerminationMessagePolicy  path 
+2026-04-09T13:44:17.9917200Z Container is terminated. Total time elapsed: 4620 ms.
+2026-04-09T13:44:18.0131283Z Site: paceforge-app stopped.
+2026-04-09T13:44:18.0399300Z State: Stopping, Action: UnmountingVolumes, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site started at 04/09/2026 13:21:35 (UTC), DetailsLevel: INFO
+2026-04-09T13:44:18.3749670Z State: Stopping, Action: StoppingSiteNetworks, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site started at 04/09/2026 13:21:35 (UTC), DetailsLevel: INFO
+2026-04-09T13:44:18.8453238Z State: Stopped, Action: None, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site stopped at 04/09/2026 13:44:18 (UTC), DetailsLevel: INFO
+2026-04-09T13:44:18.9556196Z State: Stopped, Action: None, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site stopped at 04/09/2026 13:44:18 (UTC), DetailsLevel: INFO
+2026-04-09T13:44:35.4160400Z State: Starting, Action: EstablishingSiteNetworks, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site stopped at 04/09/2026 13:44:18 (UTC), DetailsLevel: INFO
+2026-04-09T13:44:37.1843769Z State: Starting, Action: StartingSiteContainers, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site stopped at 04/09/2026 13:44:18 (UTC), DetailsLevel: INFO
+2026-04-09T13:44:37.1854459Z Container start method called.
+2026-04-09T13:44:37.1865060Z State: Starting, Action: PullingImage, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Pulling image paceforgeacr.azurecr.io/paceforge:latest for paceforge-app., DetailsLevel: INFO
+2026-04-09T13:44:37.1963078Z Establishing network.
+2026-04-09T13:44:37.2035457Z Pulling image: paceforgeacr.azurecr.io/paceforge:latest.
+2026-04-09T13:45:22.5967850Z Image paceforgeacr.azurecr.io/paceforge:latest is pulled from registry paceforgeacr.azurecr.io
+2026-04-09T13:45:22.6090671Z Container is starting.
+2026-04-09T13:45:22.6151523Z State: Starting, Action: MountingVolumes, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Mounting volumes for paceforge-app., DetailsLevel: INFO
+2026-04-09T13:45:22.6158074Z Establishing user namespace if not established already.
+2026-04-09T13:45:22.6166511Z Establishing network if not established already.
+2026-04-09T13:45:22.6228871Z Mounting volumes.
+2026-04-09T13:45:22.6316995Z Nested mountpoint 
+2026-04-09T13:45:22.7009337Z Nested mountpoint volatile/logs
+2026-04-09T13:45:22.7301721Z Nested mountpoint 
+2026-04-09T13:45:22.8655528Z State: Starting, Action: CreatingContainer, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Finished pulling container image and mounting volumes for paceforge-app. Allocatinng the rest of the container resources to finish container creation., DetailsLevel: INFO
+2026-04-09T13:45:22.8656917Z Creating container.
+2026-04-09T13:45:22.8657923Z Creating pipes for streaming container io.
+2026-04-09T13:45:22.8658928Z Creating stdout named pipe at /podr/container/pipe/87e3af88175f_paceforge-app/stdout_4e0912b0b12548dfa96cc17bce343407.
+2026-04-09T13:45:22.9132432Z Successfully created stdout named pipe at: /podr/container/pipe/87e3af88175f_paceforge-app/stdout_4e0912b0b12548dfa96cc17bce343407.
+2026-04-09T13:45:22.9385240Z Opening named pipe /podr/container/pipe/87e3af88175f_paceforge-app/stdout_4e0912b0b12548dfa96cc17bce343407 for reading in non-blocking mode.
+2026-04-09T13:45:22.9415624Z Successfully opened named pipe: /podr/container/pipe/87e3af88175f_paceforge-app/stdout_4e0912b0b12548dfa96cc17bce343407.
+2026-04-09T13:45:22.9417917Z Successfully removed non-blocking flag from /podr/container/pipe/87e3af88175f_paceforge-app/stdout_4e0912b0b12548dfa96cc17bce343407.
+2026-04-09T13:45:22.9480936Z Creating stderr named pipe at /podr/container/pipe/87e3af88175f_paceforge-app/stderr_ea8b6e3ce7084746857b896b79e5f804.
+2026-04-09T13:45:22.9482926Z Successfully created stderr named pipe at: /podr/container/pipe/87e3af88175f_paceforge-app/stderr_ea8b6e3ce7084746857b896b79e5f804.
+2026-04-09T13:45:22.9483885Z Opening named pipe /podr/container/pipe/87e3af88175f_paceforge-app/stderr_ea8b6e3ce7084746857b896b79e5f804 for reading in non-blocking mode.
+2026-04-09T13:45:22.9485031Z Successfully opened named pipe: /podr/container/pipe/87e3af88175f_paceforge-app/stderr_ea8b6e3ce7084746857b896b79e5f804.
+2026-04-09T13:45:22.9486076Z Successfully removed non-blocking flag from /podr/container/pipe/87e3af88175f_paceforge-app/stderr_ea8b6e3ce7084746857b896b79e5f804.
+2026-04-09T13:45:23.0257359Z Creating container with image: paceforgeacr.azurecr.io/paceforge:latest from registry: paceforgeacr.azurecr.io and fully qualified image name: paceforgeacr.azurecr.io/paceforge:latest
+2026-04-09T13:45:23.9148946Z Starting container: 87e3af88175f_paceforge-app.
+2026-04-09T13:45:23.9828005Z Starting watchers and probes.
+2026-04-09T13:45:23.9930681Z Starting metrics collection.
+2026-04-09T13:45:23.9933435Z Container is running.
+2026-04-09T13:45:23.9936283Z State: Starting, Action: CreatingContainer, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Container paceforge-app successfully created and is running., DetailsLevel: INFO
+2026-04-09T13:45:24.1457945Z Container start method finished after 46949 ms.
+2026-04-09T13:45:24.1549187Z State: Starting, Action: InitiatingSiteWarmUpProbe, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Container paceforge-app successfully created and is running., DetailsLevel: INFO
+2026-04-09T13:45:24.1862807Z State: Starting, Action: WaitingForSiteWarmUpProbeSuccess, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Pinging warmup path to ensure container is ready to receive requests., DetailsLevel: INFO
+2026-04-09T13:45:34.9670998Z Site startup probe succeeded after 10.7211042 seconds.
+2026-04-09T13:45:35.2018734Z State: Starting, Action: WarmUpProbeSucceeded, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site startup probe succeeded after 10.7211042 seconds., DetailsLevel: INFO
+2026-04-09T13:45:35.6788371Z Site started.
+2026-04-09T13:45:35.6790920Z State: Started, Action: None, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site started at 04/09/2026 13:45:35 (UTC), DetailsLevel: INFO
+2026-04-09T14:00:40.2496460Z State: Stopping, Action: StoppingSite, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site started at 04/09/2026 13:45:35 (UTC), DetailsLevel: INFO
+2026-04-09T14:00:40.2925091Z State: Stopping, Action: StoppingSiteContainers, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site started at 04/09/2026 13:45:35 (UTC), DetailsLevel: INFO
+2026-04-09T14:00:40.3028215Z Container is terminating. Grace period: 5 seconds.
+2026-04-09T14:00:40.7220835Z Stop and delete container. Retry count = 0
+2026-04-09T14:00:40.7296157Z Stopping container: 87e3af88175f_paceforge-app.
+2026-04-09T14:00:45.0118493Z Deleting container: 87e3af88175f_paceforge-app. Retry count = 0
+2026-04-09T14:00:45.4309062Z Container spec TerminationMessagePolicy  path 
+2026-04-09T14:00:45.4378178Z Container is terminated. Total time elapsed: 5133 ms.
+2026-04-09T14:00:45.4540474Z Site: paceforge-app stopped.
+2026-04-09T14:00:45.4651667Z State: Stopping, Action: UnmountingVolumes, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site started at 04/09/2026 13:45:35 (UTC), DetailsLevel: INFO
+2026-04-09T14:00:45.8529548Z State: Stopping, Action: StoppingSiteNetworks, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site started at 04/09/2026 13:45:35 (UTC), DetailsLevel: INFO
+2026-04-09T14:00:46.1461301Z State: Stopped, Action: None, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site stopped at 04/09/2026 14:00:46 (UTC), DetailsLevel: INFO
+2026-04-09T14:00:46.1912617Z State: Stopped, Action: None, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site stopped at 04/09/2026 14:00:46 (UTC), DetailsLevel: INFO
+2026-04-09T14:00:52.1139911Z State: Starting, Action: EstablishingSiteNetworks, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site stopped at 04/09/2026 14:00:46 (UTC), DetailsLevel: INFO
+2026-04-09T14:00:54.8245979Z State: Starting, Action: StartingSiteContainers, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site stopped at 04/09/2026 14:00:46 (UTC), DetailsLevel: INFO
+2026-04-09T14:00:54.8247528Z Container start method called.
+2026-04-09T14:00:54.8248207Z State: Starting, Action: PullingImage, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Pulling image paceforgeacr.azurecr.io/paceforge:latest for paceforge-app., DetailsLevel: INFO
+2026-04-09T14:00:54.8249584Z Establishing network.
+2026-04-09T14:00:54.8250940Z Pulling image: paceforgeacr.azurecr.io/paceforge:latest.
+2026-04-09T14:01:40.1023399Z Image paceforgeacr.azurecr.io/paceforge:latest is pulled from registry paceforgeacr.azurecr.io
+2026-04-09T14:01:40.1104735Z Container is starting.
+2026-04-09T14:01:40.1407478Z State: Starting, Action: MountingVolumes, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Mounting volumes for paceforge-app., DetailsLevel: INFO
+2026-04-09T14:01:40.1416071Z Establishing user namespace if not established already.
+2026-04-09T14:01:40.1476475Z Establishing network if not established already.
+2026-04-09T14:01:40.1515983Z Mounting volumes.
+2026-04-09T14:01:40.1576529Z Nested mountpoint 
+2026-04-09T14:01:40.2104038Z Nested mountpoint volatile/logs
+2026-04-09T14:01:40.2274769Z Nested mountpoint 
+2026-04-09T14:01:40.3886183Z State: Starting, Action: CreatingContainer, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Finished pulling container image and mounting volumes for paceforge-app. Allocatinng the rest of the container resources to finish container creation., DetailsLevel: INFO
+2026-04-09T14:01:40.3887390Z Creating container.
+2026-04-09T14:01:40.3888469Z Creating pipes for streaming container io.
+2026-04-09T14:01:40.3889436Z Creating stdout named pipe at /podr/container/pipe/0bbdb928c251_paceforge-app/stdout_6729ca8d84e7483eb81f13aa81f1f40d.
+2026-04-09T14:01:40.4228012Z Successfully created stdout named pipe at: /podr/container/pipe/0bbdb928c251_paceforge-app/stdout_6729ca8d84e7483eb81f13aa81f1f40d.
+2026-04-09T14:01:40.4229169Z Opening named pipe /podr/container/pipe/0bbdb928c251_paceforge-app/stdout_6729ca8d84e7483eb81f13aa81f1f40d for reading in non-blocking mode.
+2026-04-09T14:01:40.4230358Z Successfully opened named pipe: /podr/container/pipe/0bbdb928c251_paceforge-app/stdout_6729ca8d84e7483eb81f13aa81f1f40d.
+2026-04-09T14:01:40.4231338Z Successfully removed non-blocking flag from /podr/container/pipe/0bbdb928c251_paceforge-app/stdout_6729ca8d84e7483eb81f13aa81f1f40d.
+2026-04-09T14:01:40.4246883Z Creating stderr named pipe at /podr/container/pipe/0bbdb928c251_paceforge-app/stderr_802dfae4b6e848e7b70df1504d3805b2.
+2026-04-09T14:01:40.4248642Z Successfully created stderr named pipe at: /podr/container/pipe/0bbdb928c251_paceforge-app/stderr_802dfae4b6e848e7b70df1504d3805b2.
+2026-04-09T14:01:40.4249733Z Opening named pipe /podr/container/pipe/0bbdb928c251_paceforge-app/stderr_802dfae4b6e848e7b70df1504d3805b2 for reading in non-blocking mode.
+2026-04-09T14:01:40.4250959Z Successfully opened named pipe: /podr/container/pipe/0bbdb928c251_paceforge-app/stderr_802dfae4b6e848e7b70df1504d3805b2.
+2026-04-09T14:01:40.4251955Z Successfully removed non-blocking flag from /podr/container/pipe/0bbdb928c251_paceforge-app/stderr_802dfae4b6e848e7b70df1504d3805b2.
+2026-04-09T14:01:40.4615143Z Creating container with image: paceforgeacr.azurecr.io/paceforge:latest from registry: paceforgeacr.azurecr.io and fully qualified image name: paceforgeacr.azurecr.io/paceforge:latest
+2026-04-09T14:01:41.7739164Z Starting container: 0bbdb928c251_paceforge-app.
+2026-04-09T14:01:41.8480712Z Starting watchers and probes.
+2026-04-09T14:01:41.8572886Z Starting metrics collection.
+2026-04-09T14:01:41.8575350Z Container is running.
+2026-04-09T14:01:41.8582007Z State: Starting, Action: CreatingContainer, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Container paceforge-app successfully created and is running., DetailsLevel: INFO
+2026-04-09T14:01:41.9529968Z Container start method finished after 47128 ms.
+2026-04-09T14:01:42.0467899Z State: Starting, Action: InitiatingSiteWarmUpProbe, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Container paceforge-app successfully created and is running., DetailsLevel: INFO
+2026-04-09T14:01:42.0485047Z State: Starting, Action: WaitingForSiteWarmUpProbeSuccess, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Pinging warmup path to ensure container is ready to receive requests., DetailsLevel: INFO
+2026-04-09T14:01:53.1848433Z Site startup probe succeeded after 11.1158931 seconds.
+2026-04-09T14:01:53.5429625Z State: Starting, Action: WarmUpProbeSucceeded, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site startup probe succeeded after 11.1158931 seconds., DetailsLevel: INFO
+2026-04-09T14:01:54.4372906Z Site started.
+2026-04-09T14:01:54.4373893Z State: Started, Action: None, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site started at 04/09/2026 14:01:54 (UTC), DetailsLevel: INFO
+2026-04-09T14:27:00.2443718Z State: Stopping, Action: StoppingSite, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site started at 04/09/2026 14:01:54 (UTC), DetailsLevel: INFO
+2026-04-09T14:27:00.2925648Z State: Stopping, Action: StoppingSiteContainers, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site started at 04/09/2026 14:01:54 (UTC), DetailsLevel: INFO
+2026-04-09T14:27:00.2946555Z Container is terminating. Grace period: 5 seconds.
+2026-04-09T14:27:00.6772533Z Stop and delete container. Retry count = 0
+2026-04-09T14:27:00.6945379Z Stopping container: 0bbdb928c251_paceforge-app.
+2026-04-09T14:27:04.6952194Z Deleting container: 0bbdb928c251_paceforge-app. Retry count = 0
+2026-04-09T14:27:05.0208275Z Container spec TerminationMessagePolicy  path 
+2026-04-09T14:27:05.0228678Z Container is terminated. Total time elapsed: 4727 ms.
+2026-04-09T14:27:05.0306322Z Site: paceforge-app stopped.
+2026-04-09T14:27:05.0400947Z State: Stopping, Action: UnmountingVolumes, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site started at 04/09/2026 14:01:54 (UTC), DetailsLevel: INFO
+2026-04-09T14:27:05.5010758Z State: Stopping, Action: StoppingSiteNetworks, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site started at 04/09/2026 14:01:54 (UTC), DetailsLevel: INFO
+2026-04-09T14:27:05.6785684Z State: Stopped, Action: None, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site stopped at 04/09/2026 14:27:05 (UTC), DetailsLevel: INFO
+2026-04-09T14:27:05.7175037Z State: Stopped, Action: None, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site stopped at 04/09/2026 14:27:05 (UTC), DetailsLevel: INFO
+2026-04-09T14:27:05.8725419Z State: Starting, Action: EstablishingSiteNetworks, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site stopped at 04/09/2026 14:27:05 (UTC), DetailsLevel: INFO
+2026-04-09T14:27:07.9086708Z State: Starting, Action: StartingSiteContainers, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site stopped at 04/09/2026 14:27:05 (UTC), DetailsLevel: INFO
+2026-04-09T14:27:07.9108404Z Container start method called.
+2026-04-09T14:27:07.9182198Z State: Starting, Action: PullingImage, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Pulling image paceforgeacr.azurecr.io/paceforge:latest for paceforge-app., DetailsLevel: INFO
+2026-04-09T14:27:07.9203271Z Establishing network.
+2026-04-09T14:27:07.9269799Z Pulling image: paceforgeacr.azurecr.io/paceforge:latest.
+2026-04-09T14:28:10.8857294Z Image paceforgeacr.azurecr.io/paceforge:latest is pulled from registry paceforgeacr.azurecr.io
+2026-04-09T14:28:10.9369331Z Container is starting.
+2026-04-09T14:28:10.9466228Z State: Starting, Action: MountingVolumes, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Mounting volumes for paceforge-app., DetailsLevel: INFO
+2026-04-09T14:28:10.9472668Z Establishing user namespace if not established already.
+2026-04-09T14:28:10.9474410Z Establishing network if not established already.
+2026-04-09T14:28:10.9544571Z Mounting volumes.
+2026-04-09T14:28:10.9566852Z Nested mountpoint 
+2026-04-09T14:28:11.0481073Z Nested mountpoint volatile/logs
+2026-04-09T14:28:11.0976074Z Nested mountpoint 
+2026-04-09T14:28:11.2922267Z State: Starting, Action: CreatingContainer, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Finished pulling container image and mounting volumes for paceforge-app. Allocatinng the rest of the container resources to finish container creation., DetailsLevel: INFO
+2026-04-09T14:28:11.3180656Z Creating container.
+2026-04-09T14:28:11.3187540Z Creating pipes for streaming container io.
+2026-04-09T14:28:11.3189214Z Creating stdout named pipe at /podr/container/pipe/b2ce822a1dd7_paceforge-app/stdout_acd4344c820b439cab4c75974e31a6cb.
+2026-04-09T14:28:11.3291171Z Successfully created stdout named pipe at: /podr/container/pipe/b2ce822a1dd7_paceforge-app/stdout_acd4344c820b439cab4c75974e31a6cb.
+2026-04-09T14:28:11.3307722Z Opening named pipe /podr/container/pipe/b2ce822a1dd7_paceforge-app/stdout_acd4344c820b439cab4c75974e31a6cb for reading in non-blocking mode.
+2026-04-09T14:28:11.3310641Z Successfully opened named pipe: /podr/container/pipe/b2ce822a1dd7_paceforge-app/stdout_acd4344c820b439cab4c75974e31a6cb.
+2026-04-09T14:28:11.3312615Z Successfully removed non-blocking flag from /podr/container/pipe/b2ce822a1dd7_paceforge-app/stdout_acd4344c820b439cab4c75974e31a6cb.
+2026-04-09T14:28:11.3401255Z Creating stderr named pipe at /podr/container/pipe/b2ce822a1dd7_paceforge-app/stderr_885ed5897fe74c43814c58a91cecbd3f.
+2026-04-09T14:28:11.3403346Z Successfully created stderr named pipe at: /podr/container/pipe/b2ce822a1dd7_paceforge-app/stderr_885ed5897fe74c43814c58a91cecbd3f.
+2026-04-09T14:28:11.3404615Z Opening named pipe /podr/container/pipe/b2ce822a1dd7_paceforge-app/stderr_885ed5897fe74c43814c58a91cecbd3f for reading in non-blocking mode.
+2026-04-09T14:28:11.3405836Z Successfully opened named pipe: /podr/container/pipe/b2ce822a1dd7_paceforge-app/stderr_885ed5897fe74c43814c58a91cecbd3f.
+2026-04-09T14:28:11.3406900Z Successfully removed non-blocking flag from /podr/container/pipe/b2ce822a1dd7_paceforge-app/stderr_885ed5897fe74c43814c58a91cecbd3f.
+2026-04-09T14:28:11.3611914Z Creating container with image: paceforgeacr.azurecr.io/paceforge:latest from registry: paceforgeacr.azurecr.io and fully qualified image name: paceforgeacr.azurecr.io/paceforge:latest
+2026-04-09T14:28:12.2862854Z Starting container: b2ce822a1dd7_paceforge-app.
+2026-04-09T14:28:12.4083517Z Starting watchers and probes.
+2026-04-09T14:28:12.4538251Z Starting metrics collection.
+2026-04-09T14:28:12.4634250Z Container is running.
+2026-04-09T14:28:12.4644371Z State: Starting, Action: CreatingContainer, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Container paceforge-app successfully created and is running., DetailsLevel: INFO
+2026-04-09T14:28:12.6305340Z Container start method finished after 64710 ms.
+2026-04-09T14:28:12.6406850Z State: Starting, Action: InitiatingSiteWarmUpProbe, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Container paceforge-app successfully created and is running., DetailsLevel: INFO
+2026-04-09T14:28:12.6469690Z State: Starting, Action: WaitingForSiteWarmUpProbeSuccess, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Pinging warmup path to ensure container is ready to receive requests., DetailsLevel: INFO
+2026-04-09T14:28:26.9466271Z Site startup probe succeeded after 14.2125152 seconds.
+2026-04-09T14:28:27.2172464Z State: Starting, Action: WarmUpProbeSucceeded, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site startup probe succeeded after 14.2125152 seconds., DetailsLevel: INFO
+2026-04-09T14:28:27.8256118Z Site started.
+2026-04-09T14:28:27.8260302Z State: Started, Action: None, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site started at 04/09/2026 14:28:27 (UTC), DetailsLevel: INFO
+2026-04-09T15:11:50.2518798Z State: Stopping, Action: StoppingSite, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site started at 04/09/2026 14:28:27 (UTC), DetailsLevel: INFO
+2026-04-09T15:11:50.2905341Z State: Stopping, Action: StoppingSiteContainers, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site started at 04/09/2026 14:28:27 (UTC), DetailsLevel: INFO
+2026-04-09T15:11:50.2926648Z Container is terminating. Grace period: 5 seconds.
+2026-04-09T15:11:50.4284146Z Stop and delete container. Retry count = 0
+2026-04-09T15:11:50.4359609Z Stopping container: b2ce822a1dd7_paceforge-app.
+2026-04-09T15:11:54.2833057Z Deleting container: b2ce822a1dd7_paceforge-app. Retry count = 0
+2026-04-09T15:11:54.6808862Z Container spec TerminationMessagePolicy  path 
+2026-04-09T15:11:54.6960831Z Container is terminated. Total time elapsed: 4395 ms.
+2026-04-09T15:11:54.7058348Z Site: paceforge-app stopped.
+2026-04-09T15:11:54.7173037Z State: Stopping, Action: UnmountingVolumes, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site started at 04/09/2026 14:28:27 (UTC), DetailsLevel: INFO
+2026-04-09T15:11:55.2878259Z State: Stopping, Action: StoppingSiteNetworks, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site started at 04/09/2026 14:28:27 (UTC), DetailsLevel: INFO
+2026-04-09T15:11:55.5197680Z State: Stopped, Action: None, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site stopped at 04/09/2026 15:11:55 (UTC), DetailsLevel: INFO
+2026-04-09T15:11:55.6359442Z State: Stopped, Action: None, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site stopped at 04/09/2026 15:11:55 (UTC), DetailsLevel: INFO
+2026-04-09T15:11:55.8937914Z State: Starting, Action: EstablishingSiteNetworks, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site stopped at 04/09/2026 15:11:55 (UTC), DetailsLevel: INFO
+2026-04-09T15:11:57.8124093Z State: Starting, Action: StartingSiteContainers, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site stopped at 04/09/2026 15:11:55 (UTC), DetailsLevel: INFO
+2026-04-09T15:11:57.8197930Z Container start method called.
+2026-04-09T15:11:57.8212725Z State: Starting, Action: PullingImage, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Pulling image paceforgeacr.azurecr.io/paceforge:latest for paceforge-app., DetailsLevel: INFO
+2026-04-09T15:11:57.8214538Z Establishing network.
+2026-04-09T15:11:57.8310100Z Pulling image: paceforgeacr.azurecr.io/paceforge:latest.
+2026-04-09T15:13:06.0501846Z Image paceforgeacr.azurecr.io/paceforge:latest is pulled from registry paceforgeacr.azurecr.io
+2026-04-09T15:13:06.0877731Z Container is starting.
+2026-04-09T15:13:06.0905800Z State: Starting, Action: MountingVolumes, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Mounting volumes for paceforge-app., DetailsLevel: INFO
+2026-04-09T15:13:06.0907974Z Establishing user namespace if not established already.
+2026-04-09T15:13:06.0911073Z Establishing network if not established already.
+2026-04-09T15:13:06.0972987Z Mounting volumes.
+2026-04-09T15:13:06.1182375Z Nested mountpoint 
+2026-04-09T15:13:06.1964187Z Nested mountpoint volatile/logs
+2026-04-09T15:13:06.2540464Z Nested mountpoint 
+2026-04-09T15:13:06.3509800Z State: Starting, Action: CreatingContainer, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Finished pulling container image and mounting volumes for paceforge-app. Allocatinng the rest of the container resources to finish container creation., DetailsLevel: INFO
+2026-04-09T15:13:06.3511809Z Creating container.
+2026-04-09T15:13:06.3520423Z Creating pipes for streaming container io.
+2026-04-09T15:13:06.3536016Z Creating stdout named pipe at /podr/container/pipe/35e05aa2f0cc_paceforge-app/stdout_25d6b5b886fb44808bfc93f3ac8c68dd.
+2026-04-09T15:13:06.4086480Z Successfully created stdout named pipe at: /podr/container/pipe/35e05aa2f0cc_paceforge-app/stdout_25d6b5b886fb44808bfc93f3ac8c68dd.
+2026-04-09T15:13:06.4088389Z Opening named pipe /podr/container/pipe/35e05aa2f0cc_paceforge-app/stdout_25d6b5b886fb44808bfc93f3ac8c68dd for reading in non-blocking mode.
+2026-04-09T15:13:06.4089855Z Successfully opened named pipe: /podr/container/pipe/35e05aa2f0cc_paceforge-app/stdout_25d6b5b886fb44808bfc93f3ac8c68dd.
+2026-04-09T15:13:06.4091470Z Successfully removed non-blocking flag from /podr/container/pipe/35e05aa2f0cc_paceforge-app/stdout_25d6b5b886fb44808bfc93f3ac8c68dd.
+2026-04-09T15:13:06.4093302Z Creating stderr named pipe at /podr/container/pipe/35e05aa2f0cc_paceforge-app/stderr_b63d05489a1849209e64ff6c78f0a414.
+2026-04-09T15:13:06.4095276Z Successfully created stderr named pipe at: /podr/container/pipe/35e05aa2f0cc_paceforge-app/stderr_b63d05489a1849209e64ff6c78f0a414.
+2026-04-09T15:13:06.4097065Z Opening named pipe /podr/container/pipe/35e05aa2f0cc_paceforge-app/stderr_b63d05489a1849209e64ff6c78f0a414 for reading in non-blocking mode.
+2026-04-09T15:13:06.4099345Z Successfully opened named pipe: /podr/container/pipe/35e05aa2f0cc_paceforge-app/stderr_b63d05489a1849209e64ff6c78f0a414.
+2026-04-09T15:13:06.4100428Z Successfully removed non-blocking flag from /podr/container/pipe/35e05aa2f0cc_paceforge-app/stderr_b63d05489a1849209e64ff6c78f0a414.
+2026-04-09T15:13:06.4377995Z Creating container with image: paceforgeacr.azurecr.io/paceforge:latest from registry: paceforgeacr.azurecr.io and fully qualified image name: paceforgeacr.azurecr.io/paceforge:latest
+2026-04-09T15:13:07.9297076Z Starting container: 35e05aa2f0cc_paceforge-app.
+2026-04-09T15:13:08.0286196Z Starting watchers and probes.
+2026-04-09T15:13:08.0360147Z Starting metrics collection.
+2026-04-09T15:13:08.0366330Z Container is running.
+2026-04-09T15:13:08.0397967Z State: Starting, Action: CreatingContainer, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Container paceforge-app successfully created and is running., DetailsLevel: INFO
+2026-04-09T15:13:08.2784995Z Container start method finished after 70458 ms.
+2026-04-09T15:13:08.2969634Z State: Starting, Action: InitiatingSiteWarmUpProbe, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Container paceforge-app successfully created and is running., DetailsLevel: INFO
+2026-04-09T15:13:08.3064611Z State: Starting, Action: WaitingForSiteWarmUpProbeSuccess, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Pinging warmup path to ensure container is ready to receive requests., DetailsLevel: INFO
+2026-04-09T15:13:20.4560751Z Site startup probe succeeded after 12.0308672 seconds.
+2026-04-09T15:13:22.0304457Z State: Starting, Action: WarmUpProbeSucceeded, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site startup probe succeeded after 12.0308672 seconds., DetailsLevel: INFO
+2026-04-09T15:13:23.5623850Z Site started.
+2026-04-09T15:13:23.5638839Z State: Started, Action: None, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site started at 04/09/2026 15:13:23 (UTC), DetailsLevel: INFO
+2026-04-09T15:59:20.2542289Z State: Stopping, Action: StoppingSite, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site started at 04/09/2026 15:13:23 (UTC), DetailsLevel: INFO
+2026-04-09T15:59:20.2937685Z State: Stopping, Action: StoppingSiteContainers, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site started at 04/09/2026 15:13:23 (UTC), DetailsLevel: INFO
+2026-04-09T15:59:20.3008789Z Container is terminating. Grace period: 5 seconds.
+2026-04-09T15:59:20.4307128Z Stop and delete container. Retry count = 0
+2026-04-09T15:59:20.4401299Z Stopping container: 35e05aa2f0cc_paceforge-app.
+2026-04-09T15:59:25.3452481Z Deleting container: 35e05aa2f0cc_paceforge-app. Retry count = 0
+2026-04-09T15:59:25.6851811Z Container spec TerminationMessagePolicy  path 
+2026-04-09T15:59:25.6942433Z Container is terminated. Total time elapsed: 5389 ms.
+2026-04-09T15:59:25.7070751Z Site: paceforge-app stopped.
+2026-04-09T15:59:25.7344242Z State: Stopping, Action: UnmountingVolumes, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site started at 04/09/2026 15:13:23 (UTC), DetailsLevel: INFO
+2026-04-09T15:59:26.3662788Z State: Stopping, Action: StoppingSiteNetworks, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site started at 04/09/2026 15:13:23 (UTC), DetailsLevel: INFO
+2026-04-09T15:59:26.8336406Z State: Stopped, Action: None, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site stopped at 04/09/2026 15:59:26 (UTC), DetailsLevel: INFO
+2026-04-09T15:59:26.9275524Z State: Stopped, Action: None, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site stopped at 04/09/2026 15:59:26 (UTC), DetailsLevel: INFO
+2026-04-09T16:00:33.6794386Z State: Starting, Action: EstablishingSiteNetworks, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site stopped at 04/09/2026 15:59:26 (UTC), DetailsLevel: INFO
+2026-04-09T16:00:35.3415209Z State: Starting, Action: StartingSiteContainers, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site stopped at 04/09/2026 15:59:26 (UTC), DetailsLevel: INFO
+2026-04-09T16:00:35.3420939Z Container start method called.
+2026-04-09T16:00:35.3491523Z State: Starting, Action: PullingImage, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Pulling image paceforgeacr.azurecr.io/paceforge:latest for paceforge-app., DetailsLevel: INFO
+2026-04-09T16:00:35.3496268Z Establishing network.
+2026-04-09T16:00:35.3508565Z Pulling image: paceforgeacr.azurecr.io/paceforge:latest.
+2026-04-09T16:01:25.6387234Z Image paceforgeacr.azurecr.io/paceforge:latest is pulled from registry paceforgeacr.azurecr.io
+2026-04-09T16:01:25.6482493Z Container is starting.
+2026-04-09T16:01:25.6723668Z State: Starting, Action: MountingVolumes, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Mounting volumes for paceforge-app., DetailsLevel: INFO
+2026-04-09T16:01:25.6729907Z Establishing user namespace if not established already.
+2026-04-09T16:01:25.6737978Z Establishing network if not established already.
+2026-04-09T16:01:25.6778222Z Mounting volumes.
+2026-04-09T16:01:25.6804664Z Nested mountpoint 
+2026-04-09T16:01:25.7394303Z Nested mountpoint volatile/logs
+2026-04-09T16:01:25.7868648Z Nested mountpoint 
+2026-04-09T16:01:25.9966340Z State: Starting, Action: CreatingContainer, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Finished pulling container image and mounting volumes for paceforge-app. Allocatinng the rest of the container resources to finish container creation., DetailsLevel: INFO
+2026-04-09T16:01:25.9983959Z Creating container.
+2026-04-09T16:01:26.0000591Z Creating pipes for streaming container io.
+2026-04-09T16:01:26.0074099Z Creating stdout named pipe at /podr/container/pipe/ed365ca944db_paceforge-app/stdout_91a353613a9b48e1bce66a1b58d09dc7.
+2026-04-09T16:01:26.0124731Z Successfully created stdout named pipe at: /podr/container/pipe/ed365ca944db_paceforge-app/stdout_91a353613a9b48e1bce66a1b58d09dc7.
+2026-04-09T16:01:26.0161771Z Opening named pipe /podr/container/pipe/ed365ca944db_paceforge-app/stdout_91a353613a9b48e1bce66a1b58d09dc7 for reading in non-blocking mode.
+2026-04-09T16:01:26.0168203Z Successfully opened named pipe: /podr/container/pipe/ed365ca944db_paceforge-app/stdout_91a353613a9b48e1bce66a1b58d09dc7.
+2026-04-09T16:01:26.0176642Z Successfully removed non-blocking flag from /podr/container/pipe/ed365ca944db_paceforge-app/stdout_91a353613a9b48e1bce66a1b58d09dc7.
+2026-04-09T16:01:26.0193785Z Creating stderr named pipe at /podr/container/pipe/ed365ca944db_paceforge-app/stderr_26ec290e1dfc4e6980d9944e8c621d33.
+2026-04-09T16:01:26.0265075Z Successfully created stderr named pipe at: /podr/container/pipe/ed365ca944db_paceforge-app/stderr_26ec290e1dfc4e6980d9944e8c621d33.
+2026-04-09T16:01:26.0272615Z Opening named pipe /podr/container/pipe/ed365ca944db_paceforge-app/stderr_26ec290e1dfc4e6980d9944e8c621d33 for reading in non-blocking mode.
+2026-04-09T16:01:26.0281071Z Successfully opened named pipe: /podr/container/pipe/ed365ca944db_paceforge-app/stderr_26ec290e1dfc4e6980d9944e8c621d33.
+2026-04-09T16:01:26.0363633Z Successfully removed non-blocking flag from /podr/container/pipe/ed365ca944db_paceforge-app/stderr_26ec290e1dfc4e6980d9944e8c621d33.
+2026-04-09T16:01:26.0390660Z Creating container with image: paceforgeacr.azurecr.io/paceforge:latest from registry: paceforgeacr.azurecr.io and fully qualified image name: paceforgeacr.azurecr.io/paceforge:latest
+2026-04-09T16:01:26.9372657Z Starting container: ed365ca944db_paceforge-app.
+2026-04-09T16:01:27.0623568Z Starting watchers and probes.
+2026-04-09T16:01:27.0805185Z Starting metrics collection.
+2026-04-09T16:01:27.0818059Z Container is running.
+2026-04-09T16:01:27.0827989Z State: Starting, Action: CreatingContainer, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Container paceforge-app successfully created and is running., DetailsLevel: INFO
+2026-04-09T16:01:27.2879578Z Container start method finished after 51945 ms.
+2026-04-09T16:01:27.3441437Z State: Starting, Action: InitiatingSiteWarmUpProbe, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Container paceforge-app successfully created and is running., DetailsLevel: INFO
+2026-04-09T16:01:27.3470424Z State: Starting, Action: WaitingForSiteWarmUpProbeSuccess, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Pinging warmup path to ensure container is ready to receive requests., DetailsLevel: INFO
+2026-04-09T16:01:40.2994428Z Site startup probe succeeded after 12.9111436 seconds.
+2026-04-09T16:01:40.5721824Z State: Starting, Action: WarmUpProbeSucceeded, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site startup probe succeeded after 12.9111436 seconds., DetailsLevel: INFO
+2026-04-09T16:01:41.2447239Z Site started.
+2026-04-09T16:01:41.2463554Z State: Started, Action: None, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site started at 04/09/2026 16:01:41 (UTC), DetailsLevel: INFO
+2026-04-09T16:07:24.7439384Z State: Stopping, Action: StoppingSite, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site started at 04/09/2026 16:01:41 (UTC), DetailsLevel: INFO
+2026-04-09T16:07:24.8159004Z State: Stopping, Action: StoppingSiteContainers, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site started at 04/09/2026 16:01:41 (UTC), DetailsLevel: INFO
+2026-04-09T16:07:24.8245863Z Container is terminating. Grace period: 5 seconds.
+2026-04-09T16:07:25.1594773Z Stop and delete container. Retry count = 0
+2026-04-09T16:07:25.1596302Z Stopping container: ed365ca944db_paceforge-app.
+2026-04-09T16:07:27.7193991Z Deleting container: ed365ca944db_paceforge-app. Retry count = 0
+2026-04-09T16:07:28.2088745Z Container spec TerminationMessagePolicy  path 
+2026-04-09T16:07:28.2158278Z Container is terminated. Total time elapsed: 3374 ms.
+2026-04-09T16:07:28.2160264Z Site: paceforge-app stopped.
+2026-04-09T16:07:28.2254209Z State: Stopping, Action: UnmountingVolumes, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site started at 04/09/2026 16:01:41 (UTC), DetailsLevel: INFO
+2026-04-09T16:07:28.5645163Z State: Stopping, Action: StoppingSiteNetworks, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site started at 04/09/2026 16:01:41 (UTC), DetailsLevel: INFO
+2026-04-09T16:07:29.2249448Z State: Stopped, Action: None, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site stopped at 04/09/2026 16:07:29 (UTC), DetailsLevel: INFO
+2026-04-09T16:07:29.2749799Z State: Stopped, Action: None, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site stopped at 04/09/2026 16:07:29 (UTC), DetailsLevel: INFO
+2026-04-09T16:08:11.3684930Z State: Starting, Action: EstablishingSiteNetworks, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site stopped at 04/09/2026 16:07:29 (UTC), DetailsLevel: INFO
+2026-04-09T16:08:13.0043048Z State: Starting, Action: StartingSiteContainers, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site stopped at 04/09/2026 16:07:29 (UTC), DetailsLevel: INFO
+2026-04-09T16:08:13.0104812Z Container start method called.
+2026-04-09T16:08:13.0115415Z State: Starting, Action: PullingImage, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Pulling image paceforgeacr.azurecr.io/paceforge:latest for paceforge-app., DetailsLevel: INFO
+2026-04-09T16:08:13.0134695Z Establishing network.
+2026-04-09T16:08:13.0146532Z Pulling image: paceforgeacr.azurecr.io/paceforge:latest.
+2026-04-09T16:09:03.8622714Z Image paceforgeacr.azurecr.io/paceforge:latest is pulled from registry paceforgeacr.azurecr.io
+2026-04-09T16:09:03.8836107Z Container is starting.
+2026-04-09T16:09:03.8907872Z State: Starting, Action: MountingVolumes, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Mounting volumes for paceforge-app., DetailsLevel: INFO
+2026-04-09T16:09:03.8918029Z Establishing user namespace if not established already.
+2026-04-09T16:09:03.8919762Z Establishing network if not established already.
+2026-04-09T16:09:03.8925275Z Mounting volumes.
+2026-04-09T16:09:03.9014628Z Nested mountpoint 
+2026-04-09T16:09:03.9659640Z Nested mountpoint volatile/logs
+2026-04-09T16:09:04.0411012Z Nested mountpoint 
+2026-04-09T16:09:04.1879983Z State: Starting, Action: CreatingContainer, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Finished pulling container image and mounting volumes for paceforge-app. Allocatinng the rest of the container resources to finish container creation., DetailsLevel: INFO
+2026-04-09T16:09:04.1891155Z Creating container.
+2026-04-09T16:09:04.1904700Z Creating pipes for streaming container io.
+2026-04-09T16:09:04.2260923Z Creating stdout named pipe at /podr/container/pipe/184cd05af571_paceforge-app/stdout_d940cd2715fb43018ff7e67bb6946352.
+2026-04-09T16:09:04.2345354Z Successfully created stdout named pipe at: /podr/container/pipe/184cd05af571_paceforge-app/stdout_d940cd2715fb43018ff7e67bb6946352.
+2026-04-09T16:09:04.2355313Z Opening named pipe /podr/container/pipe/184cd05af571_paceforge-app/stdout_d940cd2715fb43018ff7e67bb6946352 for reading in non-blocking mode.
+2026-04-09T16:09:04.2363725Z Successfully opened named pipe: /podr/container/pipe/184cd05af571_paceforge-app/stdout_d940cd2715fb43018ff7e67bb6946352.
+2026-04-09T16:09:04.2430366Z Successfully removed non-blocking flag from /podr/container/pipe/184cd05af571_paceforge-app/stdout_d940cd2715fb43018ff7e67bb6946352.
+2026-04-09T16:09:04.2443137Z Creating stderr named pipe at /podr/container/pipe/184cd05af571_paceforge-app/stderr_0f49b820d4854818b370885c13dc0b96.
+2026-04-09T16:09:04.2459477Z Successfully created stderr named pipe at: /podr/container/pipe/184cd05af571_paceforge-app/stderr_0f49b820d4854818b370885c13dc0b96.
+2026-04-09T16:09:04.2527693Z Opening named pipe /podr/container/pipe/184cd05af571_paceforge-app/stderr_0f49b820d4854818b370885c13dc0b96 for reading in non-blocking mode.
+2026-04-09T16:09:04.2540800Z Successfully opened named pipe: /podr/container/pipe/184cd05af571_paceforge-app/stderr_0f49b820d4854818b370885c13dc0b96.
+2026-04-09T16:09:04.2543693Z Successfully removed non-blocking flag from /podr/container/pipe/184cd05af571_paceforge-app/stderr_0f49b820d4854818b370885c13dc0b96.
+2026-04-09T16:09:04.2618015Z Creating container with image: paceforgeacr.azurecr.io/paceforge:latest from registry: paceforgeacr.azurecr.io and fully qualified image name: paceforgeacr.azurecr.io/paceforge:latest
+2026-04-09T16:09:05.3066098Z Starting container: 184cd05af571_paceforge-app.
+2026-04-09T16:09:05.4209594Z Starting watchers and probes.
+2026-04-09T16:09:05.4227866Z Starting metrics collection.
+2026-04-09T16:09:05.4229604Z Container is running.
+2026-04-09T16:09:05.4231303Z State: Starting, Action: CreatingContainer, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Container paceforge-app successfully created and is running., DetailsLevel: INFO
+2026-04-09T16:09:05.5386739Z Container start method finished after 52527 ms.
+2026-04-09T16:09:05.5459078Z State: Starting, Action: InitiatingSiteWarmUpProbe, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Container paceforge-app successfully created and is running., DetailsLevel: INFO
+2026-04-09T16:09:05.5466322Z State: Starting, Action: WaitingForSiteWarmUpProbeSuccess, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Pinging warmup path to ensure container is ready to receive requests., DetailsLevel: INFO
+2026-04-09T16:09:23.3997480Z Site startup probe succeeded after 17.7977567 seconds.
+2026-04-09T16:09:23.7776191Z State: Starting, Action: WarmUpProbeSucceeded, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site startup probe succeeded after 17.7977567 seconds., DetailsLevel: INFO
+2026-04-09T16:09:24.5630888Z Site started.
+2026-04-09T16:09:24.5632820Z State: Started, Action: None, LastError: , LastErrorTimestamp: 01/01/0001 00:00:00, LastErrorDetails: , Details: Site started at 04/09/2026 16:09:24 (UTC), DetailsLevel: INFO
