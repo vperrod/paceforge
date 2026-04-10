@@ -252,6 +252,10 @@ class RescheduleRequest(BaseModel):
     new_date: str
 
 
+class AcceptPlanRequest(BaseModel):
+    accepted: bool
+
+
 # ── Helper: per-user Garmin token dir ────────────────────────────────
 
 def _token_dir_for(user_id: str) -> str:
@@ -448,6 +452,17 @@ async def reschedule_workout(req: RescheduleRequest, user: dict = Depends(get_cu
     raise HTTPException(404, "Workout not found")
 
 
+@app.post("/plan/accept", response_model=TrainingPlan)
+async def accept_plan(req: AcceptPlanRequest, user: dict = Depends(get_current_user)):
+    uid = user["id"]
+    plan = _user_plan.get(uid)
+    if not plan:
+        raise HTTPException(404, "No plan generated yet")
+    plan.accepted = req.accepted
+    save_user_data(settings.db_path, uid, plan_json=plan.model_dump_json())
+    return plan
+
+
 @app.post("/coach/chat", response_model=ChatResponse)
 async def coach_chat(req: ChatRequest, user: dict = Depends(get_current_user)):
     uid = user["id"]
@@ -485,5 +500,6 @@ async def adapt_current_plan(user: dict = Depends(get_current_user)):
         raise HTTPException(404, "No plan generated yet")
     _user_profile[uid] = garmin.get_fitness_profile()
     _user_plan[uid] = adapt_plan(plan, _user_profile[uid])
+    _user_plan[uid].accepted = False
     save_user_data(settings.db_path, uid, plan_json=_user_plan[uid].model_dump_json())
     return _user_plan[uid]

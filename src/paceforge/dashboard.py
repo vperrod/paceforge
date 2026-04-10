@@ -1423,17 +1423,74 @@ with tab_plan:
                 )
                 if r.status_code == 200:
                     st.session_state.plan = r.json()
-                    st.success("Plan generated!")
+                    st.success("Plan generated! Review it below and add to calendar when ready.")
                 else:
                     st.error(f"Error: {_error_detail(r)}")
 
         plan = st.session_state.plan
         if plan:
             st.markdown("---")
+
+            # ── Plan header with acceptance status ──
+            accepted = plan.get("accepted", False)
+            status_color = "#00D26A" if accepted else "#FF9800"
+            status_text = "✓ Added to Calendar" if accepted else "Draft — Review & Accept"
             st.markdown(
-                f'<div class="pf-section-header">{plan["name"]}</div>',
+                f'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">'
+                f'<div class="pf-section-header" style="margin:0;">{plan["name"]}</div>'
+                f'<span style="background:{status_color}22;color:{status_color};padding:4px 12px;'
+                f'border-radius:12px;font-size:0.8rem;font-weight:600;">{status_text}</span>'
+                f'</div>',
                 unsafe_allow_html=True,
             )
+
+            # ── Accept / Remove / Adapt buttons ──
+            btn_cols = st.columns([1, 1, 2])
+            with btn_cols[0]:
+                if not accepted:
+                    if st.button("✓ Add to Calendar", type="primary", use_container_width=True, key="accept_plan_btn"):
+                        with st.spinner("Accepting plan..."):
+                            r = requests.post(
+                                f"{API_BASE}/plan/accept",
+                                json={"accepted": True},
+                                headers=_auth_headers(),
+                                timeout=10,
+                            )
+                            if r.status_code == 200:
+                                st.session_state.plan = r.json()
+                                st.success("Plan added to your calendar!")
+                                st.rerun()
+                            else:
+                                st.error(f"Error: {_error_detail(r)}")
+                else:
+                    if st.button("Remove from Calendar", use_container_width=True, key="remove_plan_btn"):
+                        with st.spinner("Removing..."):
+                            r = requests.post(
+                                f"{API_BASE}/plan/accept",
+                                json={"accepted": False},
+                                headers=_auth_headers(),
+                                timeout=10,
+                            )
+                            if r.status_code == 200:
+                                st.session_state.plan = r.json()
+                                st.info("Plan removed from calendar. Still here for review.")
+                                st.rerun()
+                            else:
+                                st.error(f"Error: {_error_detail(r)}")
+            with btn_cols[1]:
+                if st.button("Adapt Plan", use_container_width=True, key="adapt_plan_btn"):
+                    with st.spinner("Adapting plan based on latest fitness..."):
+                        r = requests.post(
+                            f"{API_BASE}/plan/adapt",
+                            headers=_auth_headers(),
+                            timeout=30,
+                        )
+                        if r.status_code == 200:
+                            st.session_state.plan = r.json()
+                            st.success("Plan adapted! Review and accept when ready.")
+                            st.rerun()
+                        else:
+                            st.error(f"Error: {_error_detail(r)}")
 
             # ── Training Paces ──
             paces = {}
@@ -1449,16 +1506,20 @@ with tab_plan:
                     color = _PACE_COLORS.get(zone, "#00D26A")
                     with pace_cols[i]:
                         st.markdown(
-                            f"""<div class="pf-pace-card">
-                                <div class="pf-pace-zone" style="color:{color};">{zone}</div>
-                                <div class="pf-pace-value">{val}<span class="pf-metric-unit">/km</span></div>
-                            </div>""",
+                            f'<div class="pf-pace-card">'
+                            f'<div class="pf-pace-zone" style="color:{color};">{zone}</div>'
+                            f'<div class="pf-pace-value">{val}<span class="pf-metric-unit">/km</span></div>'
+                            f'</div>',
                             unsafe_allow_html=True,
                         )
 
             st.markdown("")
 
-            # ── Weekly Breakdown ──
+            # ── Weekly Breakdown with expandable workout details ──
+            plan_paces = {
+                k: plan.get(k)
+                for k in ("easy_pace", "marathon_pace", "threshold_pace", "interval_pace", "repetition_pace")
+            }
             for week in plan.get("weeks", []):
                 phase = week.get("phase", "base").lower()
                 phase_bg = _PHASE_COLORS.get(phase, "rgba(0,210,106,0.12)")
@@ -1472,29 +1533,27 @@ with tab_plan:
                     expanded=False,
                 ):
                     st.markdown(
-                        f"""<div class="pf-week-header">
-                            <span class="pf-week-phase" style="background:{phase_bg};color:{phase_color};">
-                                {phase}
-                            </span>
-                            <span class="pf-week-meta">{total_km} km total</span>
-                        </div>""",
+                        f'<div class="pf-week-header">'
+                        f'<span class="pf-week-phase" style="background:{phase_bg};color:{phase_color};">'
+                        f'{phase}'
+                        f'</span>'
+                        f'<span class="pf-week-meta">{total_km} km total</span>'
+                        f'</div>',
                         unsafe_allow_html=True,
                     )
 
-                    for w in week.get("workouts", []):
+                    for w_idx, w in enumerate(week.get("workouts", [])):
                         wtype = w.get("workout_type", "rest")
                         color = _WORKOUT_COLORS.get(wtype, "#607D8B")
 
                         if wtype == "rest":
                             st.markdown(
-                                f"""<div class="pf-workout-item">
-                                    <div class="pf-workout-dot" style="background:#9E9E9E;"></div>
-                                    <div class="pf-workout-info">
-                                        <div class="pf-workout-name" style="color:#8B92A5;">
-                                            {w.get('scheduled_date', '')} — Rest Day
-                                        </div>
-                                    </div>
-                                </div>""",
+                                f'<div class="pf-workout-item">'
+                                f'<div class="pf-workout-dot" style="background:#9E9E9E;"></div>'
+                                f'<div class="pf-workout-info">'
+                                f'<div class="pf-workout-name" style="color:#8B92A5;">'
+                                f'{w.get("scheduled_date", "")} — Rest Day'
+                                f'</div></div></div>',
                                 unsafe_allow_html=True,
                             )
                         else:
@@ -1504,37 +1563,34 @@ with tab_plan:
                             detail_parts = [f"{dist} km"]
                             if purpose:
                                 detail_parts.append(purpose)
-                            if notes:
-                                detail_parts.append(notes)
                             detail = " · ".join(detail_parts)
 
                             st.markdown(
-                                f"""<div class="pf-workout-item">
-                                    <div class="pf-workout-dot" style="background:{color};"></div>
-                                    <div class="pf-workout-info">
-                                        <div class="pf-workout-name">
-                                            {w.get('scheduled_date', '')} — {w['name']}
-                                        </div>
-                                        <div class="pf-workout-detail">{detail}</div>
-                                    </div>
-                                </div>""",
+                                f'<div class="pf-workout-item">'
+                                f'<div class="pf-workout-dot" style="background:{color};"></div>'
+                                f'<div class="pf-workout-info">'
+                                f'<div class="pf-workout-name">'
+                                f'{w.get("scheduled_date", "")} — {w["name"]}'
+                                f'</div>'
+                                f'<div class="pf-workout-detail">{detail}</div>'
+                                f'</div></div>',
                                 unsafe_allow_html=True,
                             )
-
-            st.markdown("")
-            if st.button("Adapt Plan (re-evaluate)", use_container_width=True):
-                with st.spinner("Adapting plan based on latest fitness..."):
-                    r = requests.post(
-                        f"{API_BASE}/plan/adapt",
-                        headers=_auth_headers(),
-                        timeout=30,
-                    )
-                    if r.status_code == 200:
-                        st.session_state.plan = r.json()
-                        st.success("Plan adapted!")
-                        st.rerun()
-                    else:
-                        st.error(f"Error: {_error_detail(r)}")
+                            # Expandable structured workout detail
+                            with st.expander(f"📋 {w['name']} — Workout Structure", expanded=False):
+                                workout_dict = {
+                                    "name": w["name"],
+                                    "workout_type": wtype,
+                                    "purpose": purpose,
+                                    "notes": notes,
+                                    "steps": w.get("steps", []),
+                                    "estimated_distance_meters": w.get("estimated_distance_meters", 0),
+                                    "estimated_duration_seconds": w.get("estimated_duration_seconds", 0),
+                                }
+                                st.markdown(
+                                    _render_workout_detail(workout_dict, plan_paces),
+                                    unsafe_allow_html=True,
+                                )
 
 
 # ── Tab 3: Calendar ──────────────────────────────────────────────────
@@ -1599,9 +1655,9 @@ with tab_calendar:
                 },
             })
 
-        # ── Planned workouts from generated plan ──
+        # ── Planned workouts from accepted plan ──
         plan = st.session_state.plan
-        if plan:
+        if plan and plan.get("accepted", False):
             for week in plan.get("weeks", []):
                 for j, w in enumerate(week.get("workouts", [])):
                     wtype = w.get("workout_type", "rest")
@@ -1649,10 +1705,10 @@ with tab_calendar:
                     '</div>',
                     unsafe_allow_html=True,
                 )
-                if plan:
+                if plan and plan.get("accepted", False):
                     st.caption("Drag planned workouts (📋) to reschedule · Click any event for details")
             with legend_cols[1]:
-                if plan and st.session_state.garmin_logged_in:
+                if plan and plan.get("accepted", False) and st.session_state.garmin_logged_in:
                     if st.button("Push Plan to Garmin", type="primary", key="cal_push_btn", use_container_width=True):
                         with st.spinner("Pushing all workouts to Garmin..."):
                             try:

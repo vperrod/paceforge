@@ -108,3 +108,6 @@ class TrainingPlan(BaseModel):
     threshold_pace: float | None = None
     interval_pace: float | None = None
     repetition_pace: float | None = None
+
+    # Plan acceptance state
+    accepted: bool = False
