@@ -258,6 +258,20 @@ class GarminClient:
             logger.warning("Could not fetch summary for %s", activity_id, exc_info=True)
             result["summary"] = None
 
+        # Per-km split summaries (more granular than lap splits)
+        try:
+            result["split_summaries"] = self.client.get_activity_split_summaries(activity_id)
+        except Exception:
+            logger.debug("split_summaries unavailable for %s", activity_id)
+            result["split_summaries"] = None
+
+        # Weather conditions during the activity
+        try:
+            result["weather"] = self.client.get_activity_weather(activity_id)
+        except Exception:
+            logger.debug("weather unavailable for %s", activity_id)
+            result["weather"] = None
+
         return result
 
     # ── Write operations ─────────────────────────────────────────────

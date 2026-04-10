@@ -535,6 +535,8 @@ for key, default in {
     "plan": None,
     "page": "login",
     "_restored": False,
+    "cal_selected_event": None,
+    "cal_selected_detail": None,
 }.items():
     if key not in st.session_state:
         st.session_state[key] = default
@@ -690,10 +692,12 @@ def _render_workout_detail(workout: dict, plan_paces: dict | None = None) -> str
 def _render_garmin_activity_detail(detail: dict) -> None:
     """Render Garmin activity detail with splits, charts, and HR zones."""
     import plotly.graph_objects as go
+    from plotly.subplots import make_subplots
 
     summary = detail.get("summary") or {}
     splits_data = detail.get("splits") or {}
     hr_zones_data = detail.get("hr_zones") or {}
+    weather_data = detail.get("weather") or {}
 
     # ── Summary metric cards ──
     total_dist = summary.get("distance", 0)
@@ -704,8 +708,11 @@ def _render_garmin_activity_detail(detail: dict) -> None:
     max_hr = summary.get("maxHR")
     calories = summary.get("calories")
     elevation = summary.get("elevationGain")
+    cadence = summary.get("averageRunningCadenceInStepsPerMinute")
+    aero_te = summary.get("aerobicTrainingEffect")
+    anaero_te = summary.get("anaerobicTrainingEffect")
 
-    cards_html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:0.5rem;margin-bottom:1rem;">'
+    cards_html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:0.4rem;margin-bottom:0.75rem;">'
     metric_data = [
         ("Distance", _fmt_dist(total_dist), "📏"),
         ("Duration", _fmt_duration(total_dur / 1000 if total_dur > 10000 else total_dur), "⏱"),
@@ -715,30 +722,55 @@ def _render_garmin_activity_detail(detail: dict) -> None:
         metric_data.append(("Avg HR", f"{int(avg_hr)} bpm", "❤️"))
     if max_hr:
         metric_data.append(("Max HR", f"{int(max_hr)} bpm", "💓"))
+    if cadence:
+        metric_data.append(("Cadence", f"{int(cadence * 2)} spm", "🦶"))
     if calories:
         metric_data.append(("Calories", f"{int(calories)}", "🔥"))
     if elevation:
         metric_data.append(("Elevation", f"{int(elevation)}m", "⛰️"))
+    if aero_te:
+        metric_data.append(("Aerobic TE", f"{aero_te:.1f}", "🫁"))
+    if anaero_te:
+        metric_data.append(("Anaerobic TE", f"{anaero_te:.1f}", "💪"))
 
     for label, val, icon in metric_data:
         cards_html += (
-            f'<div style="background:#242830;border-radius:10px;padding:0.6rem;text-align:center;">'
-            f'<div style="font-size:0.7rem;color:#8B92A5;">{icon} {label}</div>'
-            f'<div style="font-size:1rem;font-weight:700;color:#FAFAFA;">{val}</div>'
+            f'<div style="background:#242830;border-radius:8px;padding:0.4rem;text-align:center;">'
+            f'<div style="font-size:0.65rem;color:#8B92A5;">{icon} {label}</div>'
+            f'<div style="font-size:0.9rem;font-weight:700;color:#FAFAFA;">{val}</div>'
             f'</div>'
         )
     cards_html += '</div>'
     st.markdown(cards_html, unsafe_allow_html=True)
 
+    # ── Weather info ──
+    if weather_data and isinstance(weather_data, dict):
+        temp = weather_data.get("temp")
+        cond = weather_data.get("weatherTypeDTO", {}).get("desc") if isinstance(weather_data.get("weatherTypeDTO"), dict) else None
+        humidity = weather_data.get("relativeHumidity")
+        wind = weather_data.get("windSpeed")
+        parts = []
+        if temp is not None:
+            parts.append(f"🌡️ {temp}°C")
+        if cond:
+            parts.append(cond)
+        if humidity is not None:
+            parts.append(f"💧 {humidity}%")
+        if wind is not None:
+            parts.append(f"💨 {wind} km/h")
+        if parts:
+            st.markdown(
+                f'<div style="color:#8B92A5;font-size:0.75rem;margin-bottom:0.5rem;">{" · ".join(parts)}</div>',
+                unsafe_allow_html=True,
+            )
+
     # ── Splits ──
     laps = splits_data.get("lapDTOs") or []
     if laps:
-        st.markdown('<div style="font-weight:600;font-size:0.9rem;margin-bottom:0.5rem;color:#00D26A;">Splits</div>', unsafe_allow_html=True)
-
         split_nums = []
         paces = []
         hrs = []
-        rows_html = '<table style="width:100%;border-collapse:collapse;font-size:0.8rem;"><tr style="color:#8B92A5;border-bottom:1px solid #2D3139;"><th style="text-align:left;padding:4px;">Split</th><th>Distance</th><th>Pace</th><th>Avg HR</th></tr>'
+        rows_html = '<table style="width:100%;border-collapse:collapse;font-size:0.75rem;"><tr style="color:#8B92A5;border-bottom:1px solid #2D3139;"><th style="text-align:left;padding:3px;">Split</th><th>Dist</th><th>Pace</th><th>HR</th></tr>'
 
         for i, lap in enumerate(laps, 1):
             lap_dist = lap.get("distance", 0)
@@ -752,71 +784,91 @@ def _render_garmin_activity_detail(detail: dict) -> None:
 
             rows_html += (
                 f'<tr style="border-bottom:1px solid #2D3139;">'
-                f'<td style="padding:4px;font-weight:600;">{i}</td>'
+                f'<td style="padding:3px;font-weight:600;">{i}</td>'
                 f'<td style="text-align:center;">{_fmt_dist(lap_dist)}</td>'
                 f'<td style="text-align:center;">{_fmt_pace(lap_pace)}</td>'
-                f'<td style="text-align:center;">{int(lap_hr) if lap_hr else "—"} bpm</td>'
+                f'<td style="text-align:center;">{int(lap_hr) if lap_hr else "—"}</td>'
                 f'</tr>'
             )
         rows_html += '</table>'
-        st.markdown(f'<div class="pf-card" style="margin-bottom:1rem;">{rows_html}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="pf-card" style="margin-bottom:0.5rem;padding:0.5rem;">{rows_html}</div>', unsafe_allow_html=True)
 
-        # Splits bar chart
-        if paces:
-            avg_p = sum(paces) / len(paces) if paces else 0
+        # Combined pace + HR chart over splits
+        if paces and any(h > 0 for h in hrs):
+            fig = make_subplots(specs=[[{"secondary_y": True}]])
+            avg_p = sum(paces) / len(paces)
             colors = ["#00D26A" if p <= avg_p else "#FF5252" for p in paces]
-            pace_labels = [_fmt_pace(p) for p in paces]
 
+            fig.add_trace(
+                go.Bar(
+                    x=split_nums, y=paces, name="Pace",
+                    marker_color=colors,
+                    text=[_fmt_pace(p) for p in paces],
+                    textposition="outside",
+                    textfont=dict(color="#FAFAFA", size=9),
+                ),
+                secondary_y=False,
+            )
+            fig.add_trace(
+                go.Scatter(
+                    x=split_nums, y=hrs, name="Heart Rate",
+                    mode="lines+markers",
+                    line=dict(color="#FF5252", width=2),
+                    marker=dict(size=5),
+                ),
+                secondary_y=True,
+            )
+            fig.update_layout(
+                plot_bgcolor="#1A1D23", paper_bgcolor="#1A1D23", font_color="#FAFAFA",
+                margin=dict(l=40, r=40, t=25, b=35), height=240,
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(size=10)),
+                bargap=0.3,
+            )
+            fig.update_yaxes(autorange="reversed", title_text="Pace (s/km)", gridcolor="#2D3139", secondary_y=False)
+            fig.update_yaxes(title_text="HR (bpm)", gridcolor="#2D3139", secondary_y=True)
+            fig.update_xaxes(title_text="Split", gridcolor="#2D3139", dtick=1)
+            st.plotly_chart(fig, use_container_width=True, key="splits_hr_chart")
+        elif paces:
+            # Pace only (no HR data)
+            avg_p = sum(paces) / len(paces)
+            colors = ["#00D26A" if p <= avg_p else "#FF5252" for p in paces]
             fig = go.Figure(go.Bar(
-                x=split_nums, y=paces,
-                marker_color=colors,
-                text=pace_labels,
-                textposition="outside",
-                textfont=dict(color="#FAFAFA", size=10),
+                x=split_nums, y=paces, marker_color=colors,
+                text=[_fmt_pace(p) for p in paces], textposition="outside",
+                textfont=dict(color="#FAFAFA", size=9),
             ))
             fig.update_layout(
-                plot_bgcolor="#1A1D23",
-                paper_bgcolor="#1A1D23",
-                font_color="#FAFAFA",
-                margin=dict(l=40, r=20, t=30, b=40),
-                height=280,
-                xaxis_title="Split",
-                yaxis=dict(autorange="reversed", title="Pace (sec/km)", gridcolor="#2D3139"),
-                xaxis=dict(gridcolor="#2D3139", dtick=1),
-                bargap=0.3,
+                plot_bgcolor="#1A1D23", paper_bgcolor="#1A1D23", font_color="#FAFAFA",
+                margin=dict(l=40, r=20, t=25, b=35), height=220,
+                yaxis=dict(autorange="reversed", title="Pace (s/km)", gridcolor="#2D3139"),
+                xaxis=dict(gridcolor="#2D3139", dtick=1, title="Split"), bargap=0.3,
             )
             st.plotly_chart(fig, use_container_width=True, key="splits_chart")
 
     # ── HR Zones ──
     hr_list = hr_zones_data if isinstance(hr_zones_data, list) else hr_zones_data.get("hrTimeInZones", [])
     if hr_list:
-        st.markdown('<div style="font-weight:600;font-size:0.9rem;margin-bottom:0.5rem;color:#00D26A;">Heart Rate Zones</div>', unsafe_allow_html=True)
+        st.markdown('<div style="font-weight:600;font-size:0.85rem;margin-bottom:0.3rem;color:#00D26A;">Heart Rate Zones</div>', unsafe_allow_html=True)
         zone_labels = []
         zone_seconds = []
         zone_colors_list = ["#3F51B5", "#2196F3", "#4CAF50", "#FF9800", "#F44336"]
         for zd in hr_list:
             zn = zd.get("zoneNumber") or zd.get("zone", 0)
             secs = zd.get("secsInZone", 0)
-            zone_labels.append(f"Zone {zn}")
+            zone_labels.append(f"Z{zn}")
             zone_seconds.append(secs)
 
         fig_hr = go.Figure(go.Bar(
-            y=zone_labels, x=zone_seconds,
-            orientation="h",
+            y=zone_labels, x=zone_seconds, orientation="h",
             marker_color=zone_colors_list[:len(zone_labels)],
             text=[_fmt_duration(s) for s in zone_seconds],
-            textposition="auto",
-            textfont=dict(color="#FAFAFA", size=10),
+            textposition="auto", textfont=dict(color="#FAFAFA", size=9),
         ))
         fig_hr.update_layout(
-            plot_bgcolor="#1A1D23",
-            paper_bgcolor="#1A1D23",
-            font_color="#FAFAFA",
-            margin=dict(l=60, r=20, t=20, b=30),
-            height=200,
-            xaxis=dict(title="Time (seconds)", gridcolor="#2D3139"),
-            yaxis=dict(gridcolor="#2D3139"),
-            bargap=0.3,
+            plot_bgcolor="#1A1D23", paper_bgcolor="#1A1D23", font_color="#FAFAFA",
+            margin=dict(l=30, r=20, t=10, b=25), height=160,
+            xaxis=dict(title="Time (s)", gridcolor="#2D3139"),
+            yaxis=dict(gridcolor="#2D3139"), bargap=0.3,
         )
         st.plotly_chart(fig_hr, use_container_width=True, key="hr_zones_chart")
 
@@ -1492,6 +1544,8 @@ with tab_calendar:
                     )
                     if r.status_code == 200:
                         st.session_state["garmin_activities"] = r.json()
+                        st.session_state["cal_selected_event"] = None
+                        st.session_state["cal_selected_detail"] = None
                         st.success(f"Synced {len(r.json())} activities!")
                     else:
                         st.error(f"Failed to sync: {_error_detail(r)}")
@@ -1569,139 +1623,199 @@ with tab_calendar:
                 unsafe_allow_html=True,
             )
         else:
-            # Legend
-            st.markdown(
-                '<div style="display:flex;gap:1.5rem;margin-bottom:0.75rem;font-size:0.8rem;">'
-                '<span style="color:#00D26A;">● Completed (Garmin)</span>'
-                '<span style="color:#2196F3;">● Planned (Long Run)</span>'
-                '<span style="color:#4CAF50;">● Planned (Easy)</span>'
-                '<span style="color:#FF9800;">● Planned (Tempo)</span>'
-                '<span style="color:#F44336;">● Planned (Speed)</span>'
-                '</div>',
-                unsafe_allow_html=True,
-            )
-
-            if plan:
-                st.caption("Drag planned workouts (📋) to reschedule them.")
-
-            cal_options = {
-                "editable": True,
-                "selectable": False,
-                "headerToolbar": {
-                    "left": "today prev,next",
-                    "center": "title",
-                    "right": "dayGridMonth,dayGridWeek",
-                },
-                "initialView": "dayGridMonth",
-                "initialDate": str(date.today()),
-            }
-
-            cal_css = """
-                .fc { background: #1A1D23; color: #FAFAFA; border: none; }
-                .fc-theme-standard td, .fc-theme-standard th { border-color: #2D3139; }
-                .fc-theme-standard .fc-scrollgrid { border-color: #2D3139; }
-                .fc-col-header-cell { background: #242830; }
-                .fc-col-header-cell-cushion { color: #8B92A5; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; }
-                .fc-daygrid-day-number { color: #8B92A5; font-size: 0.85rem; }
-                .fc-day-today { background: rgba(0,210,106,0.06) !important; }
-                .fc-event { cursor: grab; font-size: 0.8em; border-radius: 6px; padding: 2px 6px; border: none !important; }
-                .fc-event-title { font-weight: 600; }
-                .fc-button { background: #242830 !important; border: 1px solid #3A3F4B !important; color: #FAFAFA !important; font-size: 0.85rem !important; }
-                .fc-button:hover { background: #2D3139 !important; }
-                .fc-button-active { background: #00D26A !important; color: #1A1D23 !important; border-color: #00D26A !important; }
-                .fc-toolbar-title { font-size: 1.1rem !important; font-weight: 700; color: #FAFAFA; }
-            """
-
-            from streamlit_calendar import calendar as st_calendar
-
-            result = st_calendar(
-                events=cal_events,
-                options=cal_options,
-                custom_css=cal_css,
-                key="plan_calendar",
-            )
-
-            if result and result.get("callback") == "eventChange":
-                ev = result["eventChange"]
-                ev_props = ev["event"].get("extendedProps", {})
-                if ev_props.get("source") == "plan":
-                    old_start = ev["oldEvent"]["start"]
-                    new_start = ev["event"]["start"]
-                    wk_name = ev_props.get("name", ev["event"]["title"])
-                    r = requests.post(
-                        f"{API_BASE}/plan/reschedule",
-                        json={
-                            "workout_name": wk_name,
-                            "old_date": old_start[:10],
-                            "new_date": new_start[:10],
-                        },
-                        headers=_auth_headers(),
-                        timeout=10,
-                    )
-                    if r.status_code == 200:
-                        st.success(f"Moved to {new_start[:10]}")
-                    else:
-                        st.error("Failed to reschedule")
-
-            if result and result.get("callback") == "eventClick":
-                ev_data = result["eventClick"]["event"]
-                props = ev_data.get("extendedProps", {})
-                if props.get("source") == "garmin":
-                    activity_id = props.get("activity_id")
-                    st.markdown(
-                        f'<div style="font-weight:700;font-size:1.1rem;margin:1rem 0 0.5rem;">✓ {ev_data.get("title", "Activity")}</div>'
-                        f'<div style="color:#8B92A5;font-size:0.85rem;margin-bottom:0.5rem;">Date: {ev_data.get("start", "")[:10]}</div>',
-                        unsafe_allow_html=True,
-                    )
-                    if activity_id:
-                        with st.spinner("Loading activity details..."):
+            # Legend + push controls row
+            legend_cols = st.columns([4, 1])
+            with legend_cols[0]:
+                st.markdown(
+                    '<div style="display:flex;flex-wrap:wrap;gap:1rem;margin-bottom:0.5rem;font-size:0.8rem;">'
+                    '<span style="color:#00D26A;">● Completed</span>'
+                    '<span style="color:#2196F3;">● Long Run</span>'
+                    '<span style="color:#4CAF50;">● Easy</span>'
+                    '<span style="color:#FF9800;">● Tempo</span>'
+                    '<span style="color:#F44336;">● Speed</span>'
+                    '</div>',
+                    unsafe_allow_html=True,
+                )
+                if plan:
+                    st.caption("Drag planned workouts (📋) to reschedule · Click any event for details")
+            with legend_cols[1]:
+                if plan and st.session_state.garmin_logged_in:
+                    if st.button("Push Plan to Garmin", type="primary", key="cal_push_btn", use_container_width=True):
+                        with st.spinner("Pushing all workouts to Garmin..."):
                             try:
-                                r = requests.get(
-                                    f"{API_BASE}/activities/{activity_id}",
+                                r = requests.post(
+                                    f"{API_BASE}/plan/push",
+                                    json={},
                                     headers=_auth_headers(),
-                                    timeout=30,
+                                    timeout=120,
                                 )
                                 if r.status_code == 200:
-                                    _render_garmin_activity_detail(r.json())
+                                    data = r.json()
+                                    st.success(f"✓ Pushed {data.get('workouts_pushed', '?')} workouts to Garmin!")
                                 else:
-                                    st.warning(f"Could not load details: {_error_detail(r)}")
+                                    st.error(f"Push failed: {_error_detail(r)}")
                             except requests.ConnectionError:
                                 st.error("Cannot reach API.")
-                    else:
-                        # Fallback for activities without an ID
-                        dur = props.get("duration_seconds", 0)
-                        dur_m, dur_s = divmod(int(dur), 60)
-                        hr_text = f" · Avg HR: {props['avg_hr']} bpm" if props.get("avg_hr") else ""
-                        st.markdown(
-                            f'<div class="pf-card"><span style="color:#8B92A5;">Duration: {dur_m}:{dur_s:02d}{hr_text}</span></div>',
-                            unsafe_allow_html=True,
+
+            # ── Side-by-side: Calendar (left) + Detail panel (right) ──
+            cal_col, detail_col = st.columns([3, 2])
+
+            with cal_col:
+                cal_options = {
+                    "editable": True,
+                    "selectable": False,
+                    "headerToolbar": {
+                        "left": "today prev,next",
+                        "center": "title",
+                        "right": "dayGridMonth,dayGridWeek",
+                    },
+                    "initialView": "dayGridMonth",
+                    "initialDate": str(date.today()),
+                    "contentHeight": 520,
+                }
+
+                cal_css = """
+                    .fc { background: #1A1D23; color: #FAFAFA; border: none; }
+                    .fc-theme-standard td, .fc-theme-standard th { border-color: #2D3139; }
+                    .fc-theme-standard .fc-scrollgrid { border-color: #2D3139; }
+                    .fc-col-header-cell { background: #242830; }
+                    .fc-col-header-cell-cushion { color: #8B92A5; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; }
+                    .fc-daygrid-day-number { color: #8B92A5; font-size: 0.8rem; }
+                    .fc-day-today { background: rgba(0,210,106,0.06) !important; }
+                    .fc-event { cursor: pointer; font-size: 0.72em; border-radius: 5px; padding: 1px 4px; border: none !important; }
+                    .fc-event-title { font-weight: 600; }
+                    .fc-button { background: #242830 !important; border: 1px solid #3A3F4B !important; color: #FAFAFA !important; font-size: 0.8rem !important; }
+                    .fc-button:hover { background: #2D3139 !important; }
+                    .fc-button-active { background: #00D26A !important; color: #1A1D23 !important; border-color: #00D26A !important; }
+                    .fc-toolbar-title { font-size: 1rem !important; font-weight: 700; color: #FAFAFA; }
+                """
+
+                from streamlit_calendar import calendar as st_calendar
+
+                result = st_calendar(
+                    events=cal_events,
+                    options=cal_options,
+                    custom_css=cal_css,
+                    key="plan_calendar",
+                )
+
+                # Handle drag-to-reschedule
+                if result and result.get("callback") == "eventChange":
+                    ev = result["eventChange"]
+                    ev_props = ev["event"].get("extendedProps", {})
+                    if ev_props.get("source") == "plan":
+                        old_start = ev["oldEvent"]["start"]
+                        new_start = ev["event"]["start"]
+                        wk_name = ev_props.get("name", ev["event"]["title"])
+                        r = requests.post(
+                            f"{API_BASE}/plan/reschedule",
+                            json={
+                                "workout_name": wk_name,
+                                "old_date": old_start[:10],
+                                "new_date": new_start[:10],
+                            },
+                            headers=_auth_headers(),
+                            timeout=10,
                         )
-                else:
-                    # Planned workout — render structured description
-                    steps_json = props.get("steps", "[]")
-                    try:
-                        steps_list = json.loads(steps_json) if isinstance(steps_json, str) else steps_json
-                    except (json.JSONDecodeError, TypeError):
-                        steps_list = []
-                    workout_dict = {
-                        "name": props.get("name", ev_data.get("title", "Workout")),
-                        "workout_type": props.get("workout_type", ""),
-                        "purpose": props.get("purpose", ""),
-                        "notes": props.get("notes", ""),
-                        "steps": steps_list,
-                        "estimated_distance_meters": props.get("estimated_distance_meters", 0),
-                        "estimated_duration_seconds": props.get("estimated_duration_seconds", 0),
+                        if r.status_code == 200:
+                            st.success(f"Moved to {new_start[:10]} — click **Push Plan to Garmin** to sync")
+                        else:
+                            st.error("Failed to reschedule")
+
+                # Handle event click — store in session_state for the detail panel
+                if result and result.get("callback") == "eventClick":
+                    ev_data = result["eventClick"]["event"]
+                    props = ev_data.get("extendedProps", {})
+                    st.session_state["cal_selected_event"] = {
+                        "title": ev_data.get("title", ""),
+                        "start": ev_data.get("start", ""),
+                        "props": props,
                     }
-                    plan_paces = None
-                    if st.session_state.plan:
-                        plan_paces = {
-                            k: st.session_state.plan.get(k)
-                            for k in ("easy_pace", "marathon_pace", "threshold_pace", "interval_pace", "repetition_pace")
-                        }
+                    # Pre-fetch Garmin activity detail if needed
+                    if props.get("source") == "garmin" and props.get("activity_id"):
+                        try:
+                            r = requests.get(
+                                f"{API_BASE}/activities/{props['activity_id']}",
+                                headers=_auth_headers(),
+                                timeout=30,
+                            )
+                            if r.status_code == 200:
+                                st.session_state["cal_selected_detail"] = r.json()
+                            else:
+                                st.session_state["cal_selected_detail"] = None
+                        except requests.ConnectionError:
+                            st.session_state["cal_selected_detail"] = None
+                    else:
+                        st.session_state["cal_selected_detail"] = None
+
+            # ── Detail panel (right column) ──
+            with detail_col:
+                sel = st.session_state.get("cal_selected_event")
+                if sel is None:
                     st.markdown(
-                        _render_workout_detail(workout_dict, plan_paces),
+                        '<div style="display:flex;align-items:center;justify-content:center;height:400px;color:#8B92A5;text-align:center;">'
+                        '<div><div style="font-size:2rem;margin-bottom:0.5rem;">👆</div>'
+                        '<div style="font-size:0.9rem;">Click an event on the calendar<br>to view details</div></div>'
+                        '</div>',
                         unsafe_allow_html=True,
                     )
+                else:
+                    props = sel["props"]
+                    ev_title = sel["title"]
+                    ev_date = sel.get("start", "")[:10]
+
+                    if props.get("source") == "garmin":
+                        st.markdown(
+                            f'<div style="font-weight:700;font-size:1rem;margin-bottom:0.25rem;">✓ {ev_title}</div>'
+                            f'<div style="color:#8B92A5;font-size:0.8rem;margin-bottom:0.5rem;">{ev_date}</div>',
+                            unsafe_allow_html=True,
+                        )
+                        detail_data = st.session_state.get("cal_selected_detail")
+                        if detail_data:
+                            _render_garmin_activity_detail(detail_data)
+                        else:
+                            # Fallback: show basic info from event props
+                            dur = props.get("duration_seconds", 0)
+                            dur_m, dur_s = divmod(int(dur), 60)
+                            dist_km = props.get("distance_km", 0)
+                            pace_str = props.get("pace", "")
+                            hr_text = f" · Avg HR: {props['avg_hr']} bpm" if props.get("avg_hr") else ""
+                            st.markdown(
+                                f'<div class="pf-card">'
+                                f'<div style="color:#FAFAFA;">📏 {dist_km}km · ⏱ {dur_m}:{dur_s:02d}{pace_str}{hr_text}</div>'
+                                f'</div>',
+                                unsafe_allow_html=True,
+                            )
+                    else:
+                        # Planned workout detail
+                        steps_json = props.get("steps", "[]")
+                        try:
+                            steps_list = json.loads(steps_json) if isinstance(steps_json, str) else steps_json
+                        except (json.JSONDecodeError, TypeError):
+                            steps_list = []
+                        workout_dict = {
+                            "name": props.get("name", ev_title),
+                            "workout_type": props.get("workout_type", ""),
+                            "purpose": props.get("purpose", ""),
+                            "notes": props.get("notes", ""),
+                            "steps": steps_list,
+                            "estimated_distance_meters": props.get("estimated_distance_meters", 0),
+                            "estimated_duration_seconds": props.get("estimated_duration_seconds", 0),
+                        }
+                        plan_paces = None
+                        if st.session_state.plan:
+                            plan_paces = {
+                                k: st.session_state.plan.get(k)
+                                for k in ("easy_pace", "marathon_pace", "threshold_pace", "interval_pace", "repetition_pace")
+                            }
+                        st.markdown(
+                            _render_workout_detail(workout_dict, plan_paces),
+                            unsafe_allow_html=True,
+                        )
+                        st.markdown(
+                            f'<div style="color:#8B92A5;font-size:0.75rem;margin-top:0.5rem;">📅 Scheduled: {ev_date}</div>',
+                            unsafe_allow_html=True,
+                        )
 
 
 # ── Tab 4: Push to Garmin ────────────────────────────────────────────
