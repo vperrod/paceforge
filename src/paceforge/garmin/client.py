@@ -84,6 +84,25 @@ class GarminClient:
         self._mfa_state = None
         logger.info("MFA verified — authenticated with Garmin Connect")
 
+    @classmethod
+    def try_reconnect(cls, email: str, token_dir: str) -> "GarminClient | None":
+        """Attempt to restore a session from cached tokens (no password needed).
+
+        Returns a connected GarminClient on success, or None if tokens are
+        expired / missing.
+        """
+        try:
+            instance = cls(email=email, password="", token_dir=token_dir)
+            result = instance.login()
+            if result == "mfa_required":
+                logger.info("Reconnect needs MFA — treating as failed")
+                return None
+            logger.info("Reconnected to Garmin from cached tokens")
+            return instance
+        except Exception:
+            logger.info("Garmin reconnect failed — tokens may be expired", exc_info=True)
+            return None
+
     @property
     def client(self) -> Garmin:
         if self._client is None:

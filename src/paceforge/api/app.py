@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from contextlib import asynccontextmanager
 from datetime import date
@@ -20,6 +21,8 @@ from paceforge.auth.database import (
     get_user_by_id,
     init_db,
     list_users,
+    load_user_data,
+    save_user_data,
     update_garmin_email,
     update_user_profile,
     update_user_status,
@@ -259,6 +262,29 @@ def _token_dir_for(user_id: str) -> str:
 # ── Garmin endpoints (protected) ─────────────────────────────────────
 
 
+def _ensure_garmin(uid: str) -> GarminClient | None:
+    """Return existing GarminClient or try reconnecting from cached tokens."""
+    existing = _user_garmin.get(uid)
+    if existing:
+        return existing
+    user = get_user_by_id(settings.db_path, uid)
+    garmin_email = user.get("garmin_email") if user else None
+    if not garmin_email:
+        return None
+    client = GarminClient.try_reconnect(garmin_email, _token_dir_for(uid))
+    if client:
+        _user_garmin[uid] = client
+    return client
+
+
+@app.get("/garmin/status")
+async def garmin_status(user: dict = Depends(get_current_user)):
+    """Check if Garmin is connected (and try auto-reconnect from cached tokens)."""
+    uid = user["id"]
+    client = _ensure_garmin(uid)
+    return {"connected": client is not None}
+
+
 @app.post("/garmin/login")
 async def garmin_login(req: GarminLoginRequest, user: dict = Depends(get_current_user)):
     uid = user["id"]
@@ -300,7 +326,7 @@ async def garmin_mfa(req: MfaRequest, user: dict = Depends(get_current_user)):
 @app.get("/profile", response_model=UserFitnessProfile)
 async def get_profile(user: dict = Depends(get_current_user)):
     uid = user["id"]
-    garmin = _user_garmin.get(uid)
+    garmin = _ensure_garmin(uid)
     if not garmin:
         raise HTTPException(401, "Not logged in to Garmin")
     _user_profile[uid] = garmin.get_fitness_profile()
@@ -313,18 +339,24 @@ async def get_activities(
 ):
     """Return running activities from the last N days (default 240)."""
     uid = user["id"]
-    garmin = _user_garmin.get(uid)
-    if not garmin:
-        raise HTTPException(401, "Not logged in to Garmin")
-    profile = garmin.get_fitness_profile(lookback_days=min(days, 365))
-    return profile.recent_activities
+    garmin = _ensure_garmin(uid)
+    if garmin:
+        profile = garmin.get_fitness_profile(lookback_days=min(days, 365))
+        activities = [a.model_dump() for a in profile.recent_activities]
+        save_user_data(settings.db_path, uid, activities_json=json.dumps(activities))
+        return profile.recent_activities
+    # Fall back to cached activities
+    cached = load_user_data(settings.db_path, uid)
+    if cached and cached.get("activities_json"):
+        return [RecentActivity(**a) for a in json.loads(cached["activities_json"])]
+    raise HTTPException(401, "Not logged in to Garmin")
 
 
 @app.get("/activities/{activity_id}")
 async def get_activity_detail(activity_id: int, user: dict = Depends(get_current_user)):
     """Return detailed splits, HR zones, and summary for an activity."""
     uid = user["id"]
-    garmin = _user_garmin.get(uid)
+    garmin = _ensure_garmin(uid)
     if not garmin:
         raise HTTPException(401, "Not logged in to Garmin")
     return garmin.get_activity_detail(activity_id)
@@ -333,7 +365,7 @@ async def get_activity_detail(activity_id: int, user: dict = Depends(get_current
 @app.post("/plan/generate", response_model=TrainingPlan)
 async def generate(req: GeneratePlanRequest, user: dict = Depends(get_current_user)):
     uid = user["id"]
-    garmin = _user_garmin.get(uid)
+    garmin = _ensure_garmin(uid)
     if not garmin:
         raise HTTPException(401, "Not logged in to Garmin")
 
@@ -349,6 +381,7 @@ async def generate(req: GeneratePlanRequest, user: dict = Depends(get_current_us
     )
 
     _user_plan[uid] = generate_plan(profile, goal)
+    save_user_data(settings.db_path, uid, plan_json=_user_plan[uid].model_dump_json())
     return _user_plan[uid]
 
 
@@ -357,6 +390,12 @@ async def get_plan(user: dict = Depends(get_current_user)):
     uid = user["id"]
     plan = _user_plan.get(uid)
     if not plan:
+        # Try loading from DB
+        cached = load_user_data(settings.db_path, uid)
+        if cached and cached.get("plan_json"):
+            plan = TrainingPlan.model_validate_json(cached["plan_json"])
+            _user_plan[uid] = plan
+    if not plan:
         raise HTTPException(404, "No plan generated yet")
     return plan
 
@@ -364,7 +403,7 @@ async def get_plan(user: dict = Depends(get_current_user)):
 @app.post("/plan/push")
 async def push_plan(req: PushPlanRequest, user: dict = Depends(get_current_user)):
     uid = user["id"]
-    garmin = _user_garmin.get(uid)
+    garmin = _ensure_garmin(uid)
     if not garmin:
         raise HTTPException(401, "Not logged in to Garmin")
     plan = _user_plan.get(uid)
@@ -393,6 +432,7 @@ async def reschedule_workout(req: RescheduleRequest, user: dict = Depends(get_cu
         for w in week.workouts:
             if w.name == req.workout_name and str(w.scheduled_date) == req.old_date:
                 w.scheduled_date = date.fromisoformat(req.new_date)
+                save_user_data(settings.db_path, uid, plan_json=plan.model_dump_json())
                 return {"status": "ok", "message": f"Moved '{w.name}' to {req.new_date}"}
     raise HTTPException(404, "Workout not found")
 
@@ -426,7 +466,7 @@ async def coach_chat(req: ChatRequest, user: dict = Depends(get_current_user)):
 @app.post("/plan/adapt", response_model=TrainingPlan)
 async def adapt_current_plan(user: dict = Depends(get_current_user)):
     uid = user["id"]
-    garmin = _user_garmin.get(uid)
+    garmin = _ensure_garmin(uid)
     if not garmin:
         raise HTTPException(401, "Not logged in to Garmin")
     plan = _user_plan.get(uid)
@@ -434,4 +474,5 @@ async def adapt_current_plan(user: dict = Depends(get_current_user)):
         raise HTTPException(404, "No plan generated yet")
     _user_profile[uid] = garmin.get_fitness_profile()
     _user_plan[uid] = adapt_plan(plan, _user_profile[uid])
+    save_user_data(settings.db_path, uid, plan_json=_user_plan[uid].model_dump_json())
     return _user_plan[uid]

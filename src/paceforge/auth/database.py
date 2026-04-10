@@ -24,6 +24,14 @@ CREATE TABLE IF NOT EXISTS users (
     approved_at   TEXT,
     garmin_email  TEXT
 );
+
+CREATE TABLE IF NOT EXISTS user_data (
+    user_id         TEXT PRIMARY KEY REFERENCES users(id),
+    plan_json       TEXT,
+    activities_json TEXT,
+    profile_json    TEXT,
+    updated_at      TEXT NOT NULL
+);
 """
 
 
@@ -170,6 +178,60 @@ def update_user_profile(
         )
         conn.commit()
     return get_user_by_id(db_path, user_id)
+
+
+# ── User data persistence ────────────────────────────────────────────
+
+
+def save_user_data(
+    db_path: str,
+    user_id: str,
+    *,
+    plan_json: str | None = None,
+    activities_json: str | None = None,
+    profile_json: str | None = None,
+) -> None:
+    """Upsert cached user data (plan, activities, profile)."""
+    now = datetime.now(timezone.utc).isoformat()
+    with _lock:
+        conn = _get_conn(db_path)
+        existing = conn.execute(
+            "SELECT user_id FROM user_data WHERE user_id = ?", (user_id,)
+        ).fetchone()
+        if existing:
+            sets: list[str] = ["updated_at = ?"]
+            vals: list[str] = [now]
+            if plan_json is not None:
+                sets.append("plan_json = ?")
+                vals.append(plan_json)
+            if activities_json is not None:
+                sets.append("activities_json = ?")
+                vals.append(activities_json)
+            if profile_json is not None:
+                sets.append("profile_json = ?")
+                vals.append(profile_json)
+            vals.append(user_id)
+            conn.execute(
+                f"UPDATE user_data SET {', '.join(sets)} WHERE user_id = ?",
+                vals,
+            )
+        else:
+            conn.execute(
+                "INSERT INTO user_data (user_id, plan_json, activities_json, profile_json, updated_at) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (user_id, plan_json, activities_json, profile_json, now),
+            )
+        conn.commit()
+
+
+def load_user_data(db_path: str, user_id: str) -> dict | None:
+    """Load cached user data. Returns dict with plan_json, activities_json, profile_json or None."""
+    with _lock:
+        conn = _get_conn(db_path)
+        row = conn.execute(
+            "SELECT * FROM user_data WHERE user_id = ?", (user_id,)
+        ).fetchone()
+    return _row_to_dict(row)
 
 
 def reset_connection() -> None:

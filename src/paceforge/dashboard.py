@@ -7,12 +7,16 @@ import json
 from datetime import date, timedelta
 from pathlib import Path
 
+import extra_streamlit_components as stx
 import requests
 import streamlit as st
 
 API_BASE = "http://localhost:8000"
 
 st.set_page_config(page_title="PaceForge", page_icon="🏃", layout="wide")
+
+# ── Cookie manager for persistent JWT ────────────────────────────────
+_cookie_mgr = stx.CookieManager(key="pf_cookies")
 
 # ═══════════════════════════════════════════════════════════════════════
 # LOGO — load SVG and encode as base64 data URI
@@ -530,9 +534,31 @@ for key, default in {
     "profile": None,
     "plan": None,
     "page": "login",
+    "_restored": False,
 }.items():
     if key not in st.session_state:
         st.session_state[key] = default
+
+# ── Restore JWT from cookie on fresh page load ──────────────────────
+if st.session_state.jwt is None:
+    saved_jwt = _cookie_mgr.get("pf_jwt")
+    if saved_jwt:
+        # Validate the token is still accepted by the API
+        try:
+            r = requests.get(
+                f"{API_BASE}/auth/profile",
+                headers={"Authorization": f"Bearer {saved_jwt}"},
+                timeout=10,
+            )
+            if r.status_code == 200:
+                data = r.json()
+                st.session_state.jwt = saved_jwt
+                st.session_state.role = data.get("role", "user")
+                st.session_state.user_name = data.get("name", "")
+                st.session_state.user_email = data.get("email", "")
+                st.session_state.page = "app"
+        except Exception:
+            pass  # Cookie invalid or API unreachable — show login
 
 
 def _auth_headers() -> dict:
@@ -544,7 +570,9 @@ def _auth_headers() -> dict:
 def _logout():
     for key in ["jwt", "role", "user_name", "user_email", "garmin_logged_in", "mfa_required", "profile", "plan"]:
         st.session_state[key] = None if key not in ("garmin_logged_in", "mfa_required") else False
+    st.session_state._restored = False
     st.session_state.page = "login"
+    _cookie_mgr.delete("pf_jwt")
 
 
 def _error_detail(r: requests.Response) -> str:
@@ -879,6 +907,7 @@ if st.session_state.jwt is None:
                         st.session_state.user_name = data["name"]
                         st.session_state.user_email = data.get("email", "")
                         st.session_state.page = "app"
+                        _cookie_mgr.set("pf_jwt", data["access_token"], max_age=86400)
                         st.rerun()
                     elif r.status_code == 403:
                         st.warning(_error_detail(r))
@@ -902,6 +931,41 @@ if st.session_state.jwt is None:
 # ═══════════════════════════════════════════════════════════════════════
 # MAIN APP — authenticated
 # ═══════════════════════════════════════════════════════════════════════
+
+# ── Auto-restore Garmin connection, plan, and activities on load ─────
+if not st.session_state._restored:
+    st.session_state._restored = True
+    try:
+        # 1) Check Garmin connection (triggers auto-reconnect from cached tokens)
+        r = requests.get(
+            f"{API_BASE}/garmin/status",
+            headers=_auth_headers(),
+            timeout=15,
+        )
+        if r.status_code == 200 and r.json().get("connected"):
+            st.session_state.garmin_logged_in = True
+
+        # 2) Restore plan from DB cache
+        if st.session_state.plan is None:
+            r = requests.get(
+                f"{API_BASE}/plan",
+                headers=_auth_headers(),
+                timeout=10,
+            )
+            if r.status_code == 200:
+                st.session_state.plan = r.json()
+
+        # 3) Restore cached activities
+        if not st.session_state.get("garmin_activities"):
+            r = requests.get(
+                f"{API_BASE}/activities?days=240",
+                headers=_auth_headers(),
+                timeout=30,
+            )
+            if r.status_code == 200:
+                st.session_state["garmin_activities"] = r.json()
+    except Exception:
+        pass  # Non-critical — user can manually sync
 
 # ── Sidebar ──────────────────────────────────────────────────────────
 
