@@ -228,6 +228,10 @@ class GeneratePlanRequest(BaseModel):
     training_days: list[str] | None = None
     max_days_per_week: int = 5
     long_run_day: str = "sunday"
+    start_date: date | None = None
+    custom_easy_pace: float | None = None
+    custom_marathon_pace: float | None = None
+    custom_threshold_pace: float | None = None
 
 
 class PushPlanRequest(BaseModel):
@@ -393,6 +397,10 @@ async def generate(req: GeneratePlanRequest, user: dict = Depends(get_current_us
         experience_level=req.experience_level,
         training_days=req.training_days or default_training_days(req.max_days_per_week),
         long_run_day=req.long_run_day,
+        start_date=req.start_date,
+        custom_easy_pace=req.custom_easy_pace,
+        custom_marathon_pace=req.custom_marathon_pace,
+        custom_threshold_pace=req.custom_threshold_pace,
     )
 
     _user_plan[uid] = generate_plan(profile, goal)

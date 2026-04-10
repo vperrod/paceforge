@@ -111,7 +111,7 @@ class GarminClient:
 
     # ── Read operations ──────────────────────────────────────────────
 
-    def get_fitness_profile(self, lookback_days: int = 30) -> UserFitnessProfile:
+    def get_fitness_profile(self, lookback_days: int = 90) -> UserFitnessProfile:
         """Build an aggregated fitness profile from Garmin data."""
         today = date.today().isoformat()
 
@@ -193,6 +193,7 @@ class GarminClient:
                         training_effect_aerobic=act.get("aerobicTrainingEffect"),
                         training_effect_anaerobic=act.get("anaerobicTrainingEffect"),
                         vo2_max_value=act.get("vO2MaxValue"),
+                        avg_running_cadence=act.get("averageRunningCadenceInStepsPerMinute"),
                     )
                 )
         except Exception:

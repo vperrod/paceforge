@@ -1329,27 +1329,106 @@ with tab_profile:
 
             st.markdown("")
 
-            # ── Recent Activities ──
-            st.markdown('<div class="pf-section-header">Recent Activities</div>', unsafe_allow_html=True)
+            # ── Progress Trends ──
             acts = p.get("recent_activities", [])
-            if acts:
-                st.markdown('<div class="pf-card">', unsafe_allow_html=True)
-                for a in acts[:10]:
-                    dist = round(a.get("distance_meters", 0) / 1000, 1)
-                    pace = a.get("avg_pace_sec_per_km")
-                    pace_str = ""
-                    if pace:
-                        pm, ps = divmod(int(pace), 60)
-                        pace_str = f"{pm}:{ps:02d}/km"
-                    st.markdown(
-                        f"""<div class="pf-activity-row">
-                            <span class="pf-activity-name">{a['name']}</span>
-                            <span class="pf-activity-dist">{dist} km</span>
-                            <span class="pf-activity-pace">{pace_str}</span>
-                        </div>""",
-                        unsafe_allow_html=True,
-                    )
-                st.markdown('</div>', unsafe_allow_html=True)
+            if acts and len(acts) >= 2:
+                st.markdown('<div class="pf-section-header">Progress Trends</div>', unsafe_allow_html=True)
+                import plotly.graph_objects as go
+
+                sorted_acts = sorted(acts, key=lambda a: a.get("start_time", ""))
+                dates = [a.get("start_time", "")[:10] for a in sorted_acts]
+
+                chart_layout = dict(
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    plot_bgcolor="rgba(0,0,0,0)",
+                    font=dict(color="#C9CDD4", size=11),
+                    margin=dict(l=40, r=20, t=30, b=30),
+                    height=250,
+                    xaxis=dict(gridcolor="rgba(255,255,255,0.05)"),
+                    yaxis=dict(gridcolor="rgba(255,255,255,0.08)"),
+                )
+
+                trend_col1, trend_col2 = st.columns(2)
+
+                paces_list = [a.get("avg_pace_sec_per_km") for a in sorted_acts]
+                if any(pv is not None for pv in paces_list):
+                    with trend_col1:
+                        pace_vals, pace_dates = [], []
+                        for d, pv in zip(dates, paces_list):
+                            if pv and pv > 0:
+                                pace_vals.append(pv / 60)
+                                pace_dates.append(d)
+                        fig_pace = go.Figure()
+                        fig_pace.add_trace(go.Scatter(
+                            x=pace_dates, y=pace_vals,
+                            mode="lines+markers",
+                            line=dict(color="#00D26A", width=2),
+                            marker=dict(size=5),
+                            hovertemplate="%%{x}<br>%%{y:.2f} min/km<extra></extra>",
+                        ))
+                        fig_pace.update_layout(title="Average Pace (min/km)", yaxis_title="min/km", yaxis_autorange="reversed", **chart_layout)
+                        st.plotly_chart(fig_pace, use_container_width=True)
+
+                hr_list = [a.get("avg_hr") for a in sorted_acts]
+                if any(h is not None for h in hr_list):
+                    with trend_col2:
+                        hr_vals, hr_dates = [], []
+                        for d, hv in zip(dates, hr_list):
+                            if hv and hv > 0:
+                                hr_vals.append(hv)
+                                hr_dates.append(d)
+                        fig_hr = go.Figure()
+                        fig_hr.add_trace(go.Scatter(
+                            x=hr_dates, y=hr_vals,
+                            mode="lines+markers",
+                            line=dict(color="#FF6B6B", width=2),
+                            marker=dict(size=5),
+                            hovertemplate="%%{x}<br>%%{y} bpm<extra></extra>",
+                        ))
+                        fig_hr.update_layout(title="Average Heart Rate (bpm)", yaxis_title="bpm", **chart_layout)
+                        st.plotly_chart(fig_hr, use_container_width=True)
+
+                trend_col3, trend_col4 = st.columns(2)
+
+                cadence_list = [a.get("avg_running_cadence") for a in sorted_acts]
+                if any(cv is not None for cv in cadence_list):
+                    with trend_col3:
+                        cad_vals, cad_dates = [], []
+                        for d, cv in zip(dates, cadence_list):
+                            if cv and cv > 0:
+                                cad_vals.append(cv)
+                                cad_dates.append(d)
+                        fig_cad = go.Figure()
+                        fig_cad.add_trace(go.Scatter(
+                            x=cad_dates, y=cad_vals,
+                            mode="lines+markers",
+                            line=dict(color="#4ECDC4", width=2),
+                            marker=dict(size=5),
+                            hovertemplate="%%{x}<br>%%{y:.0f} spm<extra></extra>",
+                        ))
+                        fig_cad.update_layout(title="Running Cadence (spm)", yaxis_title="spm", **chart_layout)
+                        st.plotly_chart(fig_cad, use_container_width=True)
+
+                vo2_list = [a.get("vo2_max_value") for a in sorted_acts]
+                if any(v is not None for v in vo2_list):
+                    with trend_col4:
+                        vo2_vals, vo2_dates = [], []
+                        for d, vv in zip(dates, vo2_list):
+                            if vv and vv > 0:
+                                vo2_vals.append(vv)
+                                vo2_dates.append(d)
+                        fig_vo2 = go.Figure()
+                        fig_vo2.add_trace(go.Scatter(
+                            x=vo2_dates, y=vo2_vals,
+                            mode="lines+markers",
+                            line=dict(color="#FFE66D", width=2),
+                            marker=dict(size=5),
+                            hovertemplate="%%{x}<br>%%{y:.1f}<extra></extra>",
+                        ))
+                        fig_vo2.update_layout(title="VO2 Max Trend", yaxis_title="VO2 Max", **chart_layout)
+                        st.plotly_chart(fig_vo2, use_container_width=True)
+
+            st.markdown("")
         else:
             st.markdown(
                 '<p style="color:#8B92A5;text-align:center;margin-top:3rem;">Click <b>Load Fitness Profile</b> to view your data.</p>',
@@ -1375,6 +1454,13 @@ with tab_plan:
             "Race Date",
             value=date.today() + timedelta(weeks=14),
             min_value=date.today() + timedelta(weeks=6),
+        )
+        start_date = st.date_input(
+            "Plan Start Date",
+            value=date.today() + timedelta(days=(7 - date.today().weekday()) % 7 or 7),
+            min_value=date.today(),
+            max_value=target_date - timedelta(weeks=4),
+            help="When to start training. Aligns to Monday automatically.",
         )
 
         col1, col2 = st.columns(2)
@@ -1404,6 +1490,25 @@ with tab_plan:
         )
 
         target_secs = (target_time_h * 3600 + target_time_m * 60) if (target_time_h + target_time_m) > 0 else None
+
+        st.markdown('<div class="pf-section-header" style="font-size:0.9rem;margin-top:1rem;">'
+                    'Current Paces (optional \u2014 leave 0 to auto-detect from Garmin)</div>',
+                    unsafe_allow_html=True)
+        pace_cols = st.columns(3)
+        with pace_cols[0]:
+            easy_min = st.number_input("Easy pace min/km", 0, 10, 0, key="custom_easy_min")
+            easy_sec = st.number_input("Easy pace sec", 0, 59, 0, key="custom_easy_sec")
+        with pace_cols[1]:
+            marathon_min = st.number_input("Marathon pace min/km", 0, 10, 0, key="custom_marathon_min")
+            marathon_sec = st.number_input("Marathon pace sec", 0, 59, 0, key="custom_marathon_sec")
+        with pace_cols[2]:
+            threshold_min = st.number_input("Threshold pace min/km", 0, 10, 0, key="custom_threshold_min")
+            threshold_sec = st.number_input("Threshold pace sec", 0, 59, 0, key="custom_threshold_sec")
+
+        custom_easy = (easy_min * 60 + easy_sec) if (easy_min + easy_sec) > 0 else None
+        custom_marathon = (marathon_min * 60 + marathon_sec) if (marathon_min + marathon_sec) > 0 else None
+        custom_threshold = (threshold_min * 60 + threshold_sec) if (threshold_min + threshold_sec) > 0 else None
+
         st.markdown('</div>', unsafe_allow_html=True)
 
         if st.button("Generate Plan", type="primary", use_container_width=True) and len(training_days) >= 3:
@@ -1417,6 +1522,10 @@ with tab_plan:
                         "experience_level": experience,
                         "training_days": training_days,
                         "long_run_day": long_run_day,
+                        "start_date": str(start_date),
+                        "custom_easy_pace": custom_easy,
+                        "custom_marathon_pace": custom_marathon,
+                        "custom_threshold_pace": custom_threshold,
                     },
                     headers=_auth_headers(),
                     timeout=30,

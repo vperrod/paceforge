@@ -33,6 +33,7 @@ class RecentActivity(BaseModel):
     training_effect_aerobic: float | None = None
     training_effect_anaerobic: float | None = None
     vo2_max_value: float | None = None
+    avg_running_cadence: float | None = None
 
 
 class UserFitnessProfile(BaseModel):
@@ -95,6 +96,10 @@ class TrainingGoal(BaseModel):
         description="Which days of the week to train (e.g. ['monday','wednesday','friday','saturday','sunday'])",
     )
     long_run_day: str = Field(default="sunday", description="Preferred long run day")
+    start_date: date | None = Field(None, description="Optional plan start date")
+    custom_easy_pace: float | None = Field(None, description="User-provided easy pace in sec/km")
+    custom_marathon_pace: float | None = Field(None, description="User-provided marathon pace in sec/km")
+    custom_threshold_pace: float | None = Field(None, description="User-provided threshold pace in sec/km")
 
     @property
     def max_days_per_week(self) -> int:

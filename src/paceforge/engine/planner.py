@@ -98,6 +98,30 @@ def generate_plan(
 
     # 1. Determine training paces
     paces = _derive_paces(profile)
+    # Override with user-provided custom paces if given
+    if paces and (goal.custom_easy_pace or goal.custom_marathon_pace or goal.custom_threshold_pace):
+        paces = TrainingPaces(
+            vdot=paces.vdot,
+            easy_low=goal.custom_easy_pace or paces.easy_low,
+            easy_high=goal.custom_easy_pace or paces.easy_high,
+            marathon=goal.custom_marathon_pace or paces.marathon,
+            threshold=goal.custom_threshold_pace or paces.threshold,
+            interval=paces.interval,
+            repetition=paces.repetition,
+        )
+    elif not paces and (goal.custom_easy_pace or goal.custom_marathon_pace or goal.custom_threshold_pace):
+        easy = goal.custom_easy_pace or 360
+        marathon = goal.custom_marathon_pace or 300
+        threshold = goal.custom_threshold_pace or 270
+        paces = TrainingPaces(
+            vdot=0,
+            easy_low=easy,
+            easy_high=easy,
+            marathon=marathon,
+            threshold=threshold,
+            interval=threshold - 20,
+            repetition=threshold - 40,
+        )
 
     # 2. Load template (still used for volume_progression, phases, peak_weekly_km)
     template = _load_template(goal)
@@ -108,8 +132,14 @@ def generate_plan(
     # 4. Compute plan dates
     total_weeks = template["total_weeks"]
     race_date = goal.target_date
-    plan_start = race_date - timedelta(weeks=total_weeks)
-    plan_start = plan_start - timedelta(days=plan_start.weekday())
+    if goal.start_date:
+        plan_start = goal.start_date
+        plan_start = plan_start - timedelta(days=plan_start.weekday())
+        available_weeks = (race_date - plan_start).days // 7
+        total_weeks = min(total_weeks, max(available_weeks, 4))
+    else:
+        plan_start = race_date - timedelta(weeks=total_weeks)
+        plan_start = plan_start - timedelta(days=plan_start.weekday())
 
     # 5. Get peak volume
     peak_km = template["peak_weekly_km"].get(level, template["peak_weekly_km"]["intermediate"])
