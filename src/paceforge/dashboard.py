@@ -439,6 +439,40 @@ hr { border-color: #2D3139 !important; }
 #MainMenu { visibility: hidden; }
 header { visibility: hidden; }
 footer { visibility: hidden; }
+
+/* ── Mobile Responsive ─────────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 1rem !important;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+        max-width: 100% !important;
+    }
+    .pf-card { padding: 0.75rem !important; border-radius: 10px !important; }
+    .pf-metric-card { padding: 0.6rem !important; min-width: unset !important; }
+    .pf-pace-card { padding: 0.5rem !important; }
+    .pf-pace-value { font-size: 1.2rem !important; }
+    .pf-section-header { font-size: 1rem !important; }
+    .pf-workout-item { padding: 0.4rem 0 !important; }
+    .pf-workout-name { font-size: 0.85rem !important; }
+    .pf-workout-detail { font-size: 0.75rem !important; }
+    .pf-activity-row { flex-wrap: wrap !important; gap: 0.25rem !important; padding: 0.4rem 0 !important; }
+    [data-testid="column"] {
+        width: 100% !important;
+        flex: 1 1 100% !important;
+        min-width: 100% !important;
+    }
+    .fc .fc-toolbar { flex-wrap: wrap !important; gap: 0.25rem !important; }
+    .fc .fc-toolbar-title { font-size: 1rem !important; }
+    .fc .fc-button { padding: 0.2rem 0.4rem !important; font-size: 0.75rem !important; }
+    .fc .fc-daygrid-event { font-size: 0.7rem !important; }
+}
+@media (max-width: 480px) {
+    .pf-metric-card .pf-metric-value { font-size: 1.5rem !important; }
+    .pf-pace-value { font-size: 1rem !important; }
+    .fc .fc-toolbar-title { font-size: 0.85rem !important; }
+}
 </style>
 """
 
@@ -1442,99 +1476,88 @@ with tab_plan:
     if not st.session_state.garmin_logged_in:
         st.info("Connect to Garmin first to generate a plan.")
     else:
-        st.markdown('<div class="pf-section-header">Generate a Training Plan</div>', unsafe_allow_html=True)
-
-        # Form in card
-        st.markdown('<div class="pf-card">', unsafe_allow_html=True)
-        goal_type = st.selectbox(
-            "Goal",
-            ["HALF_MARATHON", "MARATHON", "HYROX", "5K", "10K"],
-        )
-        target_date = st.date_input(
-            "Race Date",
-            value=date.today() + timedelta(weeks=14),
-            min_value=date.today() + timedelta(weeks=6),
-        )
-        start_date = st.date_input(
-            "Plan Start Date",
-            value=date.today() + timedelta(days=(7 - date.today().weekday()) % 7 or 7),
-            min_value=date.today(),
-            max_value=target_date - timedelta(weeks=4),
-            help="When to start training. Aligns to Monday automatically.",
-        )
-
-        col1, col2 = st.columns(2)
-        with col1:
-            target_time_h = st.number_input("Target time — hours", 0, 6, 1)
-            target_time_m = st.number_input("Target time — minutes", 0, 59, 45)
-        with col2:
-            experience = st.selectbox("Experience Level", ["intermediate", "beginner", "advanced"])
-
-        ALL_DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
-        DAY_LABELS = {d: d.capitalize() for d in ALL_DAYS}
-
-        training_days = st.multiselect(
-            "Training Days",
-            options=ALL_DAYS,
-            default=["tuesday", "wednesday", "thursday", "saturday", "sunday"],
-            format_func=lambda d: DAY_LABELS[d],
-        )
-        if len(training_days) < 3:
-            st.warning("Select at least 3 training days.")
-
-        long_run_day = st.selectbox(
-            "Long Run Day",
-            options=training_days if training_days else ["sunday"],
-            index=len(training_days) - 1 if training_days else 0,
-            format_func=lambda d: DAY_LABELS.get(d, d),
-        )
-
-        target_secs = (target_time_h * 3600 + target_time_m * 60) if (target_time_h + target_time_m) > 0 else None
-
-        st.markdown('<div class="pf-section-header" style="font-size:0.9rem;margin-top:1rem;">'
-                    'Current Paces (optional \u2014 leave 0 to auto-detect from Garmin)</div>',
-                    unsafe_allow_html=True)
-        pace_cols = st.columns(3)
-        with pace_cols[0]:
-            easy_min = st.number_input("Easy pace min/km", 0, 10, 0, key="custom_easy_min")
-            easy_sec = st.number_input("Easy pace sec", 0, 59, 0, key="custom_easy_sec")
-        with pace_cols[1]:
-            marathon_min = st.number_input("Marathon pace min/km", 0, 10, 0, key="custom_marathon_min")
-            marathon_sec = st.number_input("Marathon pace sec", 0, 59, 0, key="custom_marathon_sec")
-        with pace_cols[2]:
-            threshold_min = st.number_input("Threshold pace min/km", 0, 10, 0, key="custom_threshold_min")
-            threshold_sec = st.number_input("Threshold pace sec", 0, 59, 0, key="custom_threshold_sec")
-
-        custom_easy = (easy_min * 60 + easy_sec) if (easy_min + easy_sec) > 0 else None
-        custom_marathon = (marathon_min * 60 + marathon_sec) if (marathon_min + marathon_sec) > 0 else None
-        custom_threshold = (threshold_min * 60 + threshold_sec) if (threshold_min + threshold_sec) > 0 else None
-
-        st.markdown('</div>', unsafe_allow_html=True)
-
-        if st.button("Generate Plan", type="primary", use_container_width=True) and len(training_days) >= 3:
-            with st.spinner("Building your personalized plan..."):
-                r = requests.post(
-                    f"{API_BASE}/plan/generate",
-                    json={
-                        "goal_type": goal_type,
-                        "target_date": str(target_date),
-                        "target_time_seconds": target_secs,
-                        "experience_level": experience,
-                        "training_days": training_days,
-                        "long_run_day": long_run_day,
-                        "start_date": str(start_date),
-                        "custom_easy_pace": custom_easy,
-                        "custom_marathon_pace": custom_marathon,
-                        "custom_threshold_pace": custom_threshold,
-                    },
-                    headers=_auth_headers(),
-                    timeout=30,
+        has_plan = st.session_state.plan is not None
+        with st.expander("⚙️ Configure New Plan" if has_plan else "⚙️ Configure Your Training Plan", expanded=not has_plan):
+            row1_col1, row1_col2, row1_col3 = st.columns(3)
+            with row1_col1:
+                goal_type = st.selectbox("Goal", ["HALF_MARATHON", "MARATHON", "HYROX", "5K", "10K"])
+            with row1_col2:
+                target_date = st.date_input(
+                    "Race Date",
+                    value=date.today() + timedelta(weeks=14),
+                    min_value=date.today() + timedelta(weeks=6),
                 )
-                if r.status_code == 200:
-                    st.session_state.plan = r.json()
-                    st.success("Plan generated! Review it below and add to calendar when ready.")
-                else:
-                    st.error(f"Error: {_error_detail(r)}")
+            with row1_col3:
+                start_date = st.date_input(
+                    "Plan Start Date",
+                    value=date.today() + timedelta(days=(7 - date.today().weekday()) % 7 or 7),
+                    min_value=date.today(),
+                    max_value=target_date - timedelta(weeks=4),
+                    help="When to start training.",
+                )
+
+            row2_col1, row2_col2, row2_col3 = st.columns(3)
+            with row2_col1:
+                target_time_h = st.number_input("Target hours", 0, 6, 1)
+                target_time_m = st.number_input("Target min", 0, 59, 45)
+            with row2_col2:
+                experience = st.selectbox("Experience", ["intermediate", "beginner", "advanced"])
+            with row2_col3:
+                ALL_DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+                DAY_LABELS = {d: d.capitalize() for d in ALL_DAYS}
+                long_run_day = st.selectbox("Long Run Day", options=ALL_DAYS, index=6, format_func=lambda d: DAY_LABELS[d])
+
+            training_days = st.multiselect(
+                "Training Days",
+                options=ALL_DAYS,
+                default=["tuesday", "wednesday", "thursday", "saturday", "sunday"],
+                format_func=lambda d: DAY_LABELS[d],
+            )
+            if len(training_days) < 3:
+                st.warning("Select at least 3 training days.")
+
+            target_secs = (target_time_h * 3600 + target_time_m * 60) if (target_time_h + target_time_m) > 0 else None
+
+            with st.expander("⏱ Custom Paces (optional)", expanded=False):
+                pace_cols = st.columns(3)
+                with pace_cols[0]:
+                    easy_min = st.number_input("Easy min/km", 0, 10, 0, key="custom_easy_min")
+                    easy_sec = st.number_input("Easy sec", 0, 59, 0, key="custom_easy_sec")
+                with pace_cols[1]:
+                    marathon_min = st.number_input("Marathon min/km", 0, 10, 0, key="custom_marathon_min")
+                    marathon_sec = st.number_input("Marathon sec", 0, 59, 0, key="custom_marathon_sec")
+                with pace_cols[2]:
+                    threshold_min = st.number_input("Threshold min/km", 0, 10, 0, key="custom_threshold_min")
+                    threshold_sec = st.number_input("Threshold sec", 0, 59, 0, key="custom_threshold_sec")
+
+            custom_easy = (easy_min * 60 + easy_sec) if (easy_min + easy_sec) > 0 else None
+            custom_marathon = (marathon_min * 60 + marathon_sec) if (marathon_min + marathon_sec) > 0 else None
+            custom_threshold = (threshold_min * 60 + threshold_sec) if (threshold_min + threshold_sec) > 0 else None
+
+            if st.button("Generate Plan", type="primary", use_container_width=True) and len(training_days) >= 3:
+                with st.spinner("Building your personalized plan..."):
+                    r = requests.post(
+                        f"{API_BASE}/plan/generate",
+                        json={
+                            "goal_type": goal_type,
+                            "target_date": str(target_date),
+                            "target_time_seconds": target_secs,
+                            "experience_level": experience,
+                            "training_days": training_days,
+                            "long_run_day": long_run_day,
+                            "start_date": str(start_date),
+                            "custom_easy_pace": custom_easy,
+                            "custom_marathon_pace": custom_marathon,
+                            "custom_threshold_pace": custom_threshold,
+                        },
+                        headers=_auth_headers(),
+                        timeout=30,
+                    )
+                    if r.status_code == 200:
+                        st.session_state.plan = r.json()
+                        st.success("Plan generated! Review it below and add to calendar when ready.")
+                    else:
+                        st.error(f"Error: {_error_detail(r)}")
 
         plan = st.session_state.plan
         if plan:
@@ -1994,6 +2017,22 @@ with tab_calendar:
                             f'<div style="color:#8B92A5;font-size:0.75rem;margin-top:0.5rem;">📅 Scheduled: {ev_date}</div>',
                             unsafe_allow_html=True,
                         )
+                        if st.button("🗑 Delete Workout", key=f"del_{ev_date}_{props.get('name','')}", use_container_width=True):
+                            r = requests.post(
+                                f"{API_BASE}/plan/delete-workout",
+                                json={"workout_name": props.get("name", ""), "scheduled_date": ev_date},
+                                headers=_auth_headers(),
+                                timeout=10,
+                            )
+                            if r.status_code == 200:
+                                pr = requests.get(f"{API_BASE}/plan", headers=_auth_headers(), timeout=10)
+                                if pr.status_code == 200:
+                                    st.session_state.plan = pr.json()
+                                st.session_state.cal_selected_event = None
+                                st.success("Workout deleted!")
+                                st.rerun()
+                            else:
+                                st.error(f"Error: {_error_detail(r)}")
 
 
 # ── Tab 4: Push to Garmin ────────────────────────────────────────────

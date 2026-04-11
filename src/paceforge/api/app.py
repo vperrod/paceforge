@@ -260,6 +260,11 @@ class AcceptPlanRequest(BaseModel):
     accepted: bool
 
 
+class DeleteWorkoutRequest(BaseModel):
+    workout_name: str
+    scheduled_date: str
+
+
 # ── Helper: per-user Garmin token dir ────────────────────────────────
 
 def _token_dir_for(user_id: str) -> str:
@@ -457,6 +462,24 @@ async def reschedule_workout(req: RescheduleRequest, user: dict = Depends(get_cu
                 w.scheduled_date = date.fromisoformat(req.new_date)
                 save_user_data(settings.db_path, uid, plan_json=plan.model_dump_json())
                 return {"status": "ok", "message": f"Moved '{w.name}' to {req.new_date}"}
+    raise HTTPException(404, "Workout not found")
+
+
+@app.post("/plan/delete-workout")
+async def delete_workout(req: DeleteWorkoutRequest, user: dict = Depends(get_current_user)):
+    uid = user["id"]
+    plan = _user_plan.get(uid)
+    if not plan:
+        raise HTTPException(404, "No plan generated yet")
+    for week in plan.weeks:
+        for w in week.workouts:
+            if w.name == req.workout_name and str(w.scheduled_date) == req.scheduled_date:
+                week.workouts.remove(w)
+                week.total_distance_km = round(
+                    sum((wo.estimated_distance_meters or 0) for wo in week.workouts) / 1000, 1
+                )
+                save_user_data(settings.db_path, uid, plan_json=plan.model_dump_json())
+                return {"status": "ok", "message": f"Deleted '{w.name}' on {req.scheduled_date}"}
     raise HTTPException(404, "Workout not found")
 
 
