@@ -295,7 +295,11 @@ async def garmin_status(user: dict = Depends(get_current_user)):
     """Check if Garmin is connected (and try auto-reconnect from cached tokens)."""
     uid = user["id"]
     client = _ensure_garmin(uid)
-    return {"connected": client is not None}
+    cached = load_user_data(settings.db_path, uid)
+    return {
+        "connected": client is not None,
+        "last_synced": cached.get("updated_at") if cached else None,
+    }
 
 
 @app.post("/garmin/login")
@@ -352,7 +356,7 @@ async def get_fitness_profile(user: dict = Depends(get_current_user)):
         profile = UserFitnessProfile.model_validate_json(cached["profile_json"])
         _user_profile[uid] = profile
         return profile
-    raise HTTPException(401, "Not logged in to Garmin")
+    raise HTTPException(404, "No profile data available. Connect to Garmin to sync.")
 
 
 @app.get("/activities", response_model=list[RecentActivity])
@@ -371,7 +375,7 @@ async def get_activities(
     cached = load_user_data(settings.db_path, uid)
     if cached and cached.get("activities_json"):
         return [RecentActivity(**a) for a in json.loads(cached["activities_json"])]
-    raise HTTPException(401, "Not logged in to Garmin")
+    return []
 
 
 @app.get("/activities/{activity_id}")
@@ -380,7 +384,7 @@ async def get_activity_detail(activity_id: int, user: dict = Depends(get_current
     uid = user["id"]
     garmin = _ensure_garmin(uid)
     if not garmin:
-        raise HTTPException(401, "Not logged in to Garmin")
+        raise HTTPException(404, "Garmin not connected \u2014 detailed view unavailable")
     return garmin.get_activity_detail(activity_id)
 
 

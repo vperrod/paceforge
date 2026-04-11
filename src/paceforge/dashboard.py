@@ -1030,8 +1030,11 @@ if not st.session_state._restored:
             headers=_auth_headers(),
             timeout=15,
         )
-        if r.status_code == 200 and r.json().get("connected"):
-            st.session_state.garmin_logged_in = True
+        if r.status_code == 200:
+            status_data = r.json()
+            if status_data.get("connected"):
+                st.session_state.garmin_logged_in = True
+            st.session_state["last_synced"] = status_data.get("last_synced")
 
         # 2) Restore plan from DB cache
         if st.session_state.plan is None:
@@ -1207,9 +1210,45 @@ with st.sidebar:
     st.markdown('</div>', unsafe_allow_html=True)
 
 
+# ── Garmin Sync Status Banner ──────────────────────────────────────
+
+if not st.session_state.garmin_logged_in:
+    last_synced = st.session_state.get("last_synced")
+    sync_msg = ""
+    if last_synced:
+        try:
+            from datetime import datetime as _dt
+            ts = _dt.fromisoformat(last_synced.replace("Z", "+00:00"))
+            sync_msg = f" · Last synced: {ts.strftime('%b %d, %Y %H:%M UTC')}"
+        except Exception:
+            sync_msg = f" · Last synced: {last_synced[:19]}"
+    st.markdown(
+        f'<div style="background:#2D2000;border:1px solid #FF9800;border-radius:8px;'
+        f'padding:0.5rem 1rem;margin-bottom:1rem;color:#FFB74D;font-size:0.85rem;">'
+        f'⚠️ Garmin not connected — showing cached data{sync_msg}. '
+        f'Connect via the sidebar to refresh.</div>',
+        unsafe_allow_html=True,
+    )
+else:
+    last_synced = st.session_state.get("last_synced")
+    if last_synced:
+        try:
+            from datetime import datetime as _dt
+            ts = _dt.fromisoformat(last_synced.replace("Z", "+00:00"))
+            sync_text = f"Last synced: {ts.strftime('%b %d, %Y %H:%M UTC')}"
+        except Exception:
+            sync_text = f"Last synced: {last_synced[:19]}"
+        st.markdown(
+            f'<div style="background:#0D2818;border:1px solid #00D26A;border-radius:8px;'
+            f'padding:0.5rem 1rem;margin-bottom:1rem;color:#69F0AE;font-size:0.85rem;">'
+            f'✅ Garmin connected · {sync_text}</div>',
+            unsafe_allow_html=True,
+        )
+
+
 # ── Tabs ─────────────────────────────────────────────────────────────
 
-tab_names = ["Fitness Profile", "Training Plan", "Calendar", "Push to Garmin", "AI Coach"]
+tab_names = ["Fitness Profile", "Training Plan", "Calendar", "AI Coach"]
 if st.session_state.role == "admin":
     tab_names.append("Admin Panel")
 
@@ -1217,18 +1256,15 @@ tabs = st.tabs(tab_names)
 tab_profile = tabs[0]
 tab_plan = tabs[1]
 tab_calendar = tabs[2]
-tab_push = tabs[3]
-tab_coach = tabs[4]
-tab_admin = tabs[5] if st.session_state.role == "admin" else None
+tab_coach = tabs[3]
+tab_admin = tabs[4] if st.session_state.role == "admin" else None
 
 
 # ── Tab 1: Fitness Profile ───────────────────────────────────────────
 
 with tab_profile:
-    if not st.session_state.garmin_logged_in:
-        st.info("Connect to Garmin using the sidebar to load your profile.")
-    else:
-        if st.button("Load Fitness Profile", type="primary", key="load_profile_btn"):
+    if st.session_state.garmin_logged_in:
+        if st.button("\U0001f504 Sync Profile from Garmin", key="load_profile_btn"):
             with st.spinner("Fetching from Garmin Connect..."):
                 r = requests.get(f"{API_BASE}/profile", headers=_auth_headers(), timeout=60)
                 if r.status_code == 200:
@@ -1236,6 +1272,10 @@ with tab_profile:
                 else:
                     st.error("Failed to fetch profile")
 
+    p = st.session_state.profile
+    if not p:
+        st.info("No profile data yet. Connect to Garmin and sync to load your fitness profile.")
+    else:
         p = st.session_state.profile
         if p:
             # ── KPI Metric Cards ──
@@ -1730,12 +1770,9 @@ with tab_plan:
 with tab_calendar:
     st.markdown('<div class="pf-section-header">Training Calendar</div>', unsafe_allow_html=True)
 
-    has_cached_data = bool(st.session_state.get("garmin_activities")) or bool(st.session_state.plan)
-    if not st.session_state.garmin_logged_in and not has_cached_data:
-        st.info("Connect to Garmin using the sidebar to view your activities.")
-    else:
-        # Fetch Garmin activities
-        if st.session_state.garmin_logged_in and st.button("Sync Activities from Garmin", type="primary", key="sync_activities_btn"):
+    if True:
+        # Sync button only visible when Garmin is connected
+        if st.session_state.garmin_logged_in and st.button("\U0001f504 Sync Activities from Garmin", key="sync_activities_btn"):
             with st.spinner("Fetching activities from Garmin Connect..."):
                 try:
                     r = requests.get(
@@ -2034,45 +2071,7 @@ with tab_calendar:
                             else:
                                 st.error(f"Error: {_error_detail(r)}")
 
-
-# ── Tab 4: Push to Garmin ────────────────────────────────────────────
-
-with tab_push:
-    plan = st.session_state.plan
-    if not plan:
-        st.info("Generate a plan first.")
-    elif not st.session_state.garmin_logged_in:
-        st.info("Connect to Garmin first.")
-    else:
-        st.markdown('<div class="pf-section-header">Push Workouts to Garmin</div>', unsafe_allow_html=True)
-        st.markdown(
-            '<p style="color:#8B92A5;margin-bottom:1rem;">Select which weeks to push to your Garmin calendar.</p>',
-            unsafe_allow_html=True,
-        )
-
-        week_options = [f"Week {w['week_number']} — {w['phase']}" for w in plan.get("weeks", [])]
-        selected = st.multiselect("Weeks", week_options)
-
-        if st.button("Push Selected Weeks", type="primary", use_container_width=True):
-            week_nums = [int(s.split()[1]) for s in selected]
-            with st.spinner("Pushing workouts to Garmin Connect..."):
-                r = requests.post(
-                    f"{API_BASE}/plan/push",
-                    json={"week_numbers": week_nums},
-                    headers=_auth_headers(),
-                    timeout=120,
-                )
-                if r.status_code == 200:
-                    try:
-                        data = r.json()
-                        st.success(f"Pushed {data['workouts_pushed']} workouts to Garmin Connect!")
-                    except Exception:
-                        st.success("Workouts pushed to Garmin Connect!")
-                else:
-                    st.error(f"Error: {_error_detail(r)}")
-
-
-# ── Tab 5: AI Coach ──────────────────────────────────────────────────
+# ── Tab 4: AI Coach ──────────────────────────────────────────────────
 
 with tab_coach:
     st.markdown('<div class="pf-section-header">AI Running Coach</div>', unsafe_allow_html=True)
