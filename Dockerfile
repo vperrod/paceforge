@@ -3,7 +3,10 @@ FROM paceforgeacr.azurecr.io/oryx-python:3.12
 WORKDIR /app
 
 # Install system deps for bcrypt, curl_cffi, and git (for pip git deps)
+# Remove ALL Microsoft apt repos (expired GPG key in Oryx base image)
 RUN rm -f /etc/apt/sources.list.d/microsoft-prod.list \
+    && find /etc/apt/ -name '*.list' -exec sed -i '/packages\.microsoft\.com/d' {} + \
+    && find /etc/apt/ -name '*.sources' -exec sed -i '/packages\.microsoft\.com/d' {} + \
     && apt-get update && apt-get install -y --no-install-recommends \
     gcc libffi-dev supervisor git nginx \
     && rm -rf /var/lib/apt/lists/*
