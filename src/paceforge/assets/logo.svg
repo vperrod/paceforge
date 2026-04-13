@@ -1,32 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
-  <!-- Upward trajectory arc - representing improvement -->
-  <path d="M80 400 Q180 350 260 280 Q340 210 400 120" stroke="#00D26A" stroke-width="28" stroke-linecap="round" fill="none" opacity="0.3"/>
-  <path d="M80 400 Q180 350 260 280 Q340 210 400 120" stroke="url(#grad)" stroke-width="16" stroke-linecap="round" fill="none"/>
-  <!-- Arrow tip on trajectory -->
-  <path d="M388 156 L400 120 L364 132" stroke="#00D26A" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-  <!-- Runner silhouette - mid stride dynamic pose -->
-  <g transform="translate(220, 140)">
-    <!-- Head -->
-    <circle cx="30" cy="20" r="22" fill="#FAFAFA"/>
-    <!-- Torso - leaning forward -->
-    <line x1="30" y1="42" x2="18" y2="110" stroke="#FAFAFA" stroke-width="18" stroke-linecap="round"/>
-    <!-- Back arm -->
-    <line x1="26" y1="60" x2="60" y2="100" stroke="#FAFAFA" stroke-width="14" stroke-linecap="round"/>
-    <!-- Front arm -->
-    <line x1="26" y1="60" x2="-16" y2="50" stroke="#FAFAFA" stroke-width="14" stroke-linecap="round"/>
-    <!-- Back leg - extended behind -->
-    <path d="M18 110 L-20 140 L-60 130" stroke="#FAFAFA" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-    <!-- Front leg - forward stride -->
-    <path d="M18 110 L50 150 L80 170" stroke="#FAFAFA" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-  </g>
-  <!-- Speed lines -->
-  <line x1="120" y1="200" x2="170" y2="200" stroke="#00D26A" stroke-width="4" stroke-linecap="round" opacity="0.5"/>
-  <line x1="100" y1="230" x2="160" y2="230" stroke="#00D26A" stroke-width="3" stroke-linecap="round" opacity="0.4"/>
-  <line x1="130" y1="260" x2="180" y2="260" stroke="#00D26A" stroke-width="3" stroke-linecap="round" opacity="0.3"/>
-  <defs>
-    <linearGradient id="grad" x1="80" y1="400" x2="400" y2="120" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#00D26A" stop-opacity="0.4"/>
-      <stop offset="100%" stop-color="#00D26A" stop-opacity="1"/>
-    </linearGradient>
-  </defs>
+  <!-- PaceForge — ascending pace line mark -->
+  <!-- Three ascending bars with rhythm, representing pace improvement -->
+  <rect x="100" y="320" width="60" height="120" rx="8" fill="#10B981" opacity="0.25"/>
+  <rect x="200" y="220" width="60" height="220" rx="8" fill="#10B981" opacity="0.5"/>
+  <rect x="300" y="100" width="60" height="340" rx="8" fill="#10B981" opacity="0.85"/>
+  <!-- Connecting ascending line — the trajectory -->
+  <path d="M130 310 L230 210 L330 90" stroke="#10B981" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Arrow tip -->
+  <path d="M318 118 L330 90 L306 96" stroke="#10B981" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Subtle baseline -->
+  <line x1="80" y1="450" x2="432" y2="450" stroke="#10B981" stroke-width="3" stroke-linecap="round" opacity="0.15"/>
 </svg>

@@ -36,75 +36,123 @@ else:
 
 _CUSTOM_CSS = """
 <style>
-/* ── Global ──────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+/* ── Design System ───────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
+:root {
+    --pf-bg: #0F1117;
+    --pf-surface: #161821;
+    --pf-elevated: #1C1F2B;
+    --pf-card: #1A1D2B;
+    --pf-border-subtle: rgba(148, 163, 194, 0.08);
+    --pf-border: rgba(148, 163, 194, 0.12);
+    --pf-border-strong: rgba(148, 163, 194, 0.18);
+    --pf-text: #E8ECF4;
+    --pf-text-secondary: #8B95AD;
+    --pf-text-tertiary: #5C6478;
+    --pf-emerald: #10B981;
+    --pf-emerald-dim: rgba(16, 185, 129, 0.12);
+    --pf-emerald-glow: rgba(16, 185, 129, 0.06);
+    --pf-amber: #F59E0B;
+    --pf-amber-dim: rgba(245, 158, 11, 0.12);
+    --pf-sky: #0EA5E9;
+    --pf-sky-dim: rgba(14, 165, 233, 0.12);
+    --pf-rose: #F43F5E;
+    --pf-rose-dim: rgba(244, 63, 94, 0.12);
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 16px;
+    --space-lg: 24px;
+    --space-xl: 32px;
+    --space-2xl: 48px;
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --duration-fast: 150ms;
+    --duration-base: 200ms;
+    --font-display: 'Manrope', sans-serif;
+    --font-body: 'Figtree', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+}
+
+/* ── Global ──────────────────────────────────────────── */
 html, body, [class*="css"] {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
 }
 
 .block-container {
-    padding-top: 2rem !important;
-    padding-bottom: 2rem !important;
+    padding-top: var(--space-xl) !important;
+    padding-bottom: var(--space-xl) !important;
     max-width: 1200px;
 }
 
 /* ── Cards ───────────────────────────────────────────── */
 .pf-card {
-    background: #242830;
-    border: 1px solid #2D3139;
-    border-radius: 14px;
-    padding: 1.5rem;
-    margin-bottom: 1rem;
-    transition: border-color 0.2s;
+    background: var(--pf-card);
+    border: 1px solid var(--pf-border);
+    border-radius: 12px;
+    padding: var(--space-lg);
+    margin-bottom: var(--space-md);
+    transition: border-color var(--duration-fast) var(--ease-out),
+                transform var(--duration-fast) var(--ease-out);
 }
 .pf-card:hover {
-    border-color: #3A3F4B;
+    border-color: var(--pf-border-strong);
+    transform: translateY(-1px);
 }
 
-/* ── Metric cards ────────────────────────────────────── */
+/* ── Metric cards (clean — no top bar) ───────────────── */
 .pf-metric-card {
-    background: #242830;
-    border: 1px solid #2D3139;
-    border-radius: 14px;
+    background: var(--pf-card);
+    border: 1px solid var(--pf-border);
+    border-radius: 12px;
     padding: 1.2rem 1.5rem;
     text-align: center;
-    position: relative;
-    overflow: hidden;
+    transition: border-color var(--duration-fast) var(--ease-out),
+                transform var(--duration-fast) var(--ease-out);
 }
-.pf-metric-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 3px;
-    border-radius: 14px 14px 0 0;
+.pf-metric-card:hover {
+    border-color: var(--pf-border-strong);
+    transform: translateY(-1px);
 }
-.pf-metric-card.green::before { background: #00D26A; }
-.pf-metric-card.blue::before { background: #2196F3; }
-.pf-metric-card.orange::before { background: #FF9800; }
-.pf-metric-card.purple::before { background: #AB47BC; }
-.pf-metric-card.red::before { background: #F44336; }
-.pf-metric-card.cyan::before { background: #00BCD4; }
 .pf-metric-label {
-    font-size: 0.75rem;
-    font-weight: 600;
+    font-family: var(--font-body);
+    font-size: 0.72rem;
+    font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: #8B92A5;
+    color: var(--pf-text-tertiary);
     margin-bottom: 0.4rem;
 }
 .pf-metric-value {
+    font-family: var(--font-mono);
     font-size: 1.8rem;
     font-weight: 700;
-    color: #FAFAFA;
+    color: var(--pf-text);
     line-height: 1.1;
 }
 .pf-metric-unit {
+    font-family: var(--font-body);
     font-size: 0.8rem;
     font-weight: 400;
-    color: #8B92A5;
-    margin-left: 0.2rem;
+    color: var(--pf-text-tertiary);
+    margin-left: 0.15rem;
 }
+
+/* ── Indicator dots ──────────────────────────────────── */
+.pf-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+    flex-shrink: 0;
+}
+.pf-dot-emerald { background: var(--pf-emerald); }
+.pf-dot-sky { background: var(--pf-sky); }
+.pf-dot-amber { background: var(--pf-amber); }
+.pf-dot-rose { background: var(--pf-rose); }
+.pf-dot-muted { background: var(--pf-text-tertiary); }
 
 /* ── Logo / Brand ────────────────────────────────────── */
 .pf-brand {
@@ -118,13 +166,14 @@ html, body, [class*="css"] {
     height: 42px;
 }
 .pf-brand-text {
-    font-size: 1.4rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    color: #FAFAFA;
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--pf-text);
 }
 .pf-brand-text span {
-    color: #00D26A;
+    color: var(--pf-emerald);
 }
 
 /* ── Auth page ───────────────────────────────────────── */
@@ -142,63 +191,67 @@ html, body, [class*="css"] {
     margin-bottom: 1rem;
 }
 .pf-auth-header h1 {
+    font-family: var(--font-display);
     font-size: 1.8rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
+    font-weight: 800;
+    letter-spacing: -0.03em;
     margin: 0;
-    color: #FAFAFA;
+    color: var(--pf-text);
 }
 .pf-auth-header h1 span {
-    color: #00D26A;
+    color: var(--pf-emerald);
 }
 .pf-auth-header p {
-    color: #8B92A5;
+    color: var(--pf-text-secondary);
     font-size: 0.9rem;
     margin-top: 0.5rem;
 }
 
 /* ── Sidebar ─────────────────────────────────────────── */
 section[data-testid="stSidebar"] {
-    background: #1E2128 !important;
-    border-right: 1px solid #2D3139;
+    background: var(--pf-surface) !important;
+    border-right: 1px solid var(--pf-border-subtle);
 }
 section[data-testid="stSidebar"] .pf-user-badge {
     display: flex;
     align-items: center;
     gap: 0.75rem;
     padding: 0.75rem;
-    background: #242830;
-    border-radius: 12px;
+    background: var(--pf-elevated);
+    border-radius: 10px;
+    border: 1px solid var(--pf-border-subtle);
     margin-bottom: 1rem;
 }
 .pf-avatar {
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background: #00D26A;
-    color: #1A1D23;
+    background: linear-gradient(135deg, var(--pf-emerald), #059669);
+    color: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
+    font-family: var(--font-display);
     font-weight: 700;
     font-size: 1rem;
     flex-shrink: 0;
 }
 .pf-user-name {
+    font-family: var(--font-display);
     font-weight: 600;
     font-size: 0.9rem;
-    color: #FAFAFA;
+    color: var(--pf-text);
 }
 .pf-user-role {
     font-size: 0.7rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: #8B92A5;
+    color: var(--pf-text-tertiary);
 }
 .pf-garmin-card {
-    background: #242830;
-    border: 1px solid #2D3139;
-    border-radius: 12px;
+    background: var(--pf-elevated);
+    border: 1px solid var(--pf-border-subtle);
+    border-radius: 10px;
     padding: 1rem;
     margin-top: 0.5rem;
 }
@@ -206,52 +259,58 @@ section[data-testid="stSidebar"] .pf-user-badge {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    color: #00D26A;
+    color: var(--pf-emerald);
     font-weight: 600;
     font-size: 0.85rem;
 }
 .pf-garmin-connected::before {
     content: '';
-    width: 8px;
-    height: 8px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
-    background: #00D26A;
-    box-shadow: 0 0 6px #00D26A;
+    background: var(--pf-emerald);
+    box-shadow: 0 0 6px var(--pf-emerald);
 }
 
 /* ── Buttons ─────────────────────────────────────────── */
 .stButton > button[kind="primary"],
 .stFormSubmitButton > button[kind="primary"] {
-    background: #00D26A !important;
-    color: #1A1D23 !important;
+    background: var(--pf-emerald) !important;
+    color: #fff !important;
+    font-family: var(--font-body) !important;
     font-weight: 600 !important;
     border: none !important;
     border-radius: 8px !important;
     padding: 0.5rem 1.5rem !important;
-    transition: all 0.2s !important;
+    transition: all var(--duration-fast) var(--ease-out) !important;
 }
 .stButton > button[kind="primary"]:hover,
 .stFormSubmitButton > button[kind="primary"]:hover {
-    background: #00B85C !important;
-    box-shadow: 0 4px 12px rgba(0, 210, 106, 0.3) !important;
+    background: #059669 !important;
+    transform: translateY(-1px);
+}
+.stButton > button[kind="primary"]:active,
+.stFormSubmitButton > button[kind="primary"]:active {
+    transform: scale(0.97);
 }
 .stButton > button[kind="secondary"] {
     background: transparent !important;
-    border: 1px solid #3A3F4B !important;
+    border: 1px solid var(--pf-border-strong) !important;
     border-radius: 8px !important;
-    color: #FAFAFA !important;
+    color: var(--pf-text) !important;
+    font-family: var(--font-body) !important;
     font-weight: 500 !important;
-    transition: all 0.2s !important;
+    transition: all var(--duration-fast) var(--ease-out) !important;
 }
 .stButton > button[kind="secondary"]:hover {
-    border-color: #00D26A !important;
-    color: #00D26A !important;
+    border-color: var(--pf-emerald) !important;
+    color: var(--pf-emerald) !important;
 }
 
 /* ── Tabs ────────────────────────────────────────────── */
 .stTabs [data-baseweb="tab-list"] {
     gap: 0;
-    border-bottom: 1px solid #2D3139;
+    border-bottom: 1px solid var(--pf-border);
     background: transparent;
 }
 .stTabs [data-baseweb="tab"] {
@@ -259,13 +318,14 @@ section[data-testid="stSidebar"] .pf-user-badge {
     border: none !important;
     border-bottom: 2px solid transparent;
     padding: 0.75rem 1.25rem !important;
+    font-family: var(--font-body);
     font-weight: 500;
-    color: #8B92A5 !important;
-    transition: all 0.2s;
+    color: var(--pf-text-secondary) !important;
+    transition: all var(--duration-fast) var(--ease-out);
 }
 .stTabs [aria-selected="true"] {
-    border-bottom-color: #00D26A !important;
-    color: #FAFAFA !important;
+    border-bottom-color: var(--pf-emerald) !important;
+    color: var(--pf-text) !important;
     font-weight: 600;
 }
 
@@ -276,31 +336,33 @@ section[data-testid="stSidebar"] .pf-user-badge {
 .stMultiSelect > div > div,
 .stNumberInput > div > div > input,
 .stDateInput > div > div > input {
-    background: #1A1D23 !important;
-    border: 1px solid #2D3139 !important;
+    background: var(--pf-bg) !important;
+    border: 1px solid var(--pf-border) !important;
     border-radius: 8px !important;
-    color: #FAFAFA !important;
+    color: var(--pf-text) !important;
+    font-family: var(--font-body) !important;
 }
 .stTextInput > div > div > input:focus,
 .stTextArea > div > div > textarea:focus {
-    border-color: #00D26A !important;
-    box-shadow: 0 0 0 1px #00D26A !important;
+    border-color: var(--pf-emerald) !important;
+    box-shadow: 0 0 0 1px var(--pf-emerald) !important;
 }
 
 /* ── Status badges ───────────────────────────────────── */
 .pf-badge {
     display: inline-block;
     padding: 0.2rem 0.6rem;
-    border-radius: 20px;
+    border-radius: 6px;
+    font-family: var(--font-body);
     font-size: 0.7rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
-.pf-badge.pending { background: rgba(255,152,0,0.15); color: #FF9800; }
-.pf-badge.approved { background: rgba(0,210,106,0.15); color: #00D26A; }
-.pf-badge.rejected { background: rgba(244,67,54,0.15); color: #F44336; }
-.pf-badge.admin { background: rgba(171,71,188,0.15); color: #AB47BC; }
+.pf-badge.pending { background: var(--pf-amber-dim); color: var(--pf-amber); }
+.pf-badge.approved { background: var(--pf-emerald-dim); color: var(--pf-emerald); }
+.pf-badge.rejected { background: var(--pf-rose-dim); color: var(--pf-rose); }
+.pf-badge.admin { background: var(--pf-emerald-dim); color: var(--pf-emerald); }
 
 /* ── Workout pills ───────────────────────────────────── */
 .pf-workout-pill {
@@ -308,7 +370,7 @@ section[data-testid="stSidebar"] .pf-user-badge {
     align-items: center;
     gap: 0.4rem;
     padding: 0.35rem 0.75rem;
-    border-radius: 20px;
+    border-radius: 6px;
     font-size: 0.78rem;
     font-weight: 500;
     margin: 0.2rem 0.2rem 0.2rem 0;
@@ -316,13 +378,14 @@ section[data-testid="stSidebar"] .pf-user-badge {
 
 /* ── Training pace cards ─────────────────────────────── */
 .pf-pace-card {
-    background: #242830;
-    border: 1px solid #2D3139;
+    background: var(--pf-card);
+    border: 1px solid var(--pf-border);
     border-radius: 10px;
     padding: 0.8rem 1rem;
     text-align: center;
 }
 .pf-pace-zone {
+    font-family: var(--font-body);
     font-size: 0.7rem;
     font-weight: 600;
     text-transform: uppercase;
@@ -330,15 +393,16 @@ section[data-testid="stSidebar"] .pf-user-badge {
     margin-bottom: 0.3rem;
 }
 .pf-pace-value {
+    font-family: var(--font-mono);
     font-size: 1.2rem;
     font-weight: 700;
-    color: #FAFAFA;
+    color: var(--pf-text);
 }
 
 /* ── Coach chat ──────────────────────────────────────── */
 .pf-chat-bubble {
-    background: #242830;
-    border: 1px solid #2D3139;
+    background: var(--pf-card);
+    border: 1px solid var(--pf-border);
     border-radius: 14px 14px 14px 4px;
     padding: 1rem 1.2rem;
     margin: 1rem 0;
@@ -350,13 +414,13 @@ section[data-testid="stSidebar"] .pf-user-badge {
     display: flex;
     align-items: center;
     padding: 0.6rem 0;
-    border-bottom: 1px solid #2D3139;
+    border-bottom: 1px solid var(--pf-border-subtle);
     font-size: 0.85rem;
 }
 .pf-activity-row:last-child { border-bottom: none; }
-.pf-activity-name { flex: 2; font-weight: 500; color: #FAFAFA; }
-.pf-activity-dist { flex: 1; color: #8B92A5; text-align: right; }
-.pf-activity-pace { flex: 1; color: #00D26A; text-align: right; font-weight: 600; }
+.pf-activity-name { flex: 2; font-weight: 500; color: var(--pf-text); }
+.pf-activity-dist { flex: 1; color: var(--pf-text-secondary); text-align: right; }
+.pf-activity-pace { flex: 1; color: var(--pf-emerald); text-align: right; font-family: var(--font-mono); font-weight: 600; }
 
 /* ── Week cards ──────────────────────────────────────── */
 .pf-week-header {
@@ -366,49 +430,57 @@ section[data-testid="stSidebar"] .pf-user-badge {
     margin-bottom: 0.75rem;
 }
 .pf-week-title {
+    font-family: var(--font-display);
     font-weight: 700;
     font-size: 1rem;
-    color: #FAFAFA;
+    color: var(--pf-text);
 }
 .pf-week-meta {
     font-size: 0.8rem;
-    color: #8B92A5;
+    color: var(--pf-text-secondary);
 }
 .pf-week-phase {
     display: inline-block;
     padding: 0.15rem 0.5rem;
-    border-radius: 6px;
+    border-radius: 4px;
     font-size: 0.7rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    background: rgba(0,210,106,0.12);
-    color: #00D26A;
+    background: var(--pf-emerald-dim);
+    color: var(--pf-emerald);
 }
 .pf-workout-item {
     display: flex;
     align-items: flex-start;
     gap: 0.75rem;
     padding: 0.5rem 0;
-    border-bottom: 1px solid rgba(45,49,57,0.5);
+    border-bottom: 1px solid var(--pf-border-subtle);
+    transition: background var(--duration-fast) ease;
+    border-radius: 6px;
+    padding-left: 6px;
+    margin-left: -6px;
+}
+.pf-workout-item:hover {
+    background: var(--pf-elevated);
 }
 .pf-workout-item:last-child { border-bottom: none; }
 .pf-workout-dot {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
-    margin-top: 0.35rem;
+    margin-top: 0.4rem;
     flex-shrink: 0;
 }
 .pf-workout-info { flex: 1; }
-.pf-workout-name { font-weight: 600; font-size: 0.88rem; color: #FAFAFA; }
-.pf-workout-detail { font-size: 0.78rem; color: #8B92A5; margin-top: 0.15rem; }
+.pf-workout-name { font-weight: 600; font-size: 0.88rem; color: var(--pf-text); }
+.pf-workout-detail { font-size: 0.78rem; color: var(--pf-text-secondary); margin-top: 0.15rem; }
 
 /* ── User cards (admin) ──────────────────────────────── */
 .pf-user-card {
-    background: #242830;
-    border: 1px solid #2D3139;
-    border-radius: 12px;
+    background: var(--pf-card);
+    border: 1px solid var(--pf-border);
+    border-radius: 10px;
     padding: 1.2rem;
     margin-bottom: 0.75rem;
     display: flex;
@@ -418,67 +490,236 @@ section[data-testid="stSidebar"] .pf-user-badge {
 
 /* ── Section headers ─────────────────────────────────── */
 .pf-section-header {
+    font-family: var(--font-display);
     font-size: 1.1rem;
     font-weight: 700;
-    color: #FAFAFA;
+    color: var(--pf-text);
     margin-bottom: 1rem;
     padding-bottom: 0.5rem;
-    border-bottom: 1px solid #2D3139;
+    border-bottom: 1px solid var(--pf-border-subtle);
 }
 
 /* ── Scrollbar ───────────────────────────────────────── */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #1A1D23; }
-::-webkit-scrollbar-thumb { background: #3A3F4B; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #555; }
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--pf-bg); }
+::-webkit-scrollbar-thumb { background: var(--pf-border-strong); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--pf-text-tertiary); }
 
 /* ── Misc polish ─────────────────────────────────────── */
-.stDivider { border-color: #2D3139 !important; }
-hr { border-color: #2D3139 !important; }
+.stDivider { border-color: var(--pf-border) !important; }
+hr { border-color: var(--pf-border) !important; }
+
+/* ── Metrics strip (divide-x) ────────────────────────── */
+.pf-metrics-strip {
+    display: flex;
+    background: var(--pf-card);
+    border: 1px solid var(--pf-border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: var(--space-md);
+}
+.pf-metrics-strip > .pf-ms-item {
+    flex: 1;
+    padding: 14px 12px;
+    text-align: center;
+    border-right: 1px solid var(--pf-border-subtle);
+    min-width: 0;
+    transition: background var(--duration-fast) ease;
+}
+.pf-metrics-strip > .pf-ms-item:hover {
+    background: var(--pf-elevated);
+}
+.pf-metrics-strip > .pf-ms-item:last-child {
+    border-right: none;
+}
+.pf-ms-label {
+    font-family: var(--font-body);
+    font-size: 0.68rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--pf-text-tertiary);
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.pf-ms-value {
+    font-family: var(--font-mono);
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--pf-text);
+    line-height: 1.2;
+}
+.pf-ms-unit {
+    font-family: var(--font-body);
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: var(--pf-text-tertiary);
+    margin-left: 2px;
+}
+
+/* ── Splits table ────────────────────────────────────── */
+.pf-splits-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+    font-family: var(--font-body);
+}
+.pf-splits-table thead th {
+    color: var(--pf-text-tertiary);
+    font-weight: 600;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 6px 8px;
+    text-align: center;
+    border-bottom: 1px solid var(--pf-border);
+}
+.pf-splits-table thead th:first-child { text-align: left; }
+.pf-splits-table tbody td {
+    padding: 7px 8px;
+    text-align: center;
+    color: var(--pf-text);
+    border-bottom: 1px solid var(--pf-border-subtle);
+    transition: background var(--duration-fast) ease;
+}
+.pf-splits-table tbody tr:hover td {
+    background: var(--pf-elevated);
+}
+.pf-splits-table tbody td:first-child {
+    text-align: left;
+    font-weight: 600;
+    font-family: var(--font-mono);
+    color: var(--pf-text-tertiary);
+}
+.pf-splits-table .pf-pace-cell {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    position: relative;
+}
+.pf-pace-bar {
+    position: absolute;
+    bottom: 0; left: 4px; right: 4px;
+    height: 3px;
+    border-radius: 1.5px;
+    opacity: 0.5;
+}
+
+/* ── HR zone bars (CSS-only) ─────────────────────────── */
+.pf-hz-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+}
+.pf-hz-label {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 600;
+    width: 32px;
+    flex-shrink: 0;
+    text-align: right;
+}
+.pf-hz-track {
+    flex: 1;
+    height: 16px;
+    background: var(--pf-border-subtle);
+    border-radius: 3px;
+    overflow: hidden;
+    position: relative;
+}
+.pf-hz-fill {
+    height: 100%;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    padding-left: 6px;
+    min-width: 0;
+    animation: pf-hz-grow 600ms var(--ease-out) both;
+}
+@keyframes pf-hz-grow {
+    from { transform: scaleX(0); transform-origin: left; }
+    to { transform: scaleX(1); transform-origin: left; }
+}
+.pf-hz-bar-row:nth-child(2) .pf-hz-fill { animation-delay: 50ms; }
+.pf-hz-bar-row:nth-child(3) .pf-hz-fill { animation-delay: 100ms; }
+.pf-hz-bar-row:nth-child(4) .pf-hz-fill { animation-delay: 150ms; }
+.pf-hz-bar-row:nth-child(5) .pf-hz-fill { animation-delay: 200ms; }
+.pf-hz-time {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    font-weight: 500;
+    color: rgba(255,255,255,0.85);
+    white-space: nowrap;
+}
+
+/* ── Workout day dots ────────────────────────────────── */
+.pf-day-dots {
+    display: flex;
+    gap: 3px;
+    margin-top: 4px;
+}
+.pf-day-letter {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: var(--pf-text-tertiary);
+    background: var(--pf-border-subtle);
+}
+.pf-day-letter.active {
+    background: currentColor;
+    color: var(--pf-bg);
+}
 
 /* Hide Streamlit default header/footer */
 #MainMenu { visibility: hidden; }
 header { visibility: hidden; }
 footer { visibility: hidden; }
 
-/* ── Loading overlay — replaces confusing grey-out ─── */
+/* ── Loading overlay ─────────────────────────────────── */
 [data-testid="stAppViewContainer"][data-stale="true"]::after {
     content: '';
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(26, 29, 35, 0.75);
+    background: rgba(15, 17, 23, 0.65);
     z-index: 99998;
     pointer-events: all;
+    animation: pf-fade-in 150ms ease-out;
+}
+@keyframes pf-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 [data-testid="stAppViewContainer"][data-stale="true"]::before {
-    content: 'Loading...';
+    content: '';
     position: fixed;
     top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
+    margin-top: -16px; margin-left: -16px;
+    width: 32px; height: 32px;
+    border: 3px solid var(--pf-border-strong);
+    border-top-color: var(--pf-emerald);
+    border-radius: 50%;
     z-index: 99999;
-    color: #FAFAFA;
-    font-size: 1.1rem;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    padding: 1rem 2rem;
-    background: #242830;
-    border: 1px solid #00D26A;
-    border-radius: 12px;
-    box-shadow: 0 0 30px rgba(0, 210, 106, 0.15);
-    animation: pf-pulse 1.5s ease-in-out infinite;
+    animation: pf-spin 0.7s linear infinite;
 }
-@keyframes pf-pulse {
-    0%, 100% { opacity: 1; box-shadow: 0 0 30px rgba(0,210,106,0.15); }
-    50% { opacity: 0.85; box-shadow: 0 0 50px rgba(0,210,106,0.3); }
+@keyframes pf-spin {
+    to { transform: rotate(360deg); }
 }
 
-/* ── Mobile Responsive ─────────────────────────────────────────────── */
+/* ── Mobile Responsive ───────────────────────────────── */
 @media (max-width: 768px) {
     .block-container {
-        padding-top: 1rem !important;
-        padding-bottom: 1rem !important;
-        padding-left: 0.5rem !important;
-        padding-right: 0.5rem !important;
+        padding-top: var(--space-md) !important;
+        padding-bottom: var(--space-md) !important;
+        padding-left: var(--space-sm) !important;
+        padding-right: var(--space-sm) !important;
         max-width: 100% !important;
     }
     .pf-card { padding: 0.75rem !important; border-radius: 10px !important; }
@@ -505,10 +746,207 @@ footer { visibility: hidden; }
     .pf-pace-value { font-size: 1rem !important; }
     .fc .fc-toolbar-title { font-size: 0.85rem !important; }
 }
+
+/* ── Staggered fade-in ───────────────────────────────── */
+@keyframes pf-fade-up {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.pf-metrics-strip > .pf-ms-item {
+    animation: pf-fade-up 400ms var(--ease-out) both;
+}
+.pf-metrics-strip > .pf-ms-item:nth-child(1) { animation-delay: 0ms; }
+.pf-metrics-strip > .pf-ms-item:nth-child(2) { animation-delay: 40ms; }
+.pf-metrics-strip > .pf-ms-item:nth-child(3) { animation-delay: 80ms; }
+.pf-metrics-strip > .pf-ms-item:nth-child(4) { animation-delay: 120ms; }
+.pf-metrics-strip > .pf-ms-item:nth-child(5) { animation-delay: 160ms; }
+.pf-metrics-strip > .pf-ms-item:nth-child(n+6) { animation-delay: 200ms; }
+
+.pf-workout-item {
+    animation: pf-fade-up 300ms var(--ease-out) both;
+}
+
+/* ── Pace bar grow animation ─────────────────────────── */
+@keyframes pf-bar-grow {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+}
+.pf-pace-bar {
+    transform-origin: left;
+    animation: pf-bar-grow 500ms var(--ease-out) 200ms both;
+}
+
+/* ── Skeleton loading ────────────────────────────────── */
+@keyframes pf-shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+.pf-skeleton {
+    background: linear-gradient(
+        90deg,
+        var(--pf-border-subtle) 25%,
+        rgba(148, 163, 194, 0.12) 50%,
+        var(--pf-border-subtle) 75%
+    );
+    background-size: 200% 100%;
+    animation: pf-shimmer 1.5s linear infinite;
+    border-radius: 6px;
+}
+.pf-skeleton-text {
+    height: 14px;
+    width: 80%;
+    margin-bottom: 8px;
+}
+.pf-skeleton-value {
+    height: 28px;
+    width: 60%;
+    margin: 0 auto;
+}
+.pf-skeleton-card {
+    background: var(--pf-card);
+    border: 1px solid var(--pf-border);
+    border-radius: 12px;
+    padding: 1.2rem 1.5rem;
+    text-align: center;
+}
+
+/* ── Tab indicator transition ────────────────────────── */
+.stTabs [data-baseweb="tab"] {
+    transition: color var(--duration-fast) var(--ease-out),
+                border-color var(--duration-base) var(--ease-out) !important;
+}
+
+/* ── Expander open animation ─────────────────────────── */
+details[open] > div {
+    animation: pf-fade-up 250ms var(--ease-out);
+}
+
+/* ── Day dot entrance ────────────────────────────────── */
+.pf-day-letter {
+    animation: pf-fade-up 250ms var(--ease-out) both;
+}
+.pf-day-dots .pf-day-letter:nth-child(1) { animation-delay: 0ms; }
+.pf-day-dots .pf-day-letter:nth-child(2) { animation-delay: 30ms; }
+.pf-day-dots .pf-day-letter:nth-child(3) { animation-delay: 60ms; }
+.pf-day-dots .pf-day-letter:nth-child(4) { animation-delay: 90ms; }
+.pf-day-dots .pf-day-letter:nth-child(5) { animation-delay: 120ms; }
+.pf-day-dots .pf-day-letter:nth-child(6) { animation-delay: 150ms; }
+.pf-day-dots .pf-day-letter:nth-child(7) { animation-delay: 180ms; }
+
+/* ── Button active feedback (all buttons) ────────────── */
+.stButton > button:active {
+    transform: scale(0.97) !important;
+    transition: transform 100ms var(--ease-out) !important;
+}
+
+/* ── Auth page ───────────────────────────────────────── */
+.pf-auth-container {
+    max-width: 420px;
+    margin: 0 auto;
+    padding: 2.5rem 0;
+}
+.pf-auth-hero {
+    text-align: center;
+    margin-bottom: var(--space-xl);
+}
+.pf-auth-hero img {
+    width: 64px;
+    height: 64px;
+    margin-bottom: var(--space-md);
+}
+.pf-auth-title {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--pf-text);
+    margin: 0 0 var(--space-xs) 0;
+}
+.pf-auth-title span {
+    color: var(--pf-emerald);
+}
+.pf-auth-subtitle {
+    color: var(--pf-text-secondary);
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    margin: 0;
+}
+.pf-auth-form {
+    background: var(--pf-card);
+    border: 1px solid var(--pf-border);
+    border-radius: 14px;
+    padding: var(--space-lg) var(--space-xl);
+}
+.pf-auth-form h4 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: var(--space-md);
+}
+.pf-auth-footer {
+    text-align: center;
+    margin-top: var(--space-md);
+    color: var(--pf-text-tertiary);
+    font-size: 0.8rem;
+    font-family: var(--font-body);
+}
 </style>
 """
 
 st.markdown(_CUSTOM_CSS, unsafe_allow_html=True)
+
+# ── Count-up animation for metric values ──
+_COUNTUP_JS = """
+<script>
+(function() {
+    if (window._pfCountUp) return;
+    window._pfCountUp = true;
+    function countUp(el) {
+        var text = el.textContent.trim();
+        var match = text.match(/^([\\d.]+)/);
+        if (!match) return;
+        var target = parseFloat(match[1]);
+        if (isNaN(target) || target === 0) return;
+        var suffix = text.slice(match[1].length);
+        var decimals = match[1].includes('.') ? match[1].split('.')[1].length : 0;
+        var duration = 600;
+        var start = performance.now();
+        function step(now) {
+            var t = Math.min((now - start) / duration, 1);
+            t = 1 - Math.pow(1 - t, 3);
+            var val = (target * t).toFixed(decimals);
+            el.textContent = val + suffix;
+            if (t < 1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+    }
+    setTimeout(function() {
+        document.querySelectorAll('.pf-ms-value, .pf-metric-value').forEach(countUp);
+    }, 100);
+})();
+</script>
+"""
+st.markdown(_COUNTUP_JS, unsafe_allow_html=True)
+
+# ═══════════════════════════════════════════════════════════════════════
+# PLOTLY — shared chart template (design-system aligned)
+# ═══════════════════════════════════════════════════════════════════════
+
+_PF_CHART_LAYOUT = dict(
+    paper_bgcolor="rgba(0,0,0,0)",
+    plot_bgcolor="rgba(0,0,0,0)",
+    font=dict(family="Figtree, sans-serif", color="#E8ECF4", size=11),
+    margin=dict(l=40, r=20, t=30, b=30),
+    height=250,
+    xaxis=dict(gridcolor="rgba(148,163,194,0.06)", zeroline=False),
+    yaxis=dict(gridcolor="rgba(148,163,194,0.08)", zeroline=False),
+    legend=dict(font=dict(color="#8B95AD", size=10)),
+    hoverlabel=dict(
+        bgcolor="#1A1D2B",
+        bordercolor="rgba(148,163,194,0.12)",
+        font=dict(color="#E8ECF4", family="Figtree, sans-serif"),
+    ),
+)
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -518,16 +956,12 @@ st.markdown(_CUSTOM_CSS, unsafe_allow_html=True)
 def _render_brand(size: str = "normal") -> str:
     """Return brand HTML with logo + wordmark."""
     if size == "large":
-        img = f'<img src="{_LOGO_URI}" style="width:72px;height:72px;">' if _LOGO_URI else ""
+        img = f'<img src="{_LOGO_URI}" alt="PaceForge">' if _LOGO_URI else ""
         return f"""
-        <div style="text-align:center;margin-bottom:1.5rem;">
+        <div class="pf-auth-hero">
             {img}
-            <h1 style="font-size:2rem;font-weight:700;letter-spacing:0.12em;margin:0.5rem 0 0 0;">
-                PACE<span style="color:#00D26A;">FORGE</span>
-            </h1>
-            <p style="color:#8B92A5;font-size:0.9rem;margin-top:0.4rem;">
-                AI-Powered Running Plan Generator
-            </p>
+            <h1 class="pf-auth-title">PACE<span>FORGE</span></h1>
+            <p class="pf-auth-subtitle">AI-Powered Running Coach</p>
         </div>"""
     img = f'<img src="{_LOGO_URI}" style="width:36px;height:36px;">' if _LOGO_URI else ""
     return f"""
@@ -546,46 +980,154 @@ def _metric_card(label: str, value: str, unit: str = "", color: str = "green") -
     </div>"""
 
 
+def _metrics_strip(items: list[tuple[str, str, str]]) -> str:
+    """Render a horizontal metrics strip with divide-x separators.
+
+    items: list of (label, value, unit) tuples.
+    """
+    cells = []
+    for label, value, unit in items:
+        unit_html = f'<span class="pf-ms-unit">{unit}</span>' if unit else ""
+        cells.append(
+            f'<div class="pf-ms-item">'
+            f'<div class="pf-ms-label">{label}</div>'
+            f'<div class="pf-ms-value">{value}{unit_html}</div>'
+            f'</div>'
+        )
+    return f'<div class="pf-metrics-strip">{"".join(cells)}</div>'
+
+
+def _splits_table_html(laps: list[dict], show_pace_bars: bool = True) -> str:
+    """Render a splits table with optional pace bars."""
+    if not laps:
+        return ""
+
+    rows = []
+    paces = []
+    for i, lap in enumerate(laps, 1):
+        lap_dist = lap.get("distance", 0)
+        lap_speed = lap.get("averageSpeed", 0)
+        lap_pace = (1000 / lap_speed) if lap_speed else 0
+        lap_hr = lap.get("averageHR", 0)
+        paces.append(lap_pace)
+        rows.append((i, lap_dist, lap_pace, lap_hr))
+
+    # Calculate pace bar widths relative to slowest pace
+    max_pace = max(paces) if paces else 1
+    avg_pace = sum(paces) / len(paces) if paces else 0
+
+    body = ""
+    for i, dist, pace, hr in rows:
+        bar_pct = (pace / max_pace * 100) if max_pace and show_pace_bars else 0
+        bar_color = "#10B981" if pace <= avg_pace else "#F43F5E"
+        pace_bar = f'<div class="pf-pace-bar" style="width:{bar_pct:.0f}%;background:{bar_color};"></div>' if show_pace_bars else ""
+        body += (
+            f'<tr>'
+            f'<td>{i}</td>'
+            f'<td>{_fmt_dist(dist)}</td>'
+            f'<td class="pf-pace-cell" style="position:relative;">{_fmt_pace(pace)}{pace_bar}</td>'
+            f'<td>{int(hr) if hr else chr(8212)}</td>'
+            f'</tr>'
+        )
+
+    return (
+        f'<table class="pf-splits-table">'
+        f'<thead><tr><th>Split</th><th>Dist</th><th>Pace</th><th>HR</th></tr></thead>'
+        f'<tbody>{body}</tbody></table>'
+    )
+
+
+def _hr_zone_bars_html(hr_list: list[dict]) -> str:
+    """Render CSS-only horizontal HR zone bars."""
+    if not hr_list:
+        return ""
+
+    zone_colors = ["#3F51B5", "#0EA5E9", "#34D399", "#F59E0B", "#F43F5E"]
+    total_secs = sum(zd.get("secsInZone", 0) for zd in hr_list) or 1
+
+    bars = []
+    for zd in hr_list:
+        zn = zd.get("zoneNumber") or zd.get("zone", 0)
+        secs = zd.get("secsInZone", 0)
+        color = zone_colors[zn - 1] if 1 <= zn <= 5 else "#607D8B"
+        pct = (secs / total_secs) * 100
+        time_str = _fmt_duration(secs)
+
+        bars.append(
+            f'<div class="pf-hz-bar-row">'
+            f'<div class="pf-hz-label" style="color:{color};">Z{zn}</div>'
+            f'<div class="pf-hz-track">'
+            f'<div class="pf-hz-fill" style="width:{pct:.1f}%;background:{color};">'
+            f'{f"<span class=pf-hz-time>{time_str}</span>" if pct > 12 else ""}'
+            f'</div></div>'
+            f'<div style="font-family:var(--font-mono);font-size:0.65rem;color:#8B95AD;width:44px;text-align:right;">'
+            f'{time_str if pct <= 12 else ""}</div>'
+            f'</div>'
+        )
+
+    return (
+        f'<div style="font-family:Manrope,sans-serif;font-weight:600;font-size:0.82rem;'
+        f'color:#8B95AD;margin-bottom:6px;">HR Zones</div>'
+        f'<div style="display:flex;flex-direction:column;gap:2px;">{"".join(bars)}</div>'
+    )
+
+
+def _skeleton_cards(count: int = 3) -> str:
+    """Render skeleton loading placeholder cards."""
+    cards = []
+    for _ in range(count):
+        cards.append(
+            '<div class="pf-skeleton-card">'
+            '<div class="pf-skeleton pf-skeleton-text" style="width:50%;margin:0 auto 8px;"></div>'
+            '<div class="pf-skeleton pf-skeleton-value"></div>'
+            '</div>'
+        )
+    return (
+        f'<div style="display:grid;grid-template-columns:repeat({count},1fr);gap:12px;">'
+        f'{"".join(cards)}</div>'
+    )
+
+
 _WORKOUT_COLORS = {
-    "easy_run": "#4CAF50",
-    "recovery_run": "#81C784",
-    "easy_with_strides": "#66BB6A",
-    "long_run": "#2196F3",
-    "long_run_progressive": "#1976D2",
-    "long_run_with_race_pace": "#1565C0",
-    "tempo": "#FF9800",
-    "threshold": "#F57C00",
-    "intervals": "#F44336",
-    "vo2max": "#D32F2F",
-    "speed": "#E53935",
-    "hills": "#C62828",
-    "fartlek": "#FF7043",
-    "progressive": "#FFA726",
-    "race_pace": "#EF6C00",
-    "rest": "#9E9E9E",
+    "easy_run": "#34D399",
+    "recovery_run": "#6EE7B7",
+    "easy_with_strides": "#4ADE80",
+    "long_run": "#0EA5E9",
+    "long_run_progressive": "#0284C7",
+    "long_run_with_race_pace": "#0369A1",
+    "tempo": "#F59E0B",
+    "threshold": "#D97706",
+    "intervals": "#F43F5E",
+    "vo2max": "#E11D48",
+    "speed": "#E11D48",
+    "hills": "#BE123C",
+    "fartlek": "#FB923C",
+    "progressive": "#FBBF24",
+    "race_pace": "#D97706",
+    "rest": "#6B7280",
 }
 
 _PACE_COLORS = {
-    "Easy": "#4CAF50",
-    "Marathon": "#2196F3",
-    "Threshold": "#FF9800",
-    "Interval": "#F44336",
+    "Easy": "#34D399",
+    "Marathon": "#0EA5E9",
+    "Threshold": "#F59E0B",
+    "Interval": "#F43F5E",
 }
 
 _PHASE_COLORS = {
-    "base": "rgba(0,210,106,0.12)",
-    "build": "rgba(33,150,243,0.12)",
-    "peak": "rgba(255,152,0,0.12)",
-    "taper": "rgba(171,71,188,0.12)",
-    "race": "rgba(244,67,54,0.12)",
+    "base": "rgba(16,185,129,0.12)",
+    "build": "rgba(14,165,233,0.12)",
+    "peak": "rgba(245,158,11,0.12)",
+    "taper": "rgba(139,92,246,0.12)",
+    "race": "rgba(244,63,94,0.12)",
 }
 
 _PHASE_TEXT = {
-    "base": "#00D26A",
-    "build": "#2196F3",
-    "peak": "#FF9800",
-    "taper": "#AB47BC",
-    "race": "#F44336",
+    "base": "#10B981",
+    "build": "#0EA5E9",
+    "peak": "#F59E0B",
+    "taper": "#8B5CF6",
+    "race": "#F43F5E",
 }
 
 # ── Session state defaults ───────────────────────────────────────────
@@ -691,20 +1233,20 @@ def _render_step_line(step: dict) -> str:
 
     if stype == "warmup":
         pace_hint = f" (no faster than {_fmt_pace(target_low)})" if target_low else ""
-        return f"🟢 <b>{dist_str}</b> warm up at a conversational pace{pace_hint}"
+        return f"<span class='pf-dot pf-dot-emerald'></span><b>{dist_str}</b> warm up at a conversational pace{pace_hint}"
     elif stype == "cooldown":
-        return f"🔵 <b>{dist_str}</b> cool down at a conversational pace (or slower!)"
+        return f"<span class='pf-dot pf-dot-sky'></span><b>{dist_str}</b> cool down at a conversational pace (or slower!)"
     elif stype == "recovery":
-        return f"⚪ <b>{dist_str}</b> recovery jog"
+        return f"<span class='pf-dot pf-dot-muted'></span><b>{dist_str}</b> recovery jog"
     elif stype == "rest":
-        return f"⚪ <b>{dist_str}</b> walking rest"
+        return f"<span class='pf-dot pf-dot-muted'></span><b>{dist_str}</b> walking rest"
     else:  # active / interval leaf
         if target_type == "pace" and target_low:
-            return f"🔴 <b>{dist_str}</b> at {_fmt_pace(target_low)}"
+            return f"<span class='pf-dot pf-dot-rose'></span><b>{dist_str}</b> at {_fmt_pace(target_low)}"
         elif target_type == "open" or not target_low:
-            return f"🟢 <b>{dist_str}</b> at an easy, conversational pace"
+            return f"<span class='pf-dot pf-dot-emerald'></span><b>{dist_str}</b> at an easy, conversational pace"
         else:
-            return f"🟠 <b>{dist_str}</b> at {_fmt_pace(target_low)}"
+            return f"<span class='pf-dot pf-dot-amber'></span><b>{dist_str}</b> at {_fmt_pace(target_low)}"
 
 
 def _render_workout_detail(workout: dict, plan_paces: dict | None = None) -> str:
@@ -719,28 +1261,28 @@ def _render_workout_detail(workout: dict, plan_paces: dict | None = None) -> str
     lines = []
     lines.append(f'<div style="font-weight:700;font-size:1.1rem;margin-bottom:0.5rem;">{name}</div>')
     if purpose:
-        lines.append(f'<div style="color:#8B92A5;margin-bottom:0.75rem;font-size:0.85rem;">{purpose}</div>')
+        lines.append(f'<div style="color:#8B95AD;margin-bottom:0.75rem;font-size:0.85rem;">{purpose}</div>')
 
     # Summary badges
     badges = []
     if est_dist and est_dist != "—":
-        badges.append(f'<span style="background:#242830;padding:4px 10px;border-radius:12px;font-size:0.8rem;margin-right:6px;">📏 {est_dist}</span>')
+        badges.append(f'<span style="background:#1A1D2B;padding:4px 10px;border-radius:12px;font-size:0.8rem;margin-right:6px;">{est_dist}</span>')
     if est_dur and est_dur != "—":
-        badges.append(f'<span style="background:#242830;padding:4px 10px;border-radius:12px;font-size:0.8rem;margin-right:6px;">⏱ {est_dur}</span>')
+        badges.append(f'<span style="background:#1A1D2B;padding:4px 10px;border-radius:12px;font-size:0.8rem;margin-right:6px;">{est_dur}</span>')
     if badges:
         lines.append(f'<div style="margin-bottom:0.75rem;">{"".join(badges)}</div>')
 
     if not steps:
-        lines.append('<div style="color:#8B92A5;">No structured steps available.</div>')
+        lines.append('<div style="color:#8B95AD;">No structured steps available.</div>')
     else:
-        lines.append('<div style="font-weight:600;font-size:0.9rem;margin-bottom:0.5rem;color:#00D26A;">Workout Structure</div>')
+        lines.append('<div style="font-weight:600;font-size:0.9rem;margin-bottom:0.5rem;color:#10B981;">Workout Structure</div>')
         for step in steps:
             rc = step.get("repeat_count")
             nested = step.get("steps", [])
             if rc and nested:
                 lines.append(
-                    f'<div style="margin:0.5rem 0;padding:0.5rem 0.75rem;border-left:3px solid #FF9800;background:#242830;border-radius:0 8px 8px 0;">'
-                    f'<div style="font-weight:600;color:#FF9800;margin-bottom:0.25rem;">Repeat {rc}×</div>'
+                    f'<div style="margin:0.5rem 0;padding:0.5rem 0.75rem;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.15);border-radius:8px;">'
+                    f'<div style="font-weight:600;color:#F59E0B;margin-bottom:0.25rem;">Repeat {rc}×</div>'
                 )
                 for sub in nested:
                     lines.append(f'<div style="padding:2px 0;">{_render_step_line(sub)}</div>')
@@ -749,7 +1291,7 @@ def _render_workout_detail(workout: dict, plan_paces: dict | None = None) -> str
                 lines.append(f'<div style="padding:3px 0;">{_render_step_line(step)}</div>')
 
     if notes:
-        lines.append(f'<div style="margin-top:0.75rem;color:#8B92A5;font-size:0.8rem;font-style:italic;">💡 {notes}</div>')
+        lines.append(f'<div style="margin-top:0.75rem;color:#8B95AD;font-size:0.8rem;font-style:italic;">{notes}</div>')
 
     return f'<div class="pf-card" style="margin-top:1rem;">{"".join(lines)}</div>'
 
@@ -779,36 +1321,27 @@ def _render_garmin_activity_detail(detail: dict) -> None:
     aero_te = summary.get("aerobicTrainingEffect")
     anaero_te = summary.get("anaerobicTrainingEffect")
 
-    cards_html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:0.4rem;margin-bottom:0.75rem;">'
     metric_data = [
-        ("Distance", _fmt_dist(total_dist), "📏"),
-        ("Duration", _fmt_duration(total_dur / 1000 if total_dur > 10000 else total_dur), "⏱"),
-        ("Avg Pace", _fmt_pace(avg_pace) if avg_pace else "—", "🏃"),
+        ("Distance", _fmt_dist(total_dist), ""),
+        ("Duration", _fmt_duration(total_dur / 1000 if total_dur > 10000 else total_dur), ""),
+        ("Avg Pace", _fmt_pace(avg_pace) if avg_pace else "—", ""),
     ]
     if avg_hr:
-        metric_data.append(("Avg HR", f"{int(avg_hr)} bpm", "❤️"))
+        metric_data.append(("Avg HR", f"{int(avg_hr)}", "bpm"))
     if max_hr:
-        metric_data.append(("Max HR", f"{int(max_hr)} bpm", "💓"))
+        metric_data.append(("Max HR", f"{int(max_hr)}", "bpm"))
     if cadence:
-        metric_data.append(("Cadence", f"{int(cadence * 2)} spm", "🦶"))
+        metric_data.append(("Cadence", f"{int(cadence * 2)}", "spm"))
     if calories:
-        metric_data.append(("Calories", f"{int(calories)}", "🔥"))
+        metric_data.append(("Calories", f"{int(calories)}", ""))
     if elevation:
-        metric_data.append(("Elevation", f"{int(elevation)}m", "⛰️"))
+        metric_data.append(("Elevation", f"{int(elevation)}", "m"))
     if aero_te:
-        metric_data.append(("Aerobic TE", f"{aero_te:.1f}", "🫁"))
+        metric_data.append(("Aerobic TE", f"{aero_te:.1f}", ""))
     if anaero_te:
-        metric_data.append(("Anaerobic TE", f"{anaero_te:.1f}", "💪"))
+        metric_data.append(("Anaerobic TE", f"{anaero_te:.1f}", ""))
 
-    for label, val, icon in metric_data:
-        cards_html += (
-            f'<div style="background:#242830;border-radius:8px;padding:0.4rem;text-align:center;">'
-            f'<div style="font-size:0.65rem;color:#8B92A5;">{icon} {label}</div>'
-            f'<div style="font-size:0.9rem;font-weight:700;color:#FAFAFA;">{val}</div>'
-            f'</div>'
-        )
-    cards_html += '</div>'
-    st.markdown(cards_html, unsafe_allow_html=True)
+    st.markdown(_metrics_strip(metric_data), unsafe_allow_html=True)
 
     # ── Weather info ──
     if weather_data and isinstance(weather_data, dict):
@@ -818,53 +1351,42 @@ def _render_garmin_activity_detail(detail: dict) -> None:
         wind = weather_data.get("windSpeed")
         parts = []
         if temp is not None:
-            parts.append(f"🌡️ {temp}°C")
+            parts.append(f"{temp}°C")
         if cond:
             parts.append(cond)
         if humidity is not None:
-            parts.append(f"💧 {humidity}%")
+            parts.append(f"{humidity}%")
         if wind is not None:
-            parts.append(f"💨 {wind} km/h")
+            parts.append(f"{wind} km/h")
         if parts:
             st.markdown(
-                f'<div style="color:#8B92A5;font-size:0.75rem;margin-bottom:0.5rem;">{" · ".join(parts)}</div>',
+                f'<div style="color:#8B95AD;font-size:0.75rem;margin-bottom:0.5rem;">{" · ".join(parts)}</div>',
                 unsafe_allow_html=True,
             )
 
     # ── Splits ──
     laps = splits_data.get("lapDTOs") or []
     if laps:
-        split_nums = []
+        st.markdown(
+            f'<div class="pf-card" style="margin-bottom:0.5rem;padding:0.75rem;">'
+            f'{_splits_table_html(laps)}</div>',
+            unsafe_allow_html=True,
+        )
+
+        # Collect data for chart
+        split_nums = list(range(1, len(laps) + 1))
         paces = []
         hrs = []
-        rows_html = '<table style="width:100%;border-collapse:collapse;font-size:0.75rem;"><tr style="color:#8B92A5;border-bottom:1px solid #2D3139;"><th style="text-align:left;padding:3px;">Split</th><th>Dist</th><th>Pace</th><th>HR</th></tr>'
-
-        for i, lap in enumerate(laps, 1):
-            lap_dist = lap.get("distance", 0)
+        for lap in laps:
             lap_speed = lap.get("averageSpeed", 0)
-            lap_pace = (1000 / lap_speed) if lap_speed else 0
-            lap_hr = lap.get("averageHR", 0)
-
-            split_nums.append(i)
-            paces.append(lap_pace)
-            hrs.append(lap_hr)
-
-            rows_html += (
-                f'<tr style="border-bottom:1px solid #2D3139;">'
-                f'<td style="padding:3px;font-weight:600;">{i}</td>'
-                f'<td style="text-align:center;">{_fmt_dist(lap_dist)}</td>'
-                f'<td style="text-align:center;">{_fmt_pace(lap_pace)}</td>'
-                f'<td style="text-align:center;">{int(lap_hr) if lap_hr else "—"}</td>'
-                f'</tr>'
-            )
-        rows_html += '</table>'
-        st.markdown(f'<div class="pf-card" style="margin-bottom:0.5rem;padding:0.5rem;">{rows_html}</div>', unsafe_allow_html=True)
+            paces.append((1000 / lap_speed) if lap_speed else 0)
+            hrs.append(lap.get("averageHR", 0))
 
         # Combined pace + HR chart over splits
         if paces and any(h > 0 for h in hrs):
             fig = make_subplots(specs=[[{"secondary_y": True}]])
             avg_p = sum(paces) / len(paces)
-            colors = ["#00D26A" if p <= avg_p else "#FF5252" for p in paces]
+            colors = ["#10B981" if p <= avg_p else "#F43F5E" for p in paces]
 
             fig.add_trace(
                 go.Bar(
@@ -872,7 +1394,7 @@ def _render_garmin_activity_detail(detail: dict) -> None:
                     marker_color=colors,
                     text=[_fmt_pace(p) for p in paces],
                     textposition="outside",
-                    textfont=dict(color="#FAFAFA", size=9),
+                    textfont=dict(color="#E8ECF4", size=9),
                 ),
                 secondary_y=False,
             )
@@ -880,64 +1402,45 @@ def _render_garmin_activity_detail(detail: dict) -> None:
                 go.Scatter(
                     x=split_nums, y=hrs, name="Heart Rate",
                     mode="lines+markers",
-                    line=dict(color="#FF5252", width=2),
+                    line=dict(color="#F43F5E", width=2),
                     marker=dict(size=5),
                 ),
                 secondary_y=True,
             )
             fig.update_layout(
-                plot_bgcolor="#1A1D23", paper_bgcolor="#1A1D23", font_color="#FAFAFA",
+                **_PF_CHART_LAYOUT,
                 margin=dict(l=40, r=40, t=25, b=35), height=240,
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(size=10)),
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(size=10, color="#8B95AD")),
                 bargap=0.3,
             )
-            fig.update_yaxes(autorange="reversed", title_text="Pace (s/km)", gridcolor="#2D3139", secondary_y=False)
-            fig.update_yaxes(title_text="HR (bpm)", gridcolor="#2D3139", secondary_y=True)
-            fig.update_xaxes(title_text="Split", gridcolor="#2D3139", dtick=1)
+            fig.update_yaxes(autorange="reversed", title_text="Pace (s/km)", gridcolor="rgba(148,163,194,0.08)", secondary_y=False)
+            fig.update_yaxes(title_text="HR (bpm)", gridcolor="rgba(148,163,194,0.08)", secondary_y=True)
+            fig.update_xaxes(title_text="Split", gridcolor="rgba(148,163,194,0.06)", dtick=1)
             st.plotly_chart(fig, use_container_width=True, key="splits_hr_chart")
         elif paces:
-            # Pace only (no HR data)
             avg_p = sum(paces) / len(paces)
-            colors = ["#00D26A" if p <= avg_p else "#FF5252" for p in paces]
+            colors = ["#10B981" if p <= avg_p else "#F43F5E" for p in paces]
             fig = go.Figure(go.Bar(
                 x=split_nums, y=paces, marker_color=colors,
                 text=[_fmt_pace(p) for p in paces], textposition="outside",
-                textfont=dict(color="#FAFAFA", size=9),
+                textfont=dict(color="#E8ECF4", size=9),
             ))
             fig.update_layout(
-                plot_bgcolor="#1A1D23", paper_bgcolor="#1A1D23", font_color="#FAFAFA",
+                **_PF_CHART_LAYOUT,
                 margin=dict(l=40, r=20, t=25, b=35), height=220,
-                yaxis=dict(autorange="reversed", title="Pace (s/km)", gridcolor="#2D3139"),
-                xaxis=dict(gridcolor="#2D3139", dtick=1, title="Split"), bargap=0.3,
+                yaxis=dict(autorange="reversed", title="Pace (s/km)", gridcolor="rgba(148,163,194,0.08)", zeroline=False),
+                xaxis=dict(gridcolor="rgba(148,163,194,0.06)", dtick=1, title="Split", zeroline=False),
+                bargap=0.3,
             )
             st.plotly_chart(fig, use_container_width=True, key="splits_chart")
 
     # ── HR Zones ──
     hr_list = hr_zones_data if isinstance(hr_zones_data, list) else hr_zones_data.get("hrTimeInZones", [])
-    if hr_list:
-        st.markdown('<div style="font-weight:600;font-size:0.85rem;margin-bottom:0.3rem;color:#00D26A;">Heart Rate Zones</div>', unsafe_allow_html=True)
-        zone_labels = []
-        zone_seconds = []
-        zone_colors_list = ["#3F51B5", "#2196F3", "#4CAF50", "#FF9800", "#F44336"]
-        for zd in hr_list:
-            zn = zd.get("zoneNumber") or zd.get("zone", 0)
-            secs = zd.get("secsInZone", 0)
-            zone_labels.append(f"Z{zn}")
-            zone_seconds.append(secs)
-
-        fig_hr = go.Figure(go.Bar(
-            y=zone_labels, x=zone_seconds, orientation="h",
-            marker_color=zone_colors_list[:len(zone_labels)],
-            text=[_fmt_duration(s) for s in zone_seconds],
-            textposition="auto", textfont=dict(color="#FAFAFA", size=9),
-        ))
-        fig_hr.update_layout(
-            plot_bgcolor="#1A1D23", paper_bgcolor="#1A1D23", font_color="#FAFAFA",
-            margin=dict(l=30, r=20, t=10, b=25), height=160,
-            xaxis=dict(title="Time (s)", gridcolor="#2D3139"),
-            yaxis=dict(gridcolor="#2D3139"), bargap=0.3,
+    if hr_list and any(zd.get("secsInZone", 0) > 0 for zd in hr_list):
+        st.markdown(
+            f'<div class="pf-card" style="padding:0.75rem;">{_hr_zone_bars_html(hr_list)}</div>',
+            unsafe_allow_html=True,
         )
-        st.plotly_chart(fig_hr, use_container_width=True, key="hr_zones_chart")
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -949,10 +1452,11 @@ if st.session_state.jwt is None:
     _left, auth_col, _right = st.columns([1, 1.2, 1])
 
     with auth_col:
+        st.markdown('<div class="pf-auth-container">', unsafe_allow_html=True)
         st.markdown(_render_brand("large"), unsafe_allow_html=True)
 
         if st.session_state.page == "register":
-            st.markdown('<div class="pf-card">', unsafe_allow_html=True)
+            st.markdown('<div class="pf-auth-form">', unsafe_allow_html=True)
             st.markdown("#### Create Account")
             with st.form("register_form"):
                 reg_name = st.text_input("Full Name")
@@ -1004,7 +1508,7 @@ if st.session_state.jwt is None:
                 st.rerun()
 
         else:
-            st.markdown('<div class="pf-card">', unsafe_allow_html=True)
+            st.markdown('<div class="pf-auth-form">', unsafe_allow_html=True)
             st.markdown("#### Welcome Back")
             with st.form("login_form"):
                 login_email = st.text_input("Email")
@@ -1037,12 +1541,14 @@ if st.session_state.jwt is None:
 
             st.markdown("")
             st.markdown(
-                '<p style="text-align:center;color:#8B92A5;font-size:0.85rem;">Don\'t have an account?</p>',
+                '<p class="pf-auth-footer">Don\'t have an account?</p>',
                 unsafe_allow_html=True,
             )
             if st.button("Create Account", use_container_width=True):
                 st.session_state.page = "register"
                 st.rerun()
+
+        st.markdown('</div>', unsafe_allow_html=True)  # close pf-auth-container
 
     st.stop()
 
@@ -1133,14 +1639,14 @@ with st.sidebar:
     # Garmin status indicator in sidebar
     if st.session_state.garmin_logged_in:
         st.markdown(
-            '<div style="background:#00D26A22;color:#00D26A;padding:6px 12px;border-radius:8px;'
+            '<div style="background:#10B98122;color:#10B981;padding:6px 12px;border-radius:8px;'
             'font-size:0.8rem;font-weight:600;text-align:center;margin-bottom:0.5rem;">'
             '⌚ Garmin Connected</div>',
             unsafe_allow_html=True,
         )
     else:
         st.markdown(
-            '<div style="background:#FF980022;color:#FF9800;padding:6px 12px;border-radius:8px;'
+            '<div style="background:#F59E0B22;color:#F59E0B;padding:6px 12px;border-radius:8px;'
             'font-size:0.8rem;font-weight:600;text-align:center;margin-bottom:0.5rem;">'
             '⌚ Garmin Not Connected</div>',
             unsafe_allow_html=True,
@@ -1164,9 +1670,9 @@ if not st.session_state.garmin_logged_in:
         except Exception:
             sync_msg = f" · Last synced: {last_synced[:19]}"
     st.markdown(
-        f'<div style="background:#2D2000;border:1px solid #FF9800;border-radius:8px;'
+        f'<div style="background:#2D2000;border:1px solid #F59E0B;border-radius:8px;'
         f'padding:0.5rem 1rem;margin-bottom:1rem;color:#FFB74D;font-size:0.85rem;">'
-        f'⚠️ Garmin not connected — showing cached data{sync_msg}. '
+        f'Garmin not connected — showing cached data{sync_msg}. '
         f'Connect via the sidebar to refresh.</div>',
         unsafe_allow_html=True,
     )
@@ -1180,9 +1686,9 @@ else:
         except Exception:
             sync_text = f"Last synced: {last_synced[:19]}"
         st.markdown(
-            f'<div style="background:#0D2818;border:1px solid #00D26A;border-radius:8px;'
+            f'<div style="background:#0D2818;border:1px solid #10B981;border-radius:8px;'
             f'padding:0.5rem 1rem;margin-bottom:1rem;color:#69F0AE;font-size:0.85rem;">'
-            f'✅ Garmin connected · {sync_text}</div>',
+            f'Garmin connected · {sync_text}</div>',
             unsafe_allow_html=True,
         )
 
@@ -1208,14 +1714,14 @@ for _plan in (st.session_state.plans or []):
 _header_stats = []
 if _p:
     if _p.get("vo2_max"):
-        _header_stats.append(("VO\u2082", str(_p["vo2_max"]), "#00D26A"))
+        _header_stats.append(("VO\u2082", str(_p["vo2_max"]), "#10B981"))
     if _p.get("resting_hr"):
         _header_stats.append(("RHR", f"{_p['resting_hr']} bpm", "#4DA6FF"))
     if _p.get("weekly_mileage_km"):
-        _header_stats.append(("Weekly", f"{_p['weekly_mileage_km']} km", "#AB47BC"))
+        _header_stats.append(("Weekly", f"{_p['weekly_mileage_km']} km", "#8B5CF6"))
     if _p.get("body_battery_current"):
         _bb = _p["body_battery_current"]
-        _bb_color = "#00D26A" if _bb >= 50 else "#FF9800" if _bb >= 25 else "#FF5252"
+        _bb_color = "#10B981" if _bb >= 50 else "#F59E0B" if _bb >= 25 else "#FF5252"
         _header_stats.append(("Battery", str(_bb), _bb_color))
 
 _stat_pills_html = ""
@@ -1239,10 +1745,10 @@ if _today_workout:
     _completed = _today_workout.get("completed", False)
     if _completed:
         _workout_html = (
-            f'<div style="background:#00D26A15;border:1px solid #00D26A33;border-radius:10px;'
+            f'<div style="background:#10B98115;border:1px solid #10B98133;border-radius:10px;'
             f'padding:6px 14px;display:flex;align-items:center;gap:6px;">'
             f'<span style="font-size:0.85rem;">\u2705</span>'
-            f'<span style="color:#00D26A;font-weight:600;font-size:0.85rem;">{_wo_name}</span>'
+            f'<span style="color:#10B981;font-weight:600;font-size:0.85rem;">{_wo_name}</span>'
             f'</div>'
         )
     else:
@@ -1255,7 +1761,7 @@ if _today_workout:
         )
 elif any(isinstance(pl, dict) and pl.get("accepted") for pl in (st.session_state.plans or [])):
     _workout_html = (
-        '<div style="background:#00D26A15;border:1px solid #00D26A33;border-radius:10px;'
+        '<div style="background:#10B98115;border:1px solid #10B98133;border-radius:10px;'
         'padding:6px 14px;display:flex;align-items:center;gap:6px;">'
         '<span style="font-size:0.85rem;">\U0001f634</span>'
         '<span style="color:#69F0AE;font-weight:600;font-size:0.85rem;">Rest day</span>'
@@ -1267,17 +1773,17 @@ _hour = _dt_now.now().hour
 _greeting = "Good morning" if _hour < 12 else "Good afternoon" if _hour < 18 else "Good evening"
 
 st.markdown(
-    f'<div style="background:linear-gradient(135deg, #1E2128 0%, #252830 100%);'
-    f'border:1px solid #2D3139;border-radius:14px;padding:1rem 1.5rem;margin-bottom:1rem;'
+    f'<div style="background:linear-gradient(135deg, #161821 0%, #252830 100%);'
+    f'border:1px solid #252A35;border-radius:14px;padding:1rem 1.5rem;margin-bottom:1rem;'
     f'display:flex;align-items:center;gap:1.2rem;flex-wrap:wrap;">'
     # Avatar
-    f'<div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#00D26A,#00A854);'
+    f'<div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#10B981,#00A854);'
     f'display:flex;align-items:center;justify-content:center;color:#fff;'
     f'font-weight:700;font-size:1rem;flex-shrink:0;">{_header_initials}</div>'
     # Greeting + name
     f'<div style="flex:1;min-width:140px;">'
-    f'<div style="color:#8B92A5;font-size:0.8rem;">{_greeting}</div>'
-    f'<div style="color:#FAFAFA;font-weight:600;font-size:1.15rem;">{_user_display_name}</div>'
+    f'<div style="color:#8B95AD;font-size:0.8rem;">{_greeting}</div>'
+    f'<div style="color:#E8ECF4;font-weight:600;font-size:1.15rem;">{_user_display_name}</div>'
     f'</div>'
     # Stats pills
     f'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">'
@@ -1291,7 +1797,7 @@ st.markdown(
 
 # ── Tabs ─────────────────────────────────────────────────────────────
 
-tab_names = ["🏠 Feed", "Fitness Profile", "Training Plan", "Calendar", "🔥 HYROX", "AI Coach", "User Profile"]
+tab_names = ["Feed", "Fitness Profile", "Training Plan", "Calendar", "HYROX", "AI Coach", "User Profile"]
 if st.session_state.role == "admin":
     tab_names.append("Admin Panel")
 
@@ -1323,8 +1829,8 @@ with tab_feed:
 
     if not feed_events:
         st.markdown(
-            '<div style="text-align:center;padding:3rem;color:#8B92A5;">'
-            '<div style="font-size:3rem;margin-bottom:1rem;">🏃</div>'
+            '<div style="text-align:center;padding:3rem;color:#8B95AD;">'
+            ''
             "<div>No activity yet! Complete a workout or add friends to see their activity here.</div>"
             "</div>",
             unsafe_allow_html=True,
@@ -1332,33 +1838,33 @@ with tab_feed:
     else:
         for idx, ev in enumerate(feed_events):
             _event_type_icons = {
-                "activity": "🏃", "plan": "📋", "pb": "🏆", "hyrox": "🔥", "milestone": "⭐",
+                "activity": "●", "plan": "●", "pb": "●", "hyrox": "●", "milestone": "●",
             }
-            icon = _event_type_icons.get(ev.get("event_type", ""), "📌")
+            icon = _event_type_icons.get(ev.get("event_type", ""), "●")
             user_name = ev.get("user_name", "Unknown")
             initials = "".join(w[0].upper() for w in user_name.split()[:2]) if user_name else "?"
             created = ev.get("created_at", "")[:10]
             like_count = ev.get("like_count", 0)
             comment_count = ev.get("comment_count", 0)
             liked_by_me = ev.get("liked_by_me", False)
-            heart = "❤️" if liked_by_me else "🤍"
+            heart = "♥" if liked_by_me else "♡"
 
             st.markdown(
-                f'<div style="background:#1E2128;border:1px solid #2D3139;border-radius:12px;'
+                f'<div style="background:#161821;border:1px solid #252A35;border-radius:12px;'
                 f'padding:1.2rem;margin-bottom:0.8rem;">'
                 f'<div style="display:flex;align-items:center;gap:0.8rem;margin-bottom:0.6rem;">'
-                f'<div style="width:36px;height:36px;border-radius:50%;background:#00D26A33;'
-                f'display:flex;align-items:center;justify-content:center;color:#00D26A;'
+                f'<div style="width:36px;height:36px;border-radius:50%;background:#10B98133;'
+                f'display:flex;align-items:center;justify-content:center;color:#10B981;'
                 f'font-weight:700;font-size:0.85rem;">{initials}</div>'
-                f'<div><span style="color:#FAFAFA;font-weight:600;">{user_name}</span>'
-                f'<span style="color:#8B92A5;font-size:0.8rem;margin-left:0.5rem;">{created}</span></div>'
+                f'<div><span style="color:#E8ECF4;font-weight:600;">{user_name}</span>'
+                f'<span style="color:#8B95AD;font-size:0.8rem;margin-left:0.5rem;">{created}</span></div>'
                 f'</div>'
-                f'<div style="font-size:1.05rem;color:#FAFAFA;margin-bottom:0.3rem;">'
+                f'<div style="font-size:1.05rem;color:#E8ECF4;margin-bottom:0.3rem;">'
                 f'{icon} {ev.get("title", "")}</div>'
                 + (f'<div style="color:#B0B7C3;font-size:0.9rem;margin-bottom:0.5rem;">{ev.get("body")}</div>'
                    if ev.get("body") else '')
-                + f'<div style="color:#8B92A5;font-size:0.85rem;">'
-                f'{heart} {like_count}  ·  💬 {comment_count}</div>'
+                + f'<div style="color:#8B95AD;font-size:0.85rem;">'
+                f'{heart} {like_count}  ·  {comment_count}</div>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
@@ -1378,7 +1884,7 @@ with tab_feed:
                         st.error("Cannot reach API")
 
             with col_comment:
-                if st.button(f"💬 Comment", key=f"feed_toggle_comment_{ev['id']}_{idx}", use_container_width=True):
+                if st.button(f"Comment", key=f"feed_toggle_comment_{ev['id']}_{idx}", use_container_width=True):
                     if st.session_state.get(f"show_comments_{ev['id']}"):
                         st.session_state[f"show_comments_{ev['id']}"] = False
                     else:
@@ -1400,10 +1906,10 @@ with tab_feed:
                     c_name = c.get("user_name", "?")
                     c_date = c.get("created_at", "")[:10]
                     st.markdown(
-                        f'<div style="margin-left:2rem;padding:0.5rem 0.8rem;border-left:2px solid #2D3139;'
+                        f'<div style="margin-left:2rem;padding:0.5rem 0.8rem;border-left:2px solid #252A35;'
                         f'margin-bottom:0.3rem;">'
-                        f'<span style="color:#00D26A;font-weight:600;font-size:0.85rem;">{c_name}</span>'
-                        f'<span style="color:#8B92A5;font-size:0.75rem;margin-left:0.4rem;">{c_date}</span>'
+                        f'<span style="color:#10B981;font-weight:600;font-size:0.85rem;">{c_name}</span>'
+                        f'<span style="color:#8B95AD;font-size:0.75rem;margin-left:0.4rem;">{c_date}</span>'
                         f'<div style="color:#B0B7C3;font-size:0.9rem;">{c.get("body", "")}</div>'
                         f'</div>',
                         unsafe_allow_html=True,
@@ -1433,12 +1939,12 @@ def _gauge_chart(value, title, range_min, range_max, color, steps, key_suffix):
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
         value=value,
-        title={"text": title, "font": {"size": 14, "color": "#8B92A5"}},
-        number={"font": {"size": 36, "color": "#FAFAFA"}},
+        title={"text": title, "font": {"size": 14, "color": "#8B95AD", "family": "Figtree, sans-serif"}},
+        number={"font": {"size": 36, "color": "#E8ECF4", "family": "JetBrains Mono, monospace"}},
         gauge={
-            "axis": {"range": [range_min, range_max], "tickcolor": "#3A3F4B", "tickfont": {"color": "#8B92A5"}},
+            "axis": {"range": [range_min, range_max], "tickcolor": "rgba(148,163,194,0.18)", "tickfont": {"color": "#8B95AD"}},
             "bar": {"color": color},
-            "bgcolor": "#2D3139",
+            "bgcolor": "#1C1F2B",
             "borderwidth": 0,
             "steps": steps,
         },
@@ -1446,6 +1952,7 @@ def _gauge_chart(value, title, range_min, range_max, color, steps, key_suffix):
     fig.update_layout(
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
         height=220, margin=dict(t=35, b=15, l=25, r=25),
+        hoverlabel=dict(bgcolor="#1A1D2B", bordercolor="rgba(148,163,194,0.12)", font=dict(color="#E8ECF4")),
     )
     st.plotly_chart(fig, use_container_width=True, key=f"gauge_{key_suffix}")
 
@@ -1460,21 +1967,22 @@ def _badge(text, color, bg=None):
     )
 
 
-def _section_card(title, content_html, accent="#2563EB"):
-    """Render a section card with accent left border."""
+def _section_card(title, content_html, accent="#0EA5E9"):
+    """Render a section card with accent header."""
     return (
-        f'<div style="background:#1E2028;border-left:3px solid {accent};border-radius:0 10px 10px 0;'
-        f'padding:14px 18px;margin-bottom:0.75rem;">'
-        f'<div style="font-weight:600;color:{accent};margin-bottom:6px;font-size:0.95rem;">{title}</div>'
-        f'<div style="color:#C9CDD5;font-size:0.88rem;line-height:1.6;">{content_html}</div>'
+        f'<div style="background:#1A1D2B;border:1px solid rgba(148,163,194,0.12);border-radius:10px;'
+        f'padding:16px 18px;margin-bottom:0.75rem;">'
+        f'<div style="font-weight:600;color:{accent};margin-bottom:8px;font-size:0.9rem;'
+        f'font-family:Manrope,sans-serif;letter-spacing:-0.01em;">{title}</div>'
+        f'<div style="color:#8B95AD;font-size:0.85rem;line-height:1.6;">{content_html}</div>'
         f'</div>'
     )
 
 
-def _bullet_list(items, color="#00D26A", icon="▸"):
+def _bullet_list(items, color="#10B981", icon="▸"):
     """Render a colored bullet list."""
     lines = "".join(
-        f'<div style="padding:3px 0;color:#C9CDD5;font-size:0.88rem;">'
+        f'<div style="padding:3px 0;color:#A0A8BE;font-size:0.88rem;">'
         f'<span style="color:{color};margin-right:6px;">{icon}</span>{item}</div>'
         for item in items
     )
@@ -1490,7 +1998,7 @@ def _fmt_time(seconds):
 
 with tab_profile:
     if st.session_state.garmin_logged_in:
-        if st.button("\U0001f504 Sync Profile from Garmin", key="load_profile_btn"):
+        if st.button("Sync Profile from Garmin", key="load_profile_btn"):
             with st.spinner("Fetching from Garmin Connect..."):
                 r = requests.get(f"{API_BASE}/profile?sync=true", headers=_auth_headers(), timeout=60)
                 if r.status_code == 200:
@@ -1502,6 +2010,7 @@ with tab_profile:
 
     p = st.session_state.profile
     if not p:
+        st.markdown(_skeleton_cards(3), unsafe_allow_html=True)
         st.info("No profile data yet. Connect to Garmin and sync to load your fitness profile.")
     else:
         # Fetch analytics (cached per session)
@@ -1519,9 +2028,9 @@ with tab_profile:
 
         # ── Sub-tabs ──
         prof_tabs = st.tabs([
-            "📊 Snapshot", "🫀 Aerobic Engine", "🏃 Running Economy",
-            "🔋 Load & Recovery", "🏁 Race Predictions",
-            "📋 Recommendations", "📈 Trends",
+            "Snapshot", "Aerobic Engine", "Running Economy",
+            "Load & Recovery", "Race Predictions",
+            "Recommendations", "Trends",
         ])
 
         # ═════════════════════════════════════════════════════════════
@@ -1530,30 +2039,30 @@ with tab_profile:
         with prof_tabs[0]:
             snap = (analytics or {}).get("snapshot", {})
             level = snap.get("fitness_level", "—")
-            level_colors = {"Beginner": "#FF9800", "Intermediate": "#2196F3", "Advanced": "#00D26A", "Elite": "#FFD600"}
-            level_color = level_colors.get(level, "#8B92A5")
+            level_colors = {"Beginner": "#F59E0B", "Intermediate": "#0EA5E9", "Advanced": "#10B981", "Elite": "#FBBF24"}
+            level_color = level_colors.get(level, "#8B95AD")
 
             # Hero card
             vdot_val = snap.get("vdot", "—")
             t_status = snap.get("training_status", "—")
             t_age = snap.get("training_age_estimate", "—")
             st.markdown(
-                f'<div style="background:linear-gradient(135deg,#1A1D24,#1E2028);border-radius:12px;'
-                f'padding:20px 24px;margin-bottom:1rem;border:1px solid #2D3139;">'
+                f'<div style="background:linear-gradient(135deg,#1A1D24,#161821);border-radius:12px;'
+                f'padding:20px 24px;margin-bottom:1rem;border:1px solid #252A35;">'
                 f'<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">'
                 f'<div style="background:{level_color}22;border:2px solid {level_color};border-radius:50%;'
                 f'width:64px;height:64px;display:flex;align-items:center;justify-content:center;'
                 f'font-size:1.6rem;font-weight:800;color:{level_color};">'
                 f'{level[0] if level != "—" else "?"}</div>'
                 f'<div>'
-                f'<div style="font-size:1.3rem;font-weight:700;color:#FAFAFA;">{level} Athlete</div>'
-                f'<div style="color:#8B92A5;font-size:0.85rem;margin-top:2px;">'
+                f'<div style="font-size:1.3rem;font-weight:700;color:#E8ECF4;">{level} Athlete</div>'
+                f'<div style="color:#8B95AD;font-size:0.85rem;margin-top:2px;">'
                 f'Training age: {t_age} · Status: {t_status}</div>'
                 f'</div>'
                 f'<div style="margin-left:auto;text-align:right;">'
-                f'<div style="font-size:2rem;font-weight:800;color:#FFD600;">'
+                f'<div style="font-size:2rem;font-weight:800;color:#FBBF24;">'
                 f'{vdot_val if vdot_val != "—" else "—"}</div>'
-                f'<div style="color:#8B92A5;font-size:0.8rem;">VDOT</div>'
+                f'<div style="color:#8B95AD;font-size:0.8rem;">VDOT</div>'
                 f'</div>'
                 f'</div></div>',
                 unsafe_allow_html=True,
@@ -1587,12 +2096,12 @@ with tab_profile:
             sw_col1, sw_col2 = st.columns(2)
             with sw_col1:
                 st.markdown(
-                    _section_card("💪 Strengths", _bullet_list(snap.get("strengths", []), "#00D26A", "✓"), "#00D26A"),
+                    _section_card("Strengths", _bullet_list(snap.get("strengths", []), "#10B981", "✓"), "#10B981"),
                     unsafe_allow_html=True,
                 )
             with sw_col2:
                 st.markdown(
-                    _section_card("⚠️ Weaknesses", _bullet_list(snap.get("weaknesses", []), "#FF9800", "✗"), "#FF9800"),
+                    _section_card("Weaknesses", _bullet_list(snap.get("weaknesses", []), "#F59E0B", "✗"), "#F59E0B"),
                     unsafe_allow_html=True,
                 )
 
@@ -1600,18 +2109,20 @@ with tab_profile:
             zones = p.get("hr_zones", [])
             if zones:
                 st.markdown("")
-                st.markdown('<div style="font-weight:600;color:#8B92A5;font-size:0.85rem;margin-bottom:6px;">HR Zone Distribution</div>', unsafe_allow_html=True)
-                zone_colors = ["#4CAF50", "#8BC34A", "#FFC107", "#FF9800", "#F44336"]
-                zone_labels = ["Z1 Recovery", "Z2 Aerobic", "Z3 Tempo", "Z4 Threshold", "Z5 VO2max"]
-                zone_html = '<div style="display:flex;gap:4px;border-radius:8px;overflow:hidden;">'
+                zone_colors = ["#34D399", "#8BC34A", "#FFC107", "#F59E0B", "#F43F5E"]
+                zone_labels = ["Z1", "Z2", "Z3", "Z4", "Z5"]
+                zone_names = ["Recovery", "Aerobic", "Tempo", "Threshold", "VO2max"]
+                zone_html = '<div style="display:flex;gap:3px;border-radius:10px;overflow:hidden;">'
                 for i, z in enumerate(zones[:5]):
-                    width_pct = max(100 / len(zones), 10)
                     c = zone_colors[i] if i < len(zone_colors) else "#607D8B"
-                    lbl = zone_labels[i] if i < len(zone_labels) else f"Z{z.get('zone', i+1)}"
+                    lbl = zone_labels[i] if i < len(zone_labels) else f"Z{i+1}"
+                    name = zone_names[i] if i < len(zone_names) else ""
+                    bpm_range = f'{z.get("low_bpm","")}-{z.get("high_bpm","")}'
                     zone_html += (
-                        f'<div style="flex:1;background:{c}33;padding:8px 6px;text-align:center;">'
-                        f'<div style="font-size:0.7rem;color:{c};font-weight:600;">{lbl}</div>'
-                        f'<div style="font-size:0.8rem;color:#C9CDD5;">{z.get("low_bpm","")}-{z.get("high_bpm","")}</div>'
+                        f'<div style="flex:1;background:{c}15;border:1px solid {c}25;padding:10px 6px;text-align:center;border-radius:8px;">'
+                        f'<div style="font-family:JetBrains Mono,monospace;font-size:0.72rem;color:{c};font-weight:700;">{lbl}</div>'
+                        f'<div style="font-size:0.62rem;color:#8B95AD;margin:2px 0;">{name}</div>'
+                        f'<div style="font-family:JetBrains Mono,monospace;font-size:0.7rem;color:#A0A8BE;">{bpm_range}</div>'
                         f'</div>'
                     )
                 zone_html += '</div>'
@@ -1628,18 +2139,18 @@ with tab_profile:
             vo2 = p.get("vo2_max")
             if vo2 and isinstance(vo2, (int, float)):
                 with gc1:
-                    _gauge_chart(vo2, "VO2 Max", 20, 70, "#00D26A", [
-                        {"range": [20, 35], "color": "rgba(244,67,54,0.15)"},
-                        {"range": [35, 50], "color": "rgba(255,152,0,0.15)"},
-                        {"range": [50, 70], "color": "rgba(0,210,106,0.15)"},
+                    _gauge_chart(vo2, "VO2 Max", 20, 70, "#10B981", [
+                        {"range": [20, 35], "color": "rgba(244,63,94,0.15)"},
+                        {"range": [35, 50], "color": "rgba(245,158,11,0.15)"},
+                        {"range": [50, 70], "color": "rgba(16,185,129,0.15)"},
                     ], "vo2_aero")
                 with gc2:
                     cat = aero.get("vo2max_category", "—")
                     interp = aero.get("vo2max_interpretation", "")
                     st.markdown(
                         f'<div style="padding-top:20px;">'
-                        f'{_badge(cat, "#00D26A" if cat in ("Superior","Excellent") else "#FF9800" if cat in ("Good","Fair") else "#F44336")}'
-                        f'<div style="color:#C9CDD5;font-size:0.88rem;margin-top:12px;line-height:1.6;">{interp}</div>'
+                        f'{_badge(cat, "#10B981" if cat in ("Superior","Excellent") else "#F59E0B" if cat in ("Good","Fair") else "#F43F5E")}'
+                        f'<div style="color:#A0A8BE;font-size:0.88rem;margin-top:12px;line-height:1.6;">{interp}</div>'
                         f'</div>',
                         unsafe_allow_html=True,
                     )
@@ -1648,14 +2159,14 @@ with tab_profile:
             aer_r = aero.get("aerobic_ratio", 0)
             ana_r = aero.get("anaerobic_ratio", 0)
             st.markdown("")
-            st.markdown('<div style="font-weight:600;color:#8B92A5;font-size:0.85rem;margin-bottom:6px;">Training Effect Balance</div>', unsafe_allow_html=True)
+            st.markdown('<div style="font-weight:600;color:#8B95AD;font-size:0.85rem;margin-bottom:6px;">Training Effect Balance</div>', unsafe_allow_html=True)
             aer_pct = round(aer_r * 100)
             ana_pct = round(ana_r * 100)
             st.markdown(
                 f'<div style="display:flex;border-radius:8px;overflow:hidden;height:28px;">'
-                f'<div style="flex:{aer_pct};background:#2196F3;display:flex;align-items:center;justify-content:center;'
+                f'<div style="flex:{aer_pct};background:#0EA5E9;display:flex;align-items:center;justify-content:center;'
                 f'font-size:0.75rem;font-weight:600;color:#fff;">{aer_pct}% Aerobic</div>'
-                f'<div style="flex:{ana_pct};background:#F44336;display:flex;align-items:center;justify-content:center;'
+                f'<div style="flex:{ana_pct};background:#F43F5E;display:flex;align-items:center;justify-content:center;'
                 f'font-size:0.75rem;font-weight:600;color:#fff;">{ana_pct}% Anaerobic</div>'
                 f'</div>',
                 unsafe_allow_html=True,
@@ -1669,7 +2180,7 @@ with tab_profile:
                 thr_pct = aero.get("threshold_pct_of_vo2max")
                 content = thr_q
                 if thr_pct:
-                    content += f"<br><span style='color:#8B92A5;font-size:0.8rem;'>LT pace = {thr_pct}% of VDOT pace</span>"
+                    content += f"<br><span style='color:#8B95AD;font-size:0.8rem;'>LT pace = {thr_pct}% of VDOT pace</span>"
                 # LT metrics — normalize speed to m/s
                 lt_hr = p.get("lactate_threshold_hr")
                 lt_spd = p.get("lactate_threshold_speed")
@@ -1687,17 +2198,17 @@ with tab_profile:
                         pm, ps = divmod(int(1000 / lt_spd), 60)
                         parts.append(f"LT Pace: {pm}:{ps:02d}/km")
                     content += f"<br><span style='color:#60A5FA;font-size:0.8rem;'>{' · '.join(parts)}</span>"
-                st.markdown(_section_card("🎯 Threshold Quality", content, "#FF9800"), unsafe_allow_html=True)
+                st.markdown(_section_card("Threshold Quality", content, "#F59E0B"), unsafe_allow_html=True)
             with ce_col:
                 ce = aero.get("cardiac_efficiency", "—")
                 drift = aero.get("cardiac_drift_indicator")
                 content = ce
                 if drift:
-                    content += f"<br><span style='color:#8B92A5;font-size:0.8rem;'>HR/Pace ratio: {drift:.3f}</span>"
+                    content += f"<br><span style='color:#8B95AD;font-size:0.8rem;'>HR/Pace ratio: {drift:.3f}</span>"
                 decoup = aero.get("aerobic_decoupling_pct")
                 if decoup is not None:
-                    content += f"<br><span style='color:#8B92A5;font-size:0.8rem;'>Aerobic decoupling: {decoup:+.1f}%</span>"
-                st.markdown(_section_card("❤️ Cardiac Efficiency", content, "#F44336"), unsafe_allow_html=True)
+                    content += f"<br><span style='color:#8B95AD;font-size:0.8rem;'>Aerobic decoupling: {decoup:+.1f}%</span>"
+                st.markdown(_section_card("Cardiac Efficiency", content, "#F43F5E"), unsafe_allow_html=True)
 
             # Pace vs HR scatter
             acts = p.get("recent_activities", [])
@@ -1712,7 +2223,7 @@ with tab_profile:
                 fig_scatter.add_trace(go.Scatter(
                     x=[pv / 60 for pv in paces_v], y=list(hrs_v),
                     mode="markers",
-                    marker=dict(color="#2196F3", size=8, opacity=0.7),
+                    marker=dict(color="#0EA5E9", size=8, opacity=0.7),
                     customdata=pace_labels,
                     hovertemplate="Pace: %{customdata}/km<br>HR: %{y} bpm<extra></extra>",
                 ))
@@ -1733,12 +2244,11 @@ with tab_profile:
                 fig_scatter.update_layout(
                     title="Cardiac Efficiency: Pace vs Heart Rate",
                     xaxis_title="Pace (min/km)", yaxis_title="Avg HR (bpm)",
-                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#C9CDD4", size=11),
+                    **_PF_CHART_LAYOUT,
                     margin=dict(l=50, r=20, t=40, b=40), height=300,
-                    xaxis=dict(gridcolor="rgba(255,255,255,0.05)", autorange="reversed",
-                               tickvals=tick_vals, ticktext=tick_text),
-                    yaxis=dict(gridcolor="rgba(255,255,255,0.08)"),
+                    xaxis=dict(gridcolor="rgba(148,163,194,0.06)", autorange="reversed",
+                               tickvals=tick_vals, ticktext=tick_text, zeroline=False),
+                    yaxis=dict(gridcolor="rgba(148,163,194,0.08)", zeroline=False),
                 )
                 st.plotly_chart(fig_scatter, use_container_width=True, key="scatter_pace_hr")
 
@@ -1748,8 +2258,8 @@ with tab_profile:
         with prof_tabs[2]:
             econ = (analytics or {}).get("economy", {})
             grade = econ.get("overall_grade", "—")
-            grade_colors = {"A": "#00D26A", "B": "#2196F3", "C": "#FF9800", "D": "#F44336", "—": "#8B92A5"}
-            gc = grade_colors.get(grade, "#8B92A5")
+            grade_colors = {"A": "#10B981", "B": "#0EA5E9", "C": "#F59E0B", "D": "#F43F5E", "—": "#8B95AD"}
+            gc = grade_colors.get(grade, "#8B95AD")
 
             # Grade badge
             st.markdown(
@@ -1757,7 +2267,7 @@ with tab_profile:
                 f'<div style="display:inline-block;background:{gc}22;border:2px solid {gc};border-radius:16px;'
                 f'padding:12px 28px;">'
                 f'<div style="font-size:2rem;font-weight:800;color:{gc};">{grade}</div>'
-                f'<div style="font-size:0.8rem;color:#8B92A5;">Running Economy Grade</div>'
+                f'<div style="font-size:0.8rem;color:#8B95AD;">Running Economy Grade</div>'
                 f'</div></div>',
                 unsafe_allow_html=True,
             )
@@ -1768,35 +2278,35 @@ with tab_profile:
             with ec1:
                 val = f"{cad:.0f}" if cad else "—"
                 st.markdown(_metric_card("Cadence", val, "spm", "cyan"), unsafe_allow_html=True)
-                st.markdown(f'<div style="text-align:center;font-size:0.75rem;color:#8B92A5;">{econ.get("cadence_grade","")}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div style="text-align:center;font-size:0.75rem;color:#8B95AD;">{econ.get("cadence_grade","")}</div>', unsafe_allow_html=True)
             with ec2:
                 sl = econ.get("stride_length_avg")
                 val = f"{sl:.2f}" if sl else "—"
                 st.markdown(_metric_card("Stride Length", val, "m", "blue"), unsafe_allow_html=True)
-                st.markdown(f'<div style="text-align:center;font-size:0.75rem;color:#8B92A5;">{econ.get("stride_grade","")}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div style="text-align:center;font-size:0.75rem;color:#8B95AD;">{econ.get("stride_grade","")}</div>', unsafe_allow_html=True)
             with ec3:
                 gct = econ.get("gct_avg")
                 val = f"{gct:.0f}" if gct else "—"
                 st.markdown(_metric_card("Ground Contact", val, "ms", "orange"), unsafe_allow_html=True)
-                st.markdown(f'<div style="text-align:center;font-size:0.75rem;color:#8B92A5;">{econ.get("gct_grade","")}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div style="text-align:center;font-size:0.75rem;color:#8B95AD;">{econ.get("gct_grade","")}</div>', unsafe_allow_html=True)
             with ec4:
                 vo = econ.get("vert_osc_avg")
                 val = f"{vo:.1f}" if vo else "—"
                 st.markdown(_metric_card("Vert. Oscillation", val, "cm", "purple"), unsafe_allow_html=True)
-                st.markdown(f'<div style="text-align:center;font-size:0.75rem;color:#8B92A5;">{econ.get("vert_osc_grade","")}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div style="text-align:center;font-size:0.75rem;color:#8B95AD;">{econ.get("vert_osc_grade","")}</div>', unsafe_allow_html=True)
 
             # Inefficiency callouts
             ineff = econ.get("inefficiencies", [])
             if ineff:
                 st.markdown("")
                 st.markdown(
-                    _section_card("🔧 Key Inefficiencies", _bullet_list(ineff, "#FF9800", "⚠"), "#FF9800"),
+                    _section_card("Key Inefficiencies", _bullet_list(ineff, "#F59E0B", "!"), "#F59E0B"),
                     unsafe_allow_html=True,
                 )
             else:
                 st.markdown("")
                 st.markdown(
-                    _section_card("✅ Running Mechanics", "No significant inefficiencies detected. Mechanics look solid.", "#00D26A"),
+                    _section_card("Running Mechanics", "No significant inefficiencies detected. Mechanics look solid.", "#10B981"),
                     unsafe_allow_html=True,
                 )
 
@@ -1811,31 +2321,31 @@ with tab_profile:
             with lr1:
                 bb = p.get("body_battery_current")
                 if bb and isinstance(bb, (int, float)):
-                    _gauge_chart(bb, "Body Battery", 0, 100, "#00D26A", [
-                        {"range": [0, 25], "color": "rgba(244,67,54,0.15)"},
-                        {"range": [25, 60], "color": "rgba(255,152,0,0.15)"},
-                        {"range": [60, 100], "color": "rgba(0,210,106,0.15)"},
+                    _gauge_chart(bb, "Body Battery", 0, 100, "#10B981", [
+                        {"range": [0, 25], "color": "rgba(244,63,94,0.15)"},
+                        {"range": [25, 60], "color": "rgba(245,158,11,0.15)"},
+                        {"range": [60, 100], "color": "rgba(16,185,129,0.15)"},
                     ], "body_battery")
                 else:
                     st.markdown(_metric_card("Body Battery", "—", "", "green"), unsafe_allow_html=True)
             with lr2:
                 ss = p.get("sleep_score")
                 if ss and isinstance(ss, (int, float)):
-                    _gauge_chart(ss, "Sleep Score", 0, 100, "#AB47BC", [
-                        {"range": [0, 40], "color": "rgba(244,67,54,0.15)"},
-                        {"range": [40, 70], "color": "rgba(255,152,0,0.15)"},
-                        {"range": [70, 100], "color": "rgba(0,210,106,0.15)"},
+                    _gauge_chart(ss, "Sleep Score", 0, 100, "#8B5CF6", [
+                        {"range": [0, 40], "color": "rgba(244,63,94,0.15)"},
+                        {"range": [40, 70], "color": "rgba(245,158,11,0.15)"},
+                        {"range": [70, 100], "color": "rgba(16,185,129,0.15)"},
                     ], "sleep_score")
                 else:
                     st.markdown(_metric_card("Sleep Score", "—", "", "purple"), unsafe_allow_html=True)
             with lr3:
                 sa = p.get("stress_avg")
                 if sa and isinstance(sa, (int, float)):
-                    stress_color = "#00D26A" if sa <= 25 else "#FF9800" if sa <= 50 else "#F44336"
+                    stress_color = "#10B981" if sa <= 25 else "#F59E0B" if sa <= 50 else "#F43F5E"
                     _gauge_chart(sa, "Avg Stress", 0, 100, stress_color, [
-                        {"range": [0, 25], "color": "rgba(0,210,106,0.15)"},
-                        {"range": [25, 50], "color": "rgba(255,152,0,0.15)"},
-                        {"range": [50, 100], "color": "rgba(244,67,54,0.15)"},
+                        {"range": [0, 25], "color": "rgba(16,185,129,0.15)"},
+                        {"range": [25, 50], "color": "rgba(245,158,11,0.15)"},
+                        {"range": [50, 100], "color": "rgba(244,63,94,0.15)"},
                     ], "stress_avg")
                 else:
                     st.markdown(_metric_card("Avg Stress", "—", "", "orange"), unsafe_allow_html=True)
@@ -1852,63 +2362,65 @@ with tab_profile:
                 if sleep_dur and any([sleep_deep, sleep_light, sleep_rem]):
                     labels, vals, colors = [], [], []
                     if sleep_deep:
-                        labels.append("Deep"); vals.append(sleep_deep / 60); colors.append("#1565C0")
+                        labels.append("Deep"); vals.append(sleep_deep / 60); colors.append("#0369A1")
                     if sleep_light:
-                        labels.append("Light"); vals.append(sleep_light / 60); colors.append("#42A5F5")
+                        labels.append("Light"); vals.append(sleep_light / 60); colors.append("#0EA5E9")
                     if sleep_rem:
-                        labels.append("REM"); vals.append(sleep_rem / 60); colors.append("#AB47BC")
+                        labels.append("REM"); vals.append(sleep_rem / 60); colors.append("#8B5CF6")
                     if sleep_awake:
-                        labels.append("Awake"); vals.append(sleep_awake / 60); colors.append("#FF9800")
+                        labels.append("Awake"); vals.append(sleep_awake / 60); colors.append("#F59E0B")
                     fig_sleep = go.Figure(go.Pie(
                         labels=labels, values=vals, marker_colors=colors,
                         hole=0.55, textinfo="label+percent", textfont_size=11,
-                        textfont_color="#C9CDD5",
+                        textfont_color="#A0A8BE",
                     ))
                     fig_sleep.update_layout(
                         title=f"Sleep Stages ({sleep_dur / 3600:.1f}h total)",
-                        title_font=dict(size=13, color="#8B92A5"),
+                        title_font=dict(size=13, color="#8B95AD", family="Figtree, sans-serif"),
                         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                        font=dict(family="Figtree, sans-serif", color="#E8ECF4", size=11),
                         height=280, margin=dict(t=40, b=20, l=20, r=20),
-                        legend=dict(font=dict(color="#8B92A5", size=10)),
+                        legend=dict(font=dict(color="#8B95AD", size=10)),
+                        hoverlabel=dict(bgcolor="#1A1D2B", bordercolor="rgba(148,163,194,0.12)", font=dict(color="#E8ECF4")),
                         showlegend=True,
                     )
                     st.plotly_chart(fig_sleep, use_container_width=True, key="sleep_pie")
                 else:
-                    st.markdown(_section_card("😴 Sleep", "No sleep stage data available", "#AB47BC"), unsafe_allow_html=True)
+                    st.markdown(_section_card("Sleep", "No sleep stage data available", "#8B5CF6"), unsafe_allow_html=True)
 
             with lr_col2:
                 # Load + HRV + Fatigue
                 load_status = lr.get("load_status", "—")
-                load_colors = {"Optimal": "#00D26A", "Recovery": "#2196F3", "Overreaching": "#F44336",
-                               "Undertraining": "#FF9800", "Unknown": "#8B92A5"}
-                lc = load_colors.get(load_status, "#8B92A5")
+                load_colors = {"Optimal": "#10B981", "Recovery": "#0EA5E9", "Overreaching": "#F43F5E",
+                               "Undertraining": "#F59E0B", "Unknown": "#8B95AD"}
+                lc = load_colors.get(load_status, "#8B95AD")
                 tl = lr.get("training_load_7day")
                 lf = lr.get("load_focus")
                 load_html = f'{_badge(load_status, lc)}'
                 if tl:
-                    load_html += f'<div style="color:#C9CDD5;font-size:0.85rem;margin-top:8px;">7-day load: {tl:.0f}</div>'
+                    load_html += f'<div style="color:#A0A8BE;font-size:0.85rem;margin-top:8px;">7-day load: {tl:.0f}</div>'
                 if lf:
-                    load_html += f'<div style="color:#8B92A5;font-size:0.8rem;">Focus: {lf}</div>'
-                st.markdown(_section_card("📊 Training Load", load_html, lc), unsafe_allow_html=True)
+                    load_html += f'<div style="color:#8B95AD;font-size:0.8rem;">Focus: {lf}</div>'
+                st.markdown(_section_card("Training Load", load_html, lc), unsafe_allow_html=True)
 
                 hrv_a = lr.get("hrv_assessment", "—")
-                hrv_c = {"Stable": "#00D26A", "Improving": "#2196F3", "Declining": "#F44336"}.get(hrv_a, "#8B92A5")
+                hrv_c = {"Stable": "#10B981", "Improving": "#0EA5E9", "Declining": "#F43F5E"}.get(hrv_a, "#8B95AD")
                 hrv_html = f'{_badge(hrv_a, hrv_c)}'
                 hlv = p.get("hrv_last_night")
                 if hlv:
-                    hrv_html += f'<span style="color:#C9CDD5;font-size:0.85rem;margin-left:10px;">Last night: {hlv:.0f} ms</span>'
-                st.markdown(_section_card("💓 HRV Status", hrv_html, hrv_c), unsafe_allow_html=True)
+                    hrv_html += f'<span style="color:#A0A8BE;font-size:0.85rem;margin-left:10px;">Last night: {hlv:.0f} ms</span>'
+                st.markdown(_section_card("HRV Status", hrv_html, hrv_c), unsafe_allow_html=True)
 
                 fatigue = lr.get("fatigue_risk", "—")
-                fat_c = {"Low": "#00D26A", "Moderate": "#FF9800", "High": "#F44336"}.get(fatigue, "#8B92A5")
-                st.markdown(_section_card("⚡ Fatigue Risk", _badge(fatigue, fat_c), fat_c), unsafe_allow_html=True)
+                fat_c = {"Low": "#10B981", "Moderate": "#F59E0B", "High": "#F43F5E"}.get(fatigue, "#8B95AD")
+                st.markdown(_section_card("Fatigue Risk", _badge(fatigue, fat_c), fat_c), unsafe_allow_html=True)
 
             # Recovery tips
             tips = lr.get("recovery_tips", [])
             if tips:
                 st.markdown("")
                 st.markdown(
-                    _section_card("💤 Recovery Tips", _bullet_list(tips, "#AB47BC", "→"), "#AB47BC"),
+                    _section_card("Recovery Tips", _bullet_list(tips, "#8B5CF6", "→"), "#8B5CF6"),
                     unsafe_allow_html=True,
                 )
 
@@ -1925,11 +2437,11 @@ with tab_profile:
                 garmin_count = sum(1 for pred in preds if pred.get("confidence") == "High")
                 source_note = ""
                 if garmin_count:
-                    source_note = f'<span style="color:#00D26A;font-size:0.8rem;margin-left:8px;">({garmin_count} from Garmin)</span>'
+                    source_note = f'<span style="color:#10B981;font-size:0.8rem;margin-left:8px;">({garmin_count} from Garmin)</span>'
                 st.markdown(
                     f'<div style="text-align:center;margin-bottom:1rem;">'
-                    f'<span style="font-size:0.85rem;color:#8B92A5;">Based on </span>'
-                    f'<span style="font-size:1.1rem;font-weight:700;color:#FFD600;">VDOT {rp_vdot}</span>'
+                    f'<span style="font-size:0.85rem;color:#8B95AD;">Based on </span>'
+                    f'<span style="font-size:1.1rem;font-weight:700;color:#FBBF24;">VDOT {rp_vdot}</span>'
                     f'{source_note}'
                     f'</div>',
                     unsafe_allow_html=True,
@@ -1938,13 +2450,13 @@ with tab_profile:
             # Predictions table
             if preds:
                 table_html = (
-                    '<div style="background:#1E2028;border-radius:10px;padding:12px 16px;margin-bottom:1rem;">'
+                    '<div style="background:#161821;border-radius:10px;padding:12px 16px;margin-bottom:1rem;">'
                     '<table style="width:100%;border-collapse:collapse;">'
-                    '<tr style="border-bottom:1px solid #2D3139;">'
-                    '<th style="text-align:left;padding:8px;color:#8B92A5;font-size:0.8rem;">Distance</th>'
-                    '<th style="text-align:center;padding:8px;color:#8B92A5;font-size:0.8rem;">Predicted Time</th>'
-                    '<th style="text-align:center;padding:8px;color:#8B92A5;font-size:0.8rem;">Pace/km</th>'
-                    '<th style="text-align:right;padding:8px;color:#8B92A5;font-size:0.8rem;">Confidence</th>'
+                    '<tr style="border-bottom:1px solid #252A35;">'
+                    '<th style="text-align:left;padding:8px;color:#8B95AD;font-size:0.8rem;">Distance</th>'
+                    '<th style="text-align:center;padding:8px;color:#8B95AD;font-size:0.8rem;">Predicted Time</th>'
+                    '<th style="text-align:center;padding:8px;color:#8B95AD;font-size:0.8rem;">Pace/km</th>'
+                    '<th style="text-align:right;padding:8px;color:#8B95AD;font-size:0.8rem;">Confidence</th>'
                     '</tr>'
                 )
                 for pred in preds:
@@ -1952,12 +2464,12 @@ with tab_profile:
                     pm, ps = divmod(int(pred["pace_sec_per_km"]), 60)
                     pace_str = f"{pm}:{ps:02d}"
                     conf = pred["confidence"]
-                    conf_c = {"High": "#00D26A", "Moderate": "#FF9800", "Low": "#F44336"}.get(conf, "#8B92A5")
+                    conf_c = {"High": "#10B981", "Moderate": "#F59E0B", "Low": "#F43F5E"}.get(conf, "#8B95AD")
                     table_html += (
-                        f'<tr style="border-bottom:1px solid #2D313922;">'
-                        f'<td style="padding:10px 8px;font-weight:500;color:#FAFAFA;">{pred["distance"]}</td>'
-                        f'<td style="padding:10px 8px;text-align:center;color:#00D26A;font-weight:600;font-size:1.05rem;">{time_str}</td>'
-                        f'<td style="padding:10px 8px;text-align:center;color:#C9CDD5;">{pace_str}/km</td>'
+                        f'<tr style="border-bottom:1px solid #252A3522;">'
+                        f'<td style="padding:10px 8px;font-weight:500;color:#E8ECF4;">{pred["distance"]}</td>'
+                        f'<td style="padding:10px 8px;text-align:center;color:#10B981;font-weight:600;font-size:1.05rem;">{time_str}</td>'
+                        f'<td style="padding:10px 8px;text-align:center;color:#A0A8BE;">{pace_str}/km</td>'
                         f'<td style="padding:10px 8px;text-align:right;">{_badge(conf, conf_c)}</td>'
                         f'</tr>'
                     )
@@ -1968,21 +2480,21 @@ with tab_profile:
             pbs = {pr["distance"]: pr["time_seconds"] for pr in p.get("personal_records", [])}
             garmin_preds = {rpp["distance"]: rpp["predicted_seconds"] for rpp in p.get("race_predictions", [])}
             if pbs or garmin_preds:
-                st.markdown('<div style="font-weight:600;color:#8B92A5;font-size:0.85rem;margin:8px 0;">Performance Comparison</div>', unsafe_allow_html=True)
-                comp_html = '<div style="background:#1E2028;border-radius:10px;padding:12px 16px;">'
+                st.markdown('<div style="font-weight:600;color:#8B95AD;font-size:0.85rem;margin:8px 0;">Performance Comparison</div>', unsafe_allow_html=True)
+                comp_html = '<div style="background:#161821;border-radius:10px;padding:12px 16px;">'
                 for pred in preds:
                     dist_key_map = {"Half Marathon": "HALF_MARATHON", "Marathon": "MARATHON", "5K": "5K", "10K": "10K"}
                     nk = dist_key_map.get(pred["distance"], pred["distance"])
                     pb_t = pbs.get(nk)
                     gp_t = garmin_preds.get(nk)
                     if pb_t or gp_t:
-                        comp_html += f'<div style="padding:6px 0;border-bottom:1px solid #2D313933;">'
-                        comp_html += f'<span style="color:#FAFAFA;font-weight:500;width:120px;display:inline-block;">{pred["distance"]}</span>'
-                        comp_html += f'<span style="color:#FFD600;margin-right:16px;">VDOT: {_fmt_time(pred["predicted_seconds"])}</span>'
+                        comp_html += f'<div style="padding:6px 0;border-bottom:1px solid #252A3533;">'
+                        comp_html += f'<span style="color:#E8ECF4;font-weight:500;width:120px;display:inline-block;">{pred["distance"]}</span>'
+                        comp_html += f'<span style="color:#FBBF24;margin-right:16px;">VDOT: {_fmt_time(pred["predicted_seconds"])}</span>'
                         if gp_t:
-                            comp_html += f'<span style="color:#2196F3;margin-right:16px;">Garmin: {_fmt_time(gp_t)}</span>'
+                            comp_html += f'<span style="color:#0EA5E9;margin-right:16px;">Garmin: {_fmt_time(gp_t)}</span>'
                         if pb_t:
-                            comp_html += f'<span style="color:#00D26A;">PB: {_fmt_time(pb_t)}</span>'
+                            comp_html += f'<span style="color:#10B981;">PB: {_fmt_time(pb_t)}</span>'
                         comp_html += '</div>'
                 comp_html += '</div>'
                 st.markdown(comp_html, unsafe_allow_html=True)
@@ -2005,7 +2517,7 @@ with tab_profile:
             if notes:
                 st.markdown("")
                 st.markdown(
-                    _section_card("🔍 Consistency Check", _bullet_list(notes, "#FFD600", "→"), "#FFD600"),
+                    _section_card("Consistency Check", _bullet_list(notes, "#FBBF24", "→"), "#FBBF24"),
                     unsafe_allow_html=True,
                 )
 
@@ -2018,19 +2530,16 @@ with tab_profile:
                 fig_fr.add_trace(go.Scatter(
                     x=dist_labels, y=pace_vals,
                     mode="lines+markers",
-                    line=dict(color="#FF9800", width=3),
-                    marker=dict(size=10, color="#FF9800"),
+                    line=dict(color="#F59E0B", width=3),
+                    marker=dict(size=10, color="#F59E0B"),
                     fill="tozeroy", fillcolor="rgba(255,152,0,0.1)",
                     hovertemplate="%{x}<br>%{y:.2f} min/km<extra></extra>",
                 ))
                 fig_fr.update_layout(
                     title="Fatigue Resistance Curve (Pace vs Distance)",
                     yaxis_title="Pace (min/km)", yaxis_autorange="reversed",
-                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#C9CDD4", size=11),
+                    **_PF_CHART_LAYOUT,
                     margin=dict(l=50, r=20, t=40, b=40), height=300,
-                    xaxis=dict(gridcolor="rgba(255,255,255,0.05)"),
-                    yaxis=dict(gridcolor="rgba(255,255,255,0.08)"),
                 )
                 st.plotly_chart(fig_fr, use_container_width=True, key="fatigue_curve")
 
@@ -2047,19 +2556,21 @@ with tab_profile:
                 with rc1:
                     sp_labels = [k.replace("_", " ").title() for k in split]
                     sp_vals = list(split.values())
-                    sp_colors = ["#2196F3", "#FF9800", "#F44336", "#AB47BC"]
+                    sp_colors = ["#0EA5E9", "#F59E0B", "#F43F5E", "#8B5CF6"]
                     fig_split = go.Figure(go.Pie(
                         labels=sp_labels, values=sp_vals,
                         marker_colors=sp_colors[:len(sp_vals)],
                         hole=0.5, textinfo="label+percent", textfont_size=11,
-                        textfont_color="#C9CDD5",
+                        textfont_color="#A0A8BE",
                     ))
                     fig_split.update_layout(
                         title="Recommended Training Split",
-                        title_font=dict(size=13, color="#8B92A5"),
+                        title_font=dict(size=13, color="#8B95AD", family="Figtree, sans-serif"),
                         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                        font=dict(family="Figtree, sans-serif", color="#E8ECF4", size=11),
                         height=280, margin=dict(t=40, b=10, l=10, r=10),
-                        legend=dict(font=dict(color="#8B92A5", size=10)),
+                        legend=dict(font=dict(color="#8B95AD", size=10)),
+                        hoverlabel=dict(bgcolor="#1A1D2B", bordercolor="rgba(148,163,194,0.12)", font=dict(color="#E8ECF4")),
                     )
                     st.plotly_chart(fig_split, use_container_width=True, key="training_split")
 
@@ -2068,14 +2579,14 @@ with tab_profile:
                     hyrox_prog = rec.get("hyrox_progression", [])
                     if hyrox_prog:
                         st.markdown(
-                            _section_card("🔥 HYROX Progression", _bullet_list(hyrox_prog, "#FF9800", "→"), "#FF9800"),
+                            _section_card("HYROX Progression", _bullet_list(hyrox_prog, "#F59E0B", "→"), "#F59E0B"),
                             unsafe_allow_html=True,
                         )
                     # Recovery optimization
                     rec_opt = rec.get("recovery_optimization", [])
                     if rec_opt:
                         st.markdown(
-                            _section_card("💤 Recovery Optimization", _bullet_list(rec_opt, "#AB47BC", "→"), "#AB47BC"),
+                            _section_card("Recovery Optimization", _bullet_list(rec_opt, "#8B5CF6", "→"), "#8B5CF6"),
                             unsafe_allow_html=True,
                         )
 
@@ -2083,26 +2594,26 @@ with tab_profile:
             sessions = rec.get("key_sessions", [])
             if sessions:
                 st.markdown("")
-                st.markdown('<div style="font-weight:600;color:#8B92A5;font-size:0.85rem;margin-bottom:6px;">Key Sessions</div>', unsafe_allow_html=True)
+                st.markdown('<div style="font-weight:600;color:#8B95AD;font-size:0.85rem;margin-bottom:6px;">Key Sessions</div>', unsafe_allow_html=True)
                 sess_html = (
-                    '<div style="background:#1E2028;border-radius:10px;padding:12px 16px;">'
+                    '<div style="background:#161821;border-radius:10px;padding:12px 16px;">'
                     '<table style="width:100%;border-collapse:collapse;">'
-                    '<tr style="border-bottom:1px solid #2D3139;">'
-                    '<th style="text-align:left;padding:8px;color:#8B92A5;font-size:0.78rem;">Session</th>'
-                    '<th style="text-align:left;padding:8px;color:#8B92A5;font-size:0.78rem;">Description</th>'
-                    '<th style="text-align:center;padding:8px;color:#8B92A5;font-size:0.78rem;">Pace</th>'
-                    '<th style="text-align:center;padding:8px;color:#8B92A5;font-size:0.78rem;">HR</th>'
+                    '<tr style="border-bottom:1px solid #252A35;">'
+                    '<th style="text-align:left;padding:8px;color:#8B95AD;font-size:0.78rem;">Session</th>'
+                    '<th style="text-align:left;padding:8px;color:#8B95AD;font-size:0.78rem;">Description</th>'
+                    '<th style="text-align:center;padding:8px;color:#8B95AD;font-size:0.78rem;">Pace</th>'
+                    '<th style="text-align:center;padding:8px;color:#8B95AD;font-size:0.78rem;">HR</th>'
                     '</tr>'
                 )
-                session_colors = ["#F44336", "#FF9800", "#2196F3", "#AB47BC", "#00D26A"]
+                session_colors = ["#F43F5E", "#F59E0B", "#0EA5E9", "#8B5CF6", "#10B981"]
                 for i, s in enumerate(sessions):
                     sc = session_colors[i % len(session_colors)]
                     sess_html += (
-                        f'<tr style="border-bottom:1px solid #2D313922;">'
+                        f'<tr style="border-bottom:1px solid #252A3522;">'
                         f'<td style="padding:8px;color:{sc};font-weight:600;font-size:0.88rem;">{s["name"]}</td>'
-                        f'<td style="padding:8px;color:#C9CDD5;font-size:0.85rem;">{s["description"]}</td>'
-                        f'<td style="padding:8px;text-align:center;color:#FFD600;font-size:0.85rem;">{s["pace_target"]}</td>'
-                        f'<td style="padding:8px;text-align:center;color:#FF6B6B;font-size:0.85rem;">{s["hr_target"]}</td>'
+                        f'<td style="padding:8px;color:#A0A8BE;font-size:0.85rem;">{s["description"]}</td>'
+                        f'<td style="padding:8px;text-align:center;color:#FBBF24;font-size:0.85rem;">{s["pace_target"]}</td>'
+                        f'<td style="padding:8px;text-align:center;color:#F43F5E;font-size:0.85rem;">{s["hr_target"]}</td>'
                         f'</tr>'
                     )
                 sess_html += '</table></div>'
@@ -2112,26 +2623,26 @@ with tab_profile:
             benchmarks = rec.get("benchmarks", [])
             if benchmarks:
                 st.markdown("")
-                st.markdown('<div style="font-weight:600;color:#8B92A5;font-size:0.85rem;margin-bottom:6px;">Progress Benchmarks</div>', unsafe_allow_html=True)
+                st.markdown('<div style="font-weight:600;color:#8B95AD;font-size:0.85rem;margin-bottom:6px;">Progress Benchmarks</div>', unsafe_allow_html=True)
                 bench_html = (
-                    '<div style="background:#1E2028;border-radius:10px;padding:12px 16px;">'
+                    '<div style="background:#161821;border-radius:10px;padding:12px 16px;">'
                     '<table style="width:100%;border-collapse:collapse;">'
-                    '<tr style="border-bottom:1px solid #2D3139;">'
-                    '<th style="text-align:left;padding:8px;color:#8B92A5;font-size:0.78rem;">Metric</th>'
-                    '<th style="text-align:center;padding:8px;color:#8B92A5;font-size:0.78rem;">Current</th>'
-                    '<th style="text-align:center;padding:8px;color:#2196F3;font-size:0.78rem;">4 Weeks</th>'
-                    '<th style="text-align:center;padding:8px;color:#FF9800;font-size:0.78rem;">8 Weeks</th>'
-                    '<th style="text-align:center;padding:8px;color:#00D26A;font-size:0.78rem;">12 Weeks</th>'
+                    '<tr style="border-bottom:1px solid #252A35;">'
+                    '<th style="text-align:left;padding:8px;color:#8B95AD;font-size:0.78rem;">Metric</th>'
+                    '<th style="text-align:center;padding:8px;color:#8B95AD;font-size:0.78rem;">Current</th>'
+                    '<th style="text-align:center;padding:8px;color:#0EA5E9;font-size:0.78rem;">4 Weeks</th>'
+                    '<th style="text-align:center;padding:8px;color:#F59E0B;font-size:0.78rem;">8 Weeks</th>'
+                    '<th style="text-align:center;padding:8px;color:#10B981;font-size:0.78rem;">12 Weeks</th>'
                     '</tr>'
                 )
                 for b in benchmarks:
                     bench_html += (
-                        f'<tr style="border-bottom:1px solid #2D313922;">'
-                        f'<td style="padding:8px;color:#FAFAFA;font-weight:500;">{b["metric"]}</td>'
-                        f'<td style="padding:8px;text-align:center;color:#C9CDD5;">{b["current"]}</td>'
-                        f'<td style="padding:8px;text-align:center;color:#2196F3;">{b["target_4wk"]}</td>'
-                        f'<td style="padding:8px;text-align:center;color:#FF9800;">{b["target_8wk"]}</td>'
-                        f'<td style="padding:8px;text-align:center;color:#00D26A;">{b["target_12wk"]}</td>'
+                        f'<tr style="border-bottom:1px solid #252A3522;">'
+                        f'<td style="padding:8px;color:#E8ECF4;font-weight:500;">{b["metric"]}</td>'
+                        f'<td style="padding:8px;text-align:center;color:#A0A8BE;">{b["current"]}</td>'
+                        f'<td style="padding:8px;text-align:center;color:#0EA5E9;">{b["target_4wk"]}</td>'
+                        f'<td style="padding:8px;text-align:center;color:#F59E0B;">{b["target_8wk"]}</td>'
+                        f'<td style="padding:8px;text-align:center;color:#10B981;">{b["target_12wk"]}</td>'
                         f'</tr>'
                     )
                 bench_html += '</table></div>'
@@ -2146,15 +2657,7 @@ with tab_profile:
                 sorted_acts = sorted(acts, key=lambda a: a.get("start_time", ""))
                 dates = [a.get("start_time", "")[:10] for a in sorted_acts]
 
-                chart_layout = dict(
-                    paper_bgcolor="rgba(0,0,0,0)",
-                    plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#C9CDD4", size=11),
-                    margin=dict(l=40, r=20, t=30, b=30),
-                    height=250,
-                    xaxis=dict(gridcolor="rgba(255,255,255,0.05)"),
-                    yaxis=dict(gridcolor="rgba(255,255,255,0.08)"),
-                )
+                chart_layout = dict(**_PF_CHART_LAYOUT)
 
                 trend_col1, trend_col2 = st.columns(2)
 
@@ -2171,7 +2674,7 @@ with tab_profile:
                         fig_pace.add_trace(go.Scatter(
                             x=pace_dates, y=pace_vals,
                             mode="lines+markers",
-                            line=dict(color="#00D26A", width=2), marker=dict(size=5),
+                            line=dict(color="#10B981", width=2), marker=dict(size=5),
                             customdata=pace_labels_t,
                             hovertemplate="%%{x}<br>%%{customdata}/km<extra></extra>",
                         ))
@@ -2205,7 +2708,7 @@ with tab_profile:
                         fig_hr.add_trace(go.Scatter(
                             x=hr_dates, y=hr_vals,
                             mode="lines+markers",
-                            line=dict(color="#FF6B6B", width=2), marker=dict(size=5),
+                            line=dict(color="#F43F5E", width=2), marker=dict(size=5),
                             hovertemplate="%%{x}<br>%%{y} bpm<extra></extra>",
                         ))
                         fig_hr.update_layout(title="Average Heart Rate", yaxis_title="bpm", **chart_layout)
@@ -2225,7 +2728,7 @@ with tab_profile:
                         fig_cad.add_trace(go.Scatter(
                             x=cad_dates, y=cad_vals,
                             mode="lines+markers",
-                            line=dict(color="#4ECDC4", width=2), marker=dict(size=5),
+                            line=dict(color="#0EA5E9", width=2), marker=dict(size=5),
                             hovertemplate="%%{x}<br>%%{y:.0f} spm<extra></extra>",
                         ))
                         fig_cad.update_layout(title="Running Cadence", yaxis_title="spm", **chart_layout)
@@ -2243,7 +2746,7 @@ with tab_profile:
                         fig_vo2t.add_trace(go.Scatter(
                             x=vo2_dates, y=vo2_vals,
                             mode="lines+markers",
-                            line=dict(color="#FFE66D", width=2), marker=dict(size=5),
+                            line=dict(color="#F59E0B", width=2), marker=dict(size=5),
                             hovertemplate="%%{x}<br>%%{y:.1f}<extra></extra>",
                         ))
                         fig_vo2t.update_layout(title="VO2 Max Trend", yaxis_title="VO2 Max", **chart_layout)
@@ -2268,13 +2771,13 @@ with tab_profile:
                             fig_te.add_trace(go.Scatter(
                                 x=ta_dates, y=ta_vals, name="Aerobic",
                                 mode="lines+markers",
-                                line=dict(color="#2196F3", width=2), marker=dict(size=4),
+                                line=dict(color="#0EA5E9", width=2), marker=dict(size=4),
                             ))
                         if tn_vals:
                             fig_te.add_trace(go.Scatter(
                                 x=tn_dates, y=tn_vals, name="Anaerobic",
                                 mode="lines+markers",
-                                line=dict(color="#F44336", width=2), marker=dict(size=4),
+                                line=dict(color="#F43F5E", width=2), marker=dict(size=4),
                             ))
                         fig_te.update_layout(title="Training Effect", yaxis_title="TE", **chart_layout)
                         st.plotly_chart(fig_te, use_container_width=True, key="trend_te")
@@ -2290,7 +2793,7 @@ with tab_profile:
                         fig_dist = go.Figure()
                         fig_dist.add_trace(go.Bar(
                             x=d_dates, y=d_vals,
-                            marker_color="#AB47BC",
+                            marker_color="#8B5CF6",
                             hovertemplate="%%{x}<br>%%{y:.1f} km<extra></extra>",
                         ))
                         fig_dist.update_layout(title="Run Distance", yaxis_title="km", **chart_layout)
@@ -2315,14 +2818,14 @@ with tab_plan:
     DAY_LABELS = {d: d.capitalize() for d in ALL_DAYS}
 
     GOAL_INFO = {
-        "5K": {"icon": "⚡", "desc": "Speed-focused plan with VO2max intervals and short speed work. Great for building a fast base.", "weeks": "8-12 weeks"},
-        "10K": {"icon": "🔥", "desc": "Balanced plan mixing threshold runs with VO2max work. Builds both speed and endurance.", "weeks": "10-14 weeks"},
-        "HALF_MARATHON": {"icon": "🏃", "desc": "Endurance plan with progressive long runs up to 22km and tempo sessions.", "weeks": "12-16 weeks"},
-        "MARATHON": {"icon": "🏅", "desc": "Full endurance program building to 35km long runs with race-pace specifics.", "weeks": "14-20 weeks"},
-        "HYROX": {"icon": "💪", "desc": "Hybrid running + functional fitness plan simulating Hyrox race format.", "weeks": "10-14 weeks"},
+        "5K": {"icon": "→", "desc": "Speed-focused plan with VO2max intervals and short speed work. Great for building a fast base.", "weeks": "8-12 weeks"},
+        "10K": {"icon": "→", "desc": "Balanced plan mixing threshold runs with VO2max work. Builds both speed and endurance.", "weeks": "10-14 weeks"},
+        "HALF_MARATHON": {"icon": "→", "desc": "Endurance plan with progressive long runs up to 22km and tempo sessions.", "weeks": "12-16 weeks"},
+        "MARATHON": {"icon": "→", "desc": "Full endurance program building to 35km long runs with race-pace specifics.", "weeks": "14-20 weeks"},
+        "HYROX": {"icon": "→", "desc": "Hybrid running + functional fitness plan simulating Hyrox race format.", "weeks": "10-14 weeks"},
     }
 
-    with st.expander("🧭 Plan Builder" if has_plan else "🧭 Create Your Training Plan", expanded=not has_plan):
+    with st.expander("Plan Builder" if has_plan else "Create Your Training Plan", expanded=not has_plan):
         step = st.session_state.wizard_step
         wd = st.session_state.wizard_data
 
@@ -2331,11 +2834,11 @@ with tab_plan:
         progress_html = '<div style="display:flex;gap:4px;margin-bottom:1.2rem;">'
         for i, label in enumerate(step_labels, 1):
             if i < step:
-                bg, fg = "#00D26A", "#fff"
+                bg, fg = "#10B981", "#fff"
             elif i == step:
                 bg, fg = "#2563EB", "#fff"
             else:
-                bg, fg = "#2A2D35", "#8B92A5"
+                bg, fg = "#2A2D35", "#8B95AD"
             progress_html += (
                 f'<div style="flex:1;text-align:center;padding:6px 0;background:{bg};'
                 f'color:{fg};border-radius:6px;font-size:0.75rem;font-weight:600;">'
@@ -2347,7 +2850,7 @@ with tab_plan:
         # ── Step 1: Goal ─────────────────────────────────────────────
         if step == 1:
             st.markdown(
-                '<p style="font-size:1rem;color:#C9CDD5;margin-bottom:0.5rem;">'
+                '<p style="font-size:1rem;color:#A0A8BE;margin-bottom:0.5rem;">'
                 'What race are you training for? This determines the plan structure, '
                 'workout types, and volume progression.</p>',
                 unsafe_allow_html=True,
@@ -2356,12 +2859,12 @@ with tab_plan:
             for i, (goal_key, info) in enumerate(GOAL_INFO.items()):
                 with cols[i]:
                     selected = wd.get("goal_type") == goal_key
-                    border = "2px solid #00D26A" if selected else "1px solid #2A2D35"
+                    border = "2px solid #10B981" if selected else "1px solid #2A2D35"
                     st.markdown(
                         f'<div style="border:{border};border-radius:10px;padding:12px;text-align:center;min-height:120px;">'
                         f'<div style="font-size:1.5rem;">{info["icon"]}</div>'
                         f'<div style="font-weight:700;margin:4px 0;">{goal_key.replace("_"," ")}</div>'
-                        f'<div style="font-size:0.7rem;color:#8B92A5;">{info["weeks"]}</div>'
+                        f'<div style="font-size:0.7rem;color:#8B95AD;">{info["weeks"]}</div>'
                         f'</div>',
                         unsafe_allow_html=True,
                     )
@@ -2377,7 +2880,7 @@ with tab_plan:
         # ── Step 2: Timeline ─────────────────────────────────────────
         elif step == 2:
             st.markdown(
-                '<p style="font-size:1rem;color:#C9CDD5;margin-bottom:0.5rem;">'
+                '<p style="font-size:1rem;color:#A0A8BE;margin-bottom:0.5rem;">'
                 'When is your race, and when do you want to start training? '
                 'The plan will automatically periodize phases (Base → Build → Peak → Taper) '
                 'across the available weeks.</p>',
@@ -2386,7 +2889,7 @@ with tab_plan:
             col1, col2 = st.columns(2)
             with col1:
                 target_date = st.date_input(
-                    "🏁 Race Date",
+                    "Race Date",
                     value=wd.get("target_date", date.today() + timedelta(weeks=14)),
                     min_value=date.today() + timedelta(weeks=6),
                     key="wiz_race_date",
@@ -2394,7 +2897,7 @@ with tab_plan:
             with col2:
                 default_start = date.today() + timedelta(days=(7 - date.today().weekday()) % 7 or 7)
                 start_date = st.date_input(
-                    "📅 Plan Start Date",
+                    "Plan Start Date",
                     value=wd.get("start_date", default_start),
                     min_value=date.today(),
                     max_value=target_date - timedelta(weeks=4),
@@ -2402,12 +2905,12 @@ with tab_plan:
                 )
             weeks_avail = (target_date - start_date).days // 7
             st.markdown(
-                f'<p style="color:#00D26A;font-weight:600;">📐 {weeks_avail} weeks of training available</p>',
+                f'<p style="color:#10B981;font-weight:600;">{weeks_avail} weeks of training available</p>',
                 unsafe_allow_html=True,
             )
 
             st.markdown(
-                '<p style="font-size:1rem;color:#C9CDD5;margin-top:1rem;">'
+                '<p style="font-size:1rem;color:#A0A8BE;margin-top:1rem;">'
                 'Do you have a target finish time? This helps calculate your training paces using '
                 'the VDOT system (Jack Daniels\' Running Formula). Leave at 0 if unsure — '
                 'we\'ll estimate from your fitness data.</p>',
@@ -2436,7 +2939,7 @@ with tab_plan:
         # ── Step 3: Schedule ─────────────────────────────────────────
         elif step == 3:
             st.markdown(
-                '<p style="font-size:1rem;color:#C9CDD5;margin-bottom:0.5rem;">'
+                '<p style="font-size:1rem;color:#A0A8BE;margin-bottom:0.5rem;">'
                 'Which days can you train? Select at least 3. The plan places quality sessions '
                 '(intervals, tempo) on non-consecutive days and schedules easy runs around them. '
                 'Your long run goes on the day you choose below.</p>',
@@ -2453,7 +2956,7 @@ with tab_plan:
                 st.warning("Select at least 3 training days for an effective plan.")
 
             long_run_day = st.selectbox(
-                "🏃‍♂️ Long Run Day",
+                "Long Run Day",
                 options=ALL_DAYS,
                 index=ALL_DAYS.index(wd.get("long_run_day", "sunday")),
                 format_func=lambda d: DAY_LABELS[d],
@@ -2476,23 +2979,23 @@ with tab_plan:
         # ── Step 4: Experience ───────────────────────────────────────
         elif step == 4:
             st.markdown(
-                '<p style="font-size:1rem;color:#C9CDD5;margin-bottom:0.5rem;">'
+                '<p style="font-size:1rem;color:#A0A8BE;margin-bottom:0.5rem;">'
                 'What is your running experience? This affects training volume and intensity:</p>',
                 unsafe_allow_html=True,
             )
             exp_info = {
-                "beginner": ("🌱", "Running for less than a year or first-time racer. Lower volume, gentler progression, more recovery."),
-                "intermediate": ("📈", "1-3 years of consistent running with some race experience. Moderate volume with structured quality sessions."),
-                "advanced": ("🏆", "3+ years of structured training with multiple race finishes. Higher volume, aggressive periodization."),
+                "beginner": ("→", "Running for less than a year or first-time racer. Lower volume, gentler progression, more recovery."),
+                "intermediate": ("→", "1-3 years of consistent running with some race experience. Moderate volume with structured quality sessions."),
+                "advanced": ("→", "3+ years of structured training with multiple race finishes. Higher volume, aggressive periodization."),
             }
             for level, (icon, desc) in exp_info.items():
                 selected = wd.get("experience") == level
-                border = "2px solid #00D26A" if selected else "1px solid #2A2D35"
+                border = "2px solid #10B981" if selected else "1px solid #2A2D35"
                 st.markdown(
                     f'<div style="border:{border};border-radius:10px;padding:12px 16px;margin-bottom:8px;">'
                     f'<span style="font-size:1.2rem;">{icon}</span> '
                     f'<strong>{level.capitalize()}</strong>'
-                    f'<span style="color:#8B92A5;font-size:0.85rem;margin-left:8px;">{desc}</span>'
+                    f'<span style="color:#8B95AD;font-size:0.85rem;margin-left:8px;">{desc}</span>'
                     f'</div>',
                     unsafe_allow_html=True,
                 )
@@ -2501,9 +3004,9 @@ with tab_plan:
                     st.session_state.wizard_step = 5
                     st.rerun()
 
-            with st.expander("⏱ Custom Paces (optional)", expanded=False):
+            with st.expander("Custom Paces (optional)", expanded=False):
                 st.markdown(
-                    '<p style="font-size:0.85rem;color:#8B92A5;">'
+                    '<p style="font-size:0.85rem;color:#8B95AD;">'
                     'Override auto-calculated paces if you know your current training paces. '
                     'Leave at 0 to let PaceForge calculate from your VDOT.</p>',
                     unsafe_allow_html=True,
@@ -2534,7 +3037,7 @@ with tab_plan:
         # ── Step 5: Review & Generate ────────────────────────────────
         elif step == 5:
             st.markdown(
-                '<p style="font-size:1rem;color:#C9CDD5;margin-bottom:0.5rem;">'
+                '<p style="font-size:1rem;color:#A0A8BE;margin-bottom:0.5rem;">'
                 'Review your configuration. The AI coach will design a personalised plan '
                 'based on your fitness profile, goal, and schedule.</p>',
                 unsafe_allow_html=True,
@@ -2548,19 +3051,19 @@ with tab_plan:
             target_str = f"{th}h {tm:02d}m" if (th + tm) > 0 else "Auto (from fitness data)"
 
             st.markdown(
-                f'<div style="background:#1E2028;border-radius:10px;padding:16px;margin-bottom:1rem;">'
+                f'<div style="background:#161821;border-radius:10px;padding:16px;margin-bottom:1rem;">'
                 f'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">'
-                f'<div><span style="color:#8B92A5;font-size:0.8rem;">GOAL</span><br/>'
+                f'<div><span style="color:#8B95AD;font-size:0.8rem;">GOAL</span><br/>'
                 f'<span style="font-weight:700;font-size:1.1rem;">{goal_info.get("icon","")} {wd.get("goal_type","").replace("_"," ")}</span></div>'
-                f'<div><span style="color:#8B92A5;font-size:0.8rem;">RACE DATE</span><br/>'
+                f'<div><span style="color:#8B95AD;font-size:0.8rem;">RACE DATE</span><br/>'
                 f'<span style="font-weight:700;">{td.strftime("%b %d, %Y")}</span></div>'
-                f'<div><span style="color:#8B92A5;font-size:0.8rem;">TRAINING WEEKS</span><br/>'
+                f'<div><span style="color:#8B95AD;font-size:0.8rem;">TRAINING WEEKS</span><br/>'
                 f'<span style="font-weight:700;">{weeks_avail} weeks ({sd.strftime("%b %d")} → {td.strftime("%b %d")})</span></div>'
-                f'<div><span style="color:#8B92A5;font-size:0.8rem;">TARGET TIME</span><br/>'
+                f'<div><span style="color:#8B95AD;font-size:0.8rem;">TARGET TIME</span><br/>'
                 f'<span style="font-weight:700;">{target_str}</span></div>'
-                f'<div><span style="color:#8B92A5;font-size:0.8rem;">EXPERIENCE</span><br/>'
+                f'<div><span style="color:#8B95AD;font-size:0.8rem;">EXPERIENCE</span><br/>'
                 f'<span style="font-weight:700;">{wd.get("experience","intermediate").capitalize()}</span></div>'
-                f'<div><span style="color:#8B92A5;font-size:0.8rem;">TRAINING DAYS</span><br/>'
+                f'<div><span style="color:#8B95AD;font-size:0.8rem;">TRAINING DAYS</span><br/>'
                 f'<span style="font-weight:700;">{len(wd.get("training_days",[]))} days/week</span></div>'
                 f'</div></div>',
                 unsafe_allow_html=True,
@@ -2577,8 +3080,8 @@ with tab_plan:
                     st.session_state.wizard_step = 4
                     st.rerun()
             with nav2:
-                if st.button("🚀 Generate Plan", type="primary", use_container_width=True, key="wiz_generate"):
-                    with st.spinner("🤖 AI Coach is designing your personalised plan..."):
+                if st.button("Generate Plan", type="primary", use_container_width=True, key="wiz_generate"):
+                    with st.spinner("Generating your personalised plan..."):
                         r = requests.post(
                             f"{API_BASE}/plan/generate",
                             json={
@@ -2618,16 +3121,16 @@ with tab_plan:
         target_dt = plan.get("target_date", "")
         total_wks = plan.get("total_weeks", 0)
         accepted = plan.get("accepted", False)
-        status_color = "#00D26A" if accepted else "#FF9800"
+        status_color = "#10B981" if accepted else "#F59E0B"
         status_text = "✓ Added to Calendar" if accepted else "Draft — Review & Accept"
 
-        goal_icon = GOAL_INFO.get(goal_type, {}).get("icon", "🏃")
+        goal_icon = GOAL_INFO.get(goal_type, {}).get("icon", "")
         st.markdown(
-            f'<div style="background:#1E2028;border-radius:10px;padding:16px;margin-bottom:0.75rem;">'
+            f'<div style="background:#161821;border-radius:10px;padding:16px;margin-bottom:0.75rem;">'
             f'<div style="display:flex;align-items:center;justify-content:space-between;">'
             f'<div>'
             f'<div style="font-size:1.2rem;font-weight:700;">{goal_icon} {plan_name}</div>'
-            f'<div style="color:#8B92A5;font-size:0.8rem;margin-top:2px;">'
+            f'<div style="color:#8B95AD;font-size:0.8rem;margin-top:2px;">'
             f'Created {created_at} · {goal_type.replace("_"," ")} · {total_wks} weeks · Race {target_dt}'
             f'</div></div>'
             f'<span style="background:{status_color}22;color:{status_color};padding:4px 12px;'
@@ -2644,19 +3147,19 @@ with tab_plan:
         plan_vdot = plan.get("vdot")
 
         # Always show this section (athlete data + optional AI rationale)
-        with st.expander("🧠 Plan Intelligence", expanded=(p_idx == len(st.session_state.plans) - 1)):
+        with st.expander("Plan Intelligence", expanded=(p_idx == len(st.session_state.plans) - 1)):
             # Athlete profile data used
             if athlete_summary or pace_source:
                 summary_parts = []
                 if plan_vdot:
-                    summary_parts.append(f'<span style="color:#FFD600;font-weight:600;">VDOT {plan_vdot:.1f}</span>')
+                    summary_parts.append(f'<span style="color:#FBBF24;font-weight:600;">VDOT {plan_vdot:.1f}</span>')
                 if pace_source:
-                    summary_parts.append(f'<span style="color:#8B92A5;">Paces from: {pace_source}</span>')
+                    summary_parts.append(f'<span style="color:#8B95AD;">Paces from: {pace_source}</span>')
                 st.markdown(
-                    f'<div style="background:#1A2332;border-left:3px solid #FFD600;padding:12px 16px;'
-                    f'border-radius:0 8px 8px 0;margin-bottom:1rem;">'
-                    f'<div style="font-weight:600;color:#FFD600;margin-bottom:6px;">📊 Athlete Data Used</div>'
-                    f'<div style="color:#C9CDD5;font-size:0.85rem;line-height:1.6;">'
+                    f'<div style="background:#1A1D2B;border:1px solid rgba(251,191,36,0.15);border-radius:10px;padding:14px 18px;'
+                    f'margin-bottom:1rem;">'
+                    f'<div style="font-weight:600;color:#FBBF24;margin-bottom:6px;font-family:Manrope,sans-serif;">Athlete Data Used</div>'
+                    f'<div style="color:#A0A8BE;font-size:0.85rem;line-height:1.6;">'
                     f'{"<br>".join(summary_parts)}'
                     f'</div>'
                     f'</div>',
@@ -2667,7 +3170,7 @@ with tab_plan:
                     items = [s.strip() for s in athlete_summary.split(" · ") if s.strip()]
                     if items:
                         items_html = "".join(
-                            f'<div style="padding:3px 0;color:#C9CDD5;font-size:0.85rem;">'
+                            f'<div style="padding:3px 0;color:#A0A8BE;font-size:0.85rem;">'
                             f'<span style="color:#60A5FA;margin-right:6px;">▸</span>{item}</div>'
                             for item in items
                             if not item.startswith("Pace source:")  # already shown above
@@ -2679,22 +3182,22 @@ with tab_plan:
 
             if rationale:
                 st.markdown(
-                    f'<div style="background:#1A2332;border-left:3px solid #2563EB;padding:12px 16px;'
-                    f'border-radius:0 8px 8px 0;margin-bottom:1rem;">'
-                    f'<div style="font-weight:600;color:#60A5FA;margin-bottom:4px;">Plan Rationale</div>'
-                    f'<div style="color:#C9CDD5;font-size:0.9rem;">{rationale}</div>'
+                    f'<div style="background:#1A1D2B;border:1px solid rgba(14,165,233,0.15);border-radius:10px;padding:14px 18px;'
+                    f'margin-bottom:1rem;">'
+                    f'<div style="font-weight:600;color:#0EA5E9;margin-bottom:4px;font-family:Manrope,sans-serif;">Plan Rationale</div>'
+                    f'<div style="color:#A0A8BE;font-size:0.9rem;">{rationale}</div>'
                     f'</div>',
                     unsafe_allow_html=True,
                 )
             if tips:
                 st.markdown(
-                    '<div style="font-weight:600;color:#00D26A;margin-bottom:8px;">💡 Personalised Tips</div>',
+                    '<div style="font-weight:600;color:#10B981;margin-bottom:8px;">Personalised Tips</div>',
                     unsafe_allow_html=True,
                 )
                 for tip in tips:
                     st.markdown(
                         f'<div style="padding:6px 0 6px 16px;border-left:2px solid #2A2D35;'
-                        f'color:#C9CDD5;font-size:0.9rem;margin-bottom:4px;">{tip}</div>',
+                        f'color:#A0A8BE;font-size:0.9rem;margin-bottom:4px;">{tip}</div>',
                         unsafe_allow_html=True,
                     )
 
@@ -2752,7 +3255,7 @@ with tab_plan:
                     else:
                         st.error(f"Error: {_error_detail(r)}")
         with btn_cols[2]:
-            if st.button("🗑 Delete Plan", use_container_width=True, key=f"delete_{plan_id}"):
+            if st.button("Delete Plan", use_container_width=True, key=f"delete_{plan_id}"):
                 with st.spinner("Deleting plan..."):
                     r = requests.delete(
                         f"{API_BASE}/plan/{plan_id}",
@@ -2779,7 +3282,7 @@ with tab_plan:
         if paces:
             pace_cols = st.columns(len(paces))
             for i, (zone, val) in enumerate(paces.items()):
-                color = _PACE_COLORS.get(zone, "#00D26A")
+                color = _PACE_COLORS.get(zone, "#10B981")
                 with pace_cols[i]:
                     st.markdown(
                         f'<div class="pf-pace-card">'
@@ -2796,8 +3299,8 @@ with tab_plan:
         }
         for week in plan.get("weeks", []):
             phase = week.get("phase", "base").lower()
-            phase_bg = _PHASE_COLORS.get(phase, "rgba(0,210,106,0.12)")
-            phase_color = _PHASE_TEXT.get(phase, "#00D26A")
+            phase_bg = _PHASE_COLORS.get(phase, "rgba(16,185,129,0.12)")
+            phase_color = _PHASE_TEXT.get(phase, "#10B981")
             focus = week.get("focus", "")
             total_km = week.get("total_distance_km", 0)
 
@@ -2816,17 +3319,44 @@ with tab_plan:
                     unsafe_allow_html=True,
                 )
 
+                # Build day dots summary
+                _day_names = ["M", "T", "W", "T", "F", "S", "S"]
+                _active_days: dict[int, str] = {}
+                for w_item in week.get("workouts", []):
+                    sd = w_item.get("scheduled_date", "")
+                    wt = w_item.get("workout_type", "rest")
+                    if sd and wt != "rest":
+                        try:
+                            dow = date.fromisoformat(sd).weekday()
+                            _active_days[dow] = _WORKOUT_COLORS.get(wt, "#607D8B")
+                        except ValueError:
+                            pass
+
+                dots_html = '<div class="pf-day-dots">'
+                for di, dl in enumerate(_day_names):
+                    if di in _active_days:
+                        dots_html += f'<div class="pf-day-letter active" style="background:{_active_days[di]};color:#0F1117;">{dl}</div>'
+                    else:
+                        dots_html += f'<div class="pf-day-letter">{dl}</div>'
+                dots_html += '</div>'
+                st.markdown(dots_html, unsafe_allow_html=True)
+
                 for w_idx, w in enumerate(week.get("workouts", [])):
                     wtype = w.get("workout_type", "rest")
                     color = _WORKOUT_COLORS.get(wtype, "#607D8B")
 
                     if wtype == "rest":
+                        _sched = w.get("scheduled_date", "")
+                        try:
+                            _day_lbl = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][date.fromisoformat(_sched).weekday()] if _sched else ""
+                        except ValueError:
+                            _day_lbl = ""
                         st.markdown(
                             f'<div class="pf-workout-item">'
-                            f'<div class="pf-workout-dot" style="background:#9E9E9E;"></div>'
+                            f'<div class="pf-workout-dot" style="background:#6B7280;"></div>'
                             f'<div class="pf-workout-info">'
-                            f'<div class="pf-workout-name" style="color:#8B92A5;">'
-                            f'{w.get("scheduled_date", "")} — Rest Day'
+                            f'<div class="pf-workout-name" style="color:#8B95AD;">'
+                            f'{_day_lbl} — Rest Day'
                             f'</div></div></div>',
                             unsafe_allow_html=True,
                         )
@@ -2838,19 +3368,24 @@ with tab_plan:
                         if purpose:
                             detail_parts.append(purpose)
                         detail = " · ".join(detail_parts)
+                        _sched = w.get("scheduled_date", "")
+                        try:
+                            _day_lbl = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][date.fromisoformat(_sched).weekday()] if _sched else ""
+                        except ValueError:
+                            _day_lbl = ""
 
                         st.markdown(
                             f'<div class="pf-workout-item">'
                             f'<div class="pf-workout-dot" style="background:{color};"></div>'
                             f'<div class="pf-workout-info">'
                             f'<div class="pf-workout-name">'
-                            f'{w.get("scheduled_date", "")} — {w["name"]}'
+                            f'{_day_lbl} — {w["name"]}'
                             f'</div>'
                             f'<div class="pf-workout-detail">{detail}</div>'
                             f'</div></div>',
                             unsafe_allow_html=True,
                         )
-                        with st.expander(f"📋 {w['name']} — Workout Structure", expanded=False):
+                        with st.expander(f"{w['name']} — Workout Structure", expanded=False):
                             workout_dict = {
                                 "name": w["name"],
                                 "workout_type": wtype,
@@ -2928,8 +3463,8 @@ with tab_calendar:
                 "title": f"✓ {act.get('name', 'Activity')} ({dist}km{pace_str})",
                 "start": start_date,
                 "allDay": True,
-                "backgroundColor": "#00D26A",
-                "borderColor": "#00D26A",
+                "backgroundColor": "#10B981",
+                "borderColor": "#10B981",
                 "editable": False,
                 "extendedProps": {
                     "source": "garmin",
@@ -2953,8 +3488,8 @@ with tab_calendar:
                         continue
                     dist = round(w.get("estimated_distance_meters", 0) / 1000, 1)
                     is_completed = w.get("completed", False)
-                    prefix = "✅" if is_completed else "📋"
-                    bg_color = "#00D26A" if is_completed else _WORKOUT_COLORS.get(wtype, "#607D8B")
+                    prefix = "✓" if is_completed else "—"
+                    bg_color = "#10B981" if is_completed else _WORKOUT_COLORS.get(wtype, "#607D8B")
                     cal_events.append({
                         "id": f"plan_w{week['week_number']}_{j}",
                         "title": f"{prefix} {w['name']} ({dist}km)",
@@ -2984,7 +3519,7 @@ with tab_calendar:
 
         if not cal_events:
             st.markdown(
-                '<p style="color:#8B92A5;text-align:center;margin:2rem 0;">'
+                '<p style="color:#8B95AD;text-align:center;margin:2rem 0;">'
                 'Click <b>Sync Activities from Garmin</b> to load your workout history, '
                 'or generate a training plan to see future workouts.</p>',
                 unsafe_allow_html=True,
@@ -2995,19 +3530,19 @@ with tab_calendar:
             with legend_cols[0]:
                 st.markdown(
                     '<div style="display:flex;flex-wrap:wrap;gap:1rem;margin-bottom:0.5rem;font-size:0.8rem;">'
-                    '<span style="color:#00D26A;">● Completed</span>'
-                    '<span style="color:#2196F3;">● Long Run</span>'
-                    '<span style="color:#4CAF50;">● Easy</span>'
-                    '<span style="color:#FF9800;">● Tempo</span>'
-                    '<span style="color:#F44336;">● Speed</span>'
+                    '<span style="color:#10B981;">● Completed</span>'
+                    '<span style="color:#0EA5E9;">● Long Run</span>'
+                    '<span style="color:#34D399;">● Easy</span>'
+                    '<span style="color:#F59E0B;">● Tempo</span>'
+                    '<span style="color:#F43F5E;">● Speed</span>'
                     '</div>',
                     unsafe_allow_html=True,
                 )
                 if plan and plan.get("accepted", False):
-                    st.caption("Drag planned workouts (📋) to reschedule · Click any event for details")
+                    st.caption("Drag planned workouts to reschedule · Click any event for details")
             with legend_cols[1]:
                 if plan and plan.get("accepted", False):
-                    if st.button("🤖 AI Review Plan", key="cal_ai_review_btn", use_container_width=True):
+                    if st.button("AI Review Plan", key="cal_ai_review_btn", use_container_width=True):
                         plan_id = plan.get("plan_id", "")
                         with st.spinner("AI is reviewing your progress..."):
                             try:
@@ -3066,19 +3601,19 @@ with tab_calendar:
                 }
 
                 cal_css = """
-                    .fc { background: #1A1D23; color: #FAFAFA; border: none; }
-                    .fc-theme-standard td, .fc-theme-standard th { border-color: #2D3139; }
-                    .fc-theme-standard .fc-scrollgrid { border-color: #2D3139; }
-                    .fc-col-header-cell { background: #242830; }
-                    .fc-col-header-cell-cushion { color: #8B92A5; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; }
-                    .fc-daygrid-day-number { color: #8B92A5; font-size: 0.8rem; }
+                    .fc { background: #0F1117; color: #E8ECF4; border: none; }
+                    .fc-theme-standard td, .fc-theme-standard th { border-color: #252A35; }
+                    .fc-theme-standard .fc-scrollgrid { border-color: #252A35; }
+                    .fc-col-header-cell { background: #1A1D2B; }
+                    .fc-col-header-cell-cushion { color: #8B95AD; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; }
+                    .fc-daygrid-day-number { color: #8B95AD; font-size: 0.8rem; }
                     .fc-day-today { background: rgba(0,210,106,0.06) !important; }
                     .fc-event { cursor: pointer; font-size: 0.72em; border-radius: 5px; padding: 1px 4px; border: none !important; }
                     .fc-event-title { font-weight: 600; }
-                    .fc-button { background: #242830 !important; border: 1px solid #3A3F4B !important; color: #FAFAFA !important; font-size: 0.8rem !important; }
-                    .fc-button:hover { background: #2D3139 !important; }
-                    .fc-button-active { background: #00D26A !important; color: #1A1D23 !important; border-color: #00D26A !important; }
-                    .fc-toolbar-title { font-size: 1rem !important; font-weight: 700; color: #FAFAFA; }
+                    .fc-button { background: #1A1D2B !important; border: 1px solid #2E3448 !important; color: #E8ECF4 !important; font-size: 0.8rem !important; }
+                    .fc-button:hover { background: #252A35 !important; }
+                    .fc-button-active { background: #10B981 !important; color: #0F1117 !important; border-color: #10B981 !important; }
+                    .fc-toolbar-title { font-size: 1rem !important; font-weight: 700; color: #E8ECF4; }
                 """
 
                 from streamlit_calendar import calendar as st_calendar
@@ -3151,8 +3686,8 @@ with tab_calendar:
                 sel = st.session_state.get("cal_selected_event")
                 if sel is None:
                     st.markdown(
-                        '<div style="display:flex;align-items:center;justify-content:center;height:400px;color:#8B92A5;text-align:center;">'
-                        '<div><div style="font-size:2rem;margin-bottom:0.5rem;">👆</div>'
+                        '<div style="display:flex;align-items:center;justify-content:center;height:400px;color:#8B95AD;text-align:center;">'
+                        '<div><div style="font-size:1rem;margin-bottom:0.5rem;color:#5C6478;">↑</div>'
                         '<div style="font-size:0.9rem;">Click an event on the calendar<br>to view details</div></div>'
                         '</div>',
                         unsafe_allow_html=True,
@@ -3165,7 +3700,7 @@ with tab_calendar:
                     if props.get("source") == "garmin":
                         st.markdown(
                             f'<div style="font-weight:700;font-size:1rem;margin-bottom:0.25rem;">✓ {ev_title}</div>'
-                            f'<div style="color:#8B92A5;font-size:0.8rem;margin-bottom:0.5rem;">{ev_date}</div>',
+                            f'<div style="color:#8B95AD;font-size:0.8rem;margin-bottom:0.5rem;">{ev_date}</div>',
                             unsafe_allow_html=True,
                         )
                         detail_data = st.session_state.get("cal_selected_detail")
@@ -3180,7 +3715,7 @@ with tab_calendar:
                             hr_text = f" · Avg HR: {props['avg_hr']} bpm" if props.get("avg_hr") else ""
                             st.markdown(
                                 f'<div class="pf-card">'
-                                f'<div style="color:#FAFAFA;">📏 {dist_km}km · ⏱ {dur_m}:{dur_s:02d}{pace_str}{hr_text}</div>'
+                                f'<div style="color:#E8ECF4;">{dist_km}km · {dur_m}:{dur_s:02d}{pace_str}{hr_text}</div>'
                                 f'</div>',
                                 unsafe_allow_html=True,
                             )
@@ -3212,8 +3747,8 @@ with tab_calendar:
                         # Show completion status header
                         if is_completed:
                             st.markdown(
-                                '<div style="background:#1B3A2A;border:1px solid #00D26A;border-radius:8px;padding:0.5rem 0.75rem;margin-bottom:0.5rem;">'
-                                '<span style="color:#00D26A;font-weight:700;">✅ Completed</span></div>',
+                                '<div style="background:#1B3A2A;border:1px solid #10B981;border-radius:8px;padding:0.5rem 0.75rem;margin-bottom:0.5rem;">'
+                                '<span style="color:#10B981;font-weight:700;">✓ Completed</span></div>',
                                 unsafe_allow_html=True,
                             )
 
@@ -3222,7 +3757,7 @@ with tab_calendar:
                             unsafe_allow_html=True,
                         )
                         st.markdown(
-                            f'<div style="color:#8B92A5;font-size:0.75rem;margin-top:0.5rem;">📅 Scheduled: {ev_date}</div>',
+                            f'<div style="color:#8B95AD;font-size:0.75rem;margin-top:0.5rem;">Scheduled: {ev_date}</div>',
                             unsafe_allow_html=True,
                         )
 
@@ -3274,55 +3809,46 @@ with tab_calendar:
                             act_aero_te = metrics.get("training_effect_aerobic")
                             act_anaero_te = metrics.get("training_effect_anaerobic")
 
-                            cards_html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:0.35rem;margin:0.5rem 0;">'
                             card_data = []
                             if act_dist:
-                                card_data.append(("Distance", f"{act_dist/1000:.1f}km", "📏"))
+                                card_data.append(("Distance", f"{act_dist/1000:.1f}", "km"))
                             if act_dur:
                                 dm, ds = divmod(int(act_dur), 60)
-                                card_data.append(("Duration", f"{dm}:{ds:02d}", "⏱"))
+                                card_data.append(("Duration", f"{dm}:{ds:02d}", ""))
                             if act_pace:
                                 pm, ps = divmod(int(act_pace), 60)
-                                card_data.append(("Avg Pace", f"{pm}:{ps:02d}/km", "🏃"))
+                                card_data.append(("Avg Pace", f"{pm}:{ps:02d}/km", ""))
                             if act_hr:
-                                card_data.append(("Avg HR", f"{int(act_hr)} bpm", "❤️"))
+                                card_data.append(("Avg HR", f"{int(act_hr)}", "bpm"))
                             if act_max_hr:
-                                card_data.append(("Max HR", f"{int(act_max_hr)} bpm", "💓"))
+                                card_data.append(("Max HR", f"{int(act_max_hr)}", "bpm"))
                             if act_cadence:
-                                card_data.append(("Cadence", f"{int(act_cadence * 2)} spm", "🦶"))
+                                card_data.append(("Cadence", f"{int(act_cadence * 2)}", "spm"))
                             if act_calories:
-                                card_data.append(("Calories", f"{int(act_calories)}", "🔥"))
+                                card_data.append(("Calories", f"{int(act_calories)}", ""))
                             if act_elevation:
-                                card_data.append(("Elevation", f"{int(act_elevation)}m", "⛰️"))
+                                card_data.append(("Elevation", f"{int(act_elevation)}", "m"))
                             if act_aero_te:
-                                card_data.append(("Aerobic TE", f"{act_aero_te:.1f}", "🫁"))
+                                card_data.append(("Aerobic TE", f"{act_aero_te:.1f}", ""))
                             if act_anaero_te:
-                                card_data.append(("Anaerobic TE", f"{act_anaero_te:.1f}", "💪"))
+                                card_data.append(("Anaerobic TE", f"{act_anaero_te:.1f}", ""))
 
-                            for label, val, icon in card_data:
-                                cards_html += (
-                                    f'<div style="background:#242830;border-radius:8px;padding:0.35rem;text-align:center;">'
-                                    f'<div style="font-size:0.6rem;color:#8B92A5;">{icon} {label}</div>'
-                                    f'<div style="font-size:0.85rem;font-weight:700;color:#FAFAFA;">{val}</div>'
-                                    f'</div>'
-                                )
-                            cards_html += '</div>'
                             if card_data:
-                                st.markdown(cards_html, unsafe_allow_html=True)
+                                st.markdown(_metrics_strip(card_data), unsafe_allow_html=True)
 
                             # ── Planned vs Actual comparison ──
                             planned_dist = props.get("estimated_distance_meters", 0)
                             planned_dur = props.get("estimated_duration_seconds", 0)
                             if planned_dist and act_dist:
                                 dist_diff = ((act_dist - planned_dist) / planned_dist) * 100
-                                dist_color = "#00D26A" if abs(dist_diff) < 15 else "#FF9800"
+                                dist_color = "#10B981" if abs(dist_diff) < 15 else "#F59E0B"
                                 comp_html = f'<span style="color:{dist_color};">Dist: {dist_diff:+.0f}%</span>'
                                 if planned_dur and act_dur:
                                     dur_diff = ((act_dur - planned_dur) / planned_dur) * 100
-                                    dur_color = "#00D26A" if abs(dur_diff) < 15 else "#FF9800"
+                                    dur_color = "#10B981" if abs(dur_diff) < 15 else "#F59E0B"
                                     comp_html += f' · <span style="color:{dur_color};">Duration: {dur_diff:+.0f}%</span>'
                                 st.markdown(
-                                    f'<div style="font-size:0.75rem;color:#8B92A5;margin-bottom:0.5rem;">vs Planned: {comp_html}</div>',
+                                    f'<div style="font-size:0.75rem;color:#8B95AD;margin-bottom:0.5rem;">vs Planned: {comp_html}</div>',
                                     unsafe_allow_html=True,
                                 )
 
@@ -3331,79 +3857,33 @@ with tab_calendar:
                             hr_zones_data = detail_data.get("hr_zones") or {}
                             laps = splits_data.get("lapDTOs") or []
                             if laps:
-                                rows_html = ""
-                                for idx, lap in enumerate(laps, 1):
-                                    lap_dist = lap.get("distance", 0)
-                                    lap_speed = lap.get("averageSpeed", 0)
-                                    lap_pace = (1000 / lap_speed) if lap_speed else 0
-                                    lap_hr = lap.get("averageHR", 0)
-                                    pace_str = _fmt_pace(lap_pace) if lap_pace else "--"
-                                    dist_str = f"{lap_dist / 1000:.2f}" if lap_dist else "--"
-                                    hr_str = f"{int(lap_hr)}" if lap_hr else "--"
-                                    rows_html += (
-                                        f'<tr style="border-bottom:1px solid #2D3139;">'
-                                        f'<td style="padding:4px 8px;text-align:center;color:#FAFAFA;">{idx}</td>'
-                                        f'<td style="padding:4px 8px;text-align:center;color:#FAFAFA;">{dist_str}</td>'
-                                        f'<td style="padding:4px 8px;text-align:center;color:#FAFAFA;">{pace_str}</td>'
-                                        f'<td style="padding:4px 8px;text-align:center;color:#FAFAFA;">{hr_str}</td>'
-                                        f'</tr>'
-                                    )
-                                table_html = (
-                                    '<div style="margin:0.5rem 0;">'
-                                    '<table style="width:100%;border-collapse:collapse;font-size:0.82rem;">'
-                                    '<thead><tr style="border-bottom:2px solid #3A3F4B;">'
-                                    '<th style="padding:4px 8px;color:#8B92A5;font-weight:600;">Split</th>'
-                                    '<th style="padding:4px 8px;color:#8B92A5;font-weight:600;">Dist (km)</th>'
-                                    '<th style="padding:4px 8px;color:#8B92A5;font-weight:600;">Pace</th>'
-                                    '<th style="padding:4px 8px;color:#8B92A5;font-weight:600;">HR</th>'
-                                    '</tr></thead><tbody>'
-                                    f'{rows_html}'
-                                    '</tbody></table></div>'
+                                st.markdown(
+                                    f'<div style="margin:0.5rem 0;">{_splits_table_html(laps)}</div>',
+                                    unsafe_allow_html=True,
                                 )
-                                st.markdown(table_html, unsafe_allow_html=True)
 
-                            # ── HR Zones chart ──
+                            # ── HR Zones ──
                             hr_list = hr_zones_data if isinstance(hr_zones_data, list) else hr_zones_data.get("hrTimeInZones", []) if isinstance(hr_zones_data, dict) else []
-                            if hr_list:
-                                import plotly.graph_objects as go
-                                zone_labels = []
-                                zone_seconds = []
-                                zone_colors_list = ["#3F51B5", "#2196F3", "#4CAF50", "#FF9800", "#F44336"]
-                                for zd in hr_list:
-                                    zn = zd.get("zoneNumber") or zd.get("zone", 0)
-                                    secs = zd.get("secsInZone", 0)
-                                    zone_labels.append(f"Z{zn}")
-                                    zone_seconds.append(secs)
-                                if any(s > 0 for s in zone_seconds):
-                                    zone_minutes = [s / 60 for s in zone_seconds]
-                                    fig_hr = go.Figure(go.Bar(
-                                        y=zone_labels, x=zone_minutes, orientation="h",
-                                        marker_color=zone_colors_list[:len(zone_labels)],
-                                        text=[_fmt_duration(s) for s in zone_seconds],
-                                        textposition="auto", textfont=dict(color="#FAFAFA", size=8),
-                                    ))
-                                    fig_hr.update_layout(
-                                        plot_bgcolor="#1A1D23", paper_bgcolor="#1A1D23", font_color="#FAFAFA",
-                                        margin=dict(l=25, r=15, t=8, b=20), height=130,
-                                        xaxis=dict(title="Time (min)", gridcolor="#2D3139", title_font=dict(size=9)),
-                                        yaxis=dict(gridcolor="#2D3139"), bargap=0.3,
-                                    )
-                                    st.plotly_chart(fig_hr, use_container_width=True, key=f"hr_zones_{ev_date}_{props.get('name','')}")
+                            if hr_list and any(zd.get("secsInZone", 0) > 0 for zd in hr_list):
+                                st.markdown(
+                                    f'<div style="margin:0.5rem 0;">{_hr_zone_bars_html(hr_list)}</div>',
+                                    unsafe_allow_html=True,
+                                )
 
                             # ── AI Analysis ──
                             analysis = props.get("completion_analysis", "")
                             if analysis:
                                 st.markdown(
-                                    f'<div class="pf-card" style="margin-top:0.5rem;border-left:3px solid #00D26A;">'
-                                    f'<div style="color:#8B92A5;font-size:0.7rem;margin-bottom:0.25rem;">🤖 AI ANALYSIS</div>'
-                                    f'<div style="color:#FAFAFA;font-size:0.82rem;">{analysis}</div>'
+                                    f'<div class="pf-card" style="margin-top:0.5rem;border:1px solid rgba(16,185,129,0.15);">'
+                                    f'<div style="color:#10B981;font-size:0.7rem;font-weight:600;margin-bottom:0.25rem;">AI ANALYSIS</div>'
+                                    f'<div style="color:#E8ECF4;font-size:0.82rem;">{analysis}</div>'
                                     f'</div>',
                                     unsafe_allow_html=True,
                                 )
                             else:
                                 wo_name = props.get("name", "")
                                 p_id = props.get("plan_id", "")
-                                if st.button("🤖 Analyze with AI", key=f"analyze_{ev_date}_{wo_name}", use_container_width=True):
+                                if st.button("Analyze with AI", key=f"analyze_{ev_date}_{wo_name}", use_container_width=True):
                                     with st.spinner("AI is analyzing your workout..."):
                                         try:
                                             r = requests.post(
@@ -3415,9 +3895,9 @@ with tab_calendar:
                                             if r.status_code == 200:
                                                 result = r.json()
                                                 st.markdown(
-                                                    f'<div class="pf-card" style="border-left:3px solid #00D26A;">'
-                                                    f'<div style="color:#8B92A5;font-size:0.7rem;margin-bottom:0.25rem;">🤖 AI ANALYSIS</div>'
-                                                    f'<div style="color:#FAFAFA;font-size:0.82rem;">{result.get("analysis", "")}</div>'
+                                                    f'<div class="pf-card" style="border:1px solid rgba(16,185,129,0.15);">'
+                                                    f'<div style="color:#10B981;font-size:0.7rem;font-weight:600;margin-bottom:0.25rem;">AI ANALYSIS</div>'
+                                                    f'<div style="color:#E8ECF4;font-size:0.82rem;">{result.get("analysis", "")}</div>'
                                                     f'</div>',
                                                     unsafe_allow_html=True,
                                                 )
@@ -3436,7 +3916,7 @@ with tab_calendar:
                             existing_rpe = props.get("user_rpe")
                             existing_notes = props.get("user_notes", "")
 
-                            st.markdown('<div style="color:#8B92A5;font-size:0.75rem;margin-bottom:0.25rem;">📝 How did it feel?</div>', unsafe_allow_html=True)
+                            st.markdown('<div style="color:#8B95AD;font-size:0.75rem;margin-bottom:0.25rem;">How did it feel?</div>', unsafe_allow_html=True)
                             rpe_val = st.slider(
                                 "Rate of Perceived Exertion",
                                 min_value=1, max_value=10,
@@ -3457,7 +3937,7 @@ with tab_calendar:
                                 height=70,
                             )
 
-                            if st.button("💾 Save & Re-analyze", key=f"feedback_{ev_date}_{wo_name}", use_container_width=True):
+                            if st.button("Save & Re-analyze", key=f"feedback_{ev_date}_{wo_name}", use_container_width=True):
                                 with st.spinner("Saving feedback and re-analyzing..."):
                                     try:
                                         r = requests.post(
@@ -3476,9 +3956,9 @@ with tab_calendar:
                                             result = r.json()
                                             st.success("Feedback saved!")
                                             st.markdown(
-                                                f'<div class="pf-card" style="border-left:3px solid #00D26A;">'
-                                                f'<div style="color:#8B92A5;font-size:0.7rem;margin-bottom:0.25rem;">🤖 UPDATED AI ANALYSIS</div>'
-                                                f'<div style="color:#FAFAFA;font-size:0.82rem;">{result.get("analysis", "")}</div>'
+                                                f'<div class="pf-card" style="border:1px solid rgba(16,185,129,0.15);">'
+                                                f'<div style="color:#10B981;font-size:0.7rem;font-weight:600;margin-bottom:0.25rem;">UPDATED AI ANALYSIS</div>'
+                                                f'<div style="color:#E8ECF4;font-size:0.82rem;">{result.get("analysis", "")}</div>'
                                                 f'</div>',
                                                 unsafe_allow_html=True,
                                             )
@@ -3504,7 +3984,7 @@ with tab_calendar:
 
                             if matching_acts:
                                 st.markdown("---")
-                                st.markdown('<div style="color:#8B92A5;font-size:0.75rem;margin-bottom:0.25rem;">🔗 Match Garmin Activity</div>', unsafe_allow_html=True)
+                                st.markdown('<div style="color:#8B95AD;font-size:0.75rem;margin-bottom:0.25rem;">Match Garmin Activity</div>', unsafe_allow_html=True)
                                 act_options = {
                                     f"{a.get('name', 'Activity')} ({round(a.get('distance_meters', 0)/1000, 1)}km)": a.get("activity_id")
                                     for a in matching_acts
@@ -3515,7 +3995,7 @@ with tab_calendar:
                                     key=f"match_sel_{ev_date}_{wo_name}",
                                     label_visibility="collapsed",
                                 )
-                                if st.button("✅ Match & Complete", key=f"match_{ev_date}_{wo_name}", use_container_width=True):
+                                if st.button("Match & Complete", key=f"match_{ev_date}_{wo_name}", use_container_width=True):
                                     act_id = act_options[selected_act]
                                     with st.spinner("Matching..."):
                                         try:
@@ -3538,7 +4018,7 @@ with tab_calendar:
                                             st.error("Cannot reach API.")
 
                         if not is_completed:
-                            if st.button("🗑 Delete Workout", key=f"del_{ev_date}_{props.get('name','')}", use_container_width=True):
+                            if st.button("Delete Workout", key=f"del_{ev_date}_{props.get('name','')}", use_container_width=True):
                                 r = requests.post(
                                     f"{API_BASE}/plan/delete-workout",
                                     json={"workout_name": props.get("name", ""), "scheduled_date": ev_date},
@@ -3562,7 +4042,7 @@ with tab_calendar:
             if ai_review:
                 st.markdown("---")
                 st.markdown(
-                    '<div style="font-weight:700;font-size:1rem;color:#00D26A;margin-bottom:0.5rem;">🤖 AI Plan Review</div>',
+                    '<div style="font-weight:700;font-size:1rem;color:#10B981;margin-bottom:0.5rem;">AI Plan Review</div>',
                     unsafe_allow_html=True,
                 )
                 st.markdown(ai_review)
@@ -3607,21 +4087,21 @@ with tab_hyrox:
         hdr_col1, hdr_col2, hdr_col3 = st.columns([3, 1, 1])
         with hdr_col1:
             st.markdown(
-                f'<div style="font-size:1.2rem;font-weight:700;color:#FF9800;margin-bottom:0.5rem;">'
-                f'🔥 HYROX Results — {hx_data.get("search_name", "")}'
-                f'<span style="color:#8B92A5;font-size:0.85rem;margin-left:12px;">'
+                f'<div style="font-size:1.2rem;font-weight:700;color:#F59E0B;margin-bottom:0.5rem;">'
+                f'HYROX Results — {hx_data.get("search_name", "")}'
+                f'<span style="color:#8B95AD;font-size:0.85rem;margin-left:12px;">'
                 f'{len(hx_data["results"])} race(s)</span></div>',
                 unsafe_allow_html=True,
             )
         with hdr_col3:
-            if st.button("🗑️ New Search", key="hyrox_clear_top_btn"):
+            if st.button("New Search", key="hyrox_clear_top_btn"):
                 requests.delete(f"{API_BASE}/hyrox/results", headers=_auth_headers(), timeout=10)
                 st.session_state.hyrox_data = None
                 st.session_state.hyrox_preview = None
                 st.session_state.hyrox_search_params = {}
                 st.rerun()
         with hdr_col2:
-            if st.button("🔄 Refresh Results", key="hyrox_refresh_btn"):
+            if st.button("Refresh Results", key="hyrox_refresh_btn"):
                 with st.spinner("Re-scraping HYROX results..."):
                     r = requests.post(f"{API_BASE}/hyrox/refresh", headers=_auth_headers(), timeout=120)
                     if r.status_code == 200:
@@ -3632,9 +4112,9 @@ with tab_hyrox:
                         st.error(f"Refresh failed: {_error_detail(r)}")
     else:
         st.markdown(
-            '<div style="font-size:1.2rem;font-weight:700;color:#FF9800;margin-bottom:0.5rem;">'
-            '🔥 HYROX Race Results</div>'
-            '<p style="color:#8B92A5;margin-bottom:1rem;">Search for your HYROX race results by name. '
+            '<div style="font-size:1.2rem;font-weight:700;color:#F59E0B;margin-bottom:0.5rem;">'
+            'HYROX Race Results</div>'
+            '<p style="color:#8B95AD;margin-bottom:1rem;">Search for your HYROX race results by name. '
             'Results are saved to your profile permanently.</p>',
             unsafe_allow_html=True,
         )
@@ -3660,7 +4140,7 @@ with tab_hyrox:
                     search_gender = st.selectbox("Gender", ["M", "F"], index=0)
                 with sc4:
                     search_div = st.selectbox("Division", ["All", "HYROX", "HYROX PRO", "Doubles", "Relay", "PRO Doubles"])
-                submitted = st.form_submit_button("🔍 Search HYROX Results", use_container_width=True)
+                submitted = st.form_submit_button("Search HYROX Results", use_container_width=True)
                 if submitted and search_surname:
                     div_map = {"All": "all", "HYROX": "hyrox", "HYROX PRO": "hyrox_pro",
                                "Doubles": "hyrox_doubles", "Relay": "hyrox_relay", "PRO Doubles": "hyrox_pro_doubles"}
@@ -3699,7 +4179,7 @@ with tab_hyrox:
 
             st.markdown(
                 f'<div style="font-size:1rem;font-weight:600;color:#E0E0E0;margin-bottom:0.5rem;">'
-                f'Found {len(preview)} race(s) matching <span style="color:#FF9800;">{display_name}</span>. '
+                f'Found {len(preview)} race(s) matching <span style="color:#F59E0B;">{display_name}</span>. '
                 f'Select the races that belong to you:</div>',
                 unsafe_allow_html=True,
             )
@@ -3721,7 +4201,7 @@ with tab_hyrox:
 
                 col_confirm, col_back = st.columns(2)
                 with col_confirm:
-                    confirmed = st.form_submit_button("✅ Import Selected Races", use_container_width=True)
+                    confirmed = st.form_submit_button("Import Selected Races", use_container_width=True)
                 with col_back:
                     go_back = st.form_submit_button("← Back to Search", use_container_width=True)
 
@@ -3799,17 +4279,13 @@ with tab_hyrox:
             # ══════════════════════════════════════════
             # RACE SUMMARY CARDS
             # ══════════════════════════════════════════
-            rc1, rc2, rc3, rc4, rc5 = st.columns(5)
-            with rc1:
-                st.markdown(_metric_card("Total Time", ana["total_time_display"], "", "orange"), unsafe_allow_html=True)
-            with rc2:
-                st.markdown(_metric_card("Running", ana["total_running_display"], f'{ana["running_pct"]}%', "blue"), unsafe_allow_html=True)
-            with rc3:
-                st.markdown(_metric_card("Stations", ana["total_stations_display"], f'{ana["station_pct"]}%', "cyan"), unsafe_allow_html=True)
-            with rc4:
-                st.markdown(_metric_card("Roxzone", ana["roxzone_display"], f'{ana["roxzone_pct"]}%', "red"), unsafe_allow_html=True)
-            with rc5:
-                st.markdown(_metric_card("Avg Run Pace", ana["avg_run_pace_display"], "", "green"), unsafe_allow_html=True)
+            st.markdown(_metrics_strip([
+                ("Total Time", ana["total_time_display"], ""),
+                ("Running", ana["total_running_display"], f'{ana["running_pct"]}%'),
+                ("Stations", ana["total_stations_display"], f'{ana["station_pct"]}%'),
+                ("Roxzone", ana["roxzone_display"], f'{ana["roxzone_pct"]}%'),
+                ("Avg Run Pace", ana["avg_run_pace_display"], ""),
+            ]), unsafe_allow_html=True)
 
             # ══════════════════════════════════════════
             # RACE WATERFALL — all segments
@@ -3823,9 +4299,9 @@ with tab_hyrox:
                 for s in split_ana:
                     is_run = s["name"].startswith("Running")
                     if is_run:
-                        wf_colors.append("#2196F3")
+                        wf_colors.append("#0EA5E9")
                     else:
-                        wf_colors.append("#FF9800")
+                        wf_colors.append("#F59E0B")
 
                 fig_wf = go.Figure()
                 fig_wf.add_trace(go.Bar(
@@ -3834,17 +4310,16 @@ with tab_hyrox:
                     marker_color=wf_colors,
                     text=[s["athlete_display"] for s in split_ana],
                     textposition="outside",
-                    textfont=dict(color="#C9CDD5", size=9),
+                    textfont=dict(color="#A0A8BE", size=9),
                     hovertemplate="%{x}: %{text}<extra></extra>",
                 ))
                 fig_wf.update_layout(
                     title="Race Segment Breakdown",
                     yaxis_title="Time (minutes)",
-                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#C9CDD4", size=11),
+                    **_PF_CHART_LAYOUT,
                     margin=dict(l=40, r=20, t=40, b=80), height=350,
-                    xaxis=dict(gridcolor="rgba(255,255,255,0.05)", tickangle=-45),
-                    yaxis=dict(gridcolor="rgba(255,255,255,0.08)"),
+                    xaxis=dict(gridcolor="rgba(148,163,194,0.06)", tickangle=-45, zeroline=False),
+                    yaxis=dict(gridcolor="rgba(148,163,194,0.08)", zeroline=False),
                 )
                 st.plotly_chart(fig_wf, use_container_width=True, key="hyrox_waterfall")
 
@@ -3856,14 +4331,14 @@ with tab_hyrox:
             if run_splits and any(s["seconds"] for s in run_splits):
                 fade = ana["fade_pct"]
                 running_class = ana["running_class"]
-                class_colors = {"Strong Compromised Runner": "#00D26A", "Moderate Drop-off": "#FF9800", "Severe Fade": "#F44336"}
-                cls_c = class_colors.get(running_class, "#8B92A5")
+                class_colors = {"Strong Compromised Runner": "#10B981", "Moderate Drop-off": "#F59E0B", "Severe Fade": "#F43F5E"}
+                cls_c = class_colors.get(running_class, "#8B95AD")
 
                 st.markdown(
                     f'<div style="display:flex;gap:12px;align-items:center;margin-bottom:8px;">'
                     f'<span style="background:{cls_c}22;color:{cls_c};padding:4px 14px;border-radius:12px;'
                     f'font-size:0.85rem;font-weight:600;">{running_class}</span>'
-                    f'<span style="color:#8B92A5;font-size:0.85rem;">Pace fade: {fade:.1f}%</span>'
+                    f'<span style="color:#8B95AD;font-size:0.85rem;">Pace fade: {fade:.1f}%</span>'
                     f'</div>',
                     unsafe_allow_html=True,
                 )
@@ -3886,17 +4361,14 @@ with tab_hyrox:
                     marker_color=run_colors,
                     text=[_hyrox_fmt_time(s) for s in run_secs],
                     textposition="outside",
-                    textfont=dict(color="#C9CDD5", size=11),
+                    textfont=dict(color="#A0A8BE", size=11),
                     hovertemplate="%{x}: %{text}/km<extra></extra>",
                 ))
                 fig_runs.update_layout(
                     title="Running Splits (8 x 1km)",
                     yaxis_title="Pace (min/km)", yaxis_autorange="reversed",
-                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#C9CDD4", size=11),
+                    **_PF_CHART_LAYOUT,
                     margin=dict(l=50, r=20, t=40, b=40), height=300,
-                    xaxis=dict(gridcolor="rgba(255,255,255,0.05)"),
-                    yaxis=dict(gridcolor="rgba(255,255,255,0.08)"),
                 )
                 st.plotly_chart(fig_runs, use_container_width=True, key="hyrox_run_splits")
 
@@ -3907,35 +4379,35 @@ with tab_hyrox:
             station_splits = [s for s in split_ana if not s["name"].startswith("Running") and s["name"] != "Roxzone_Time"]
             if station_splits:
                 st.markdown(
-                    '<div style="font-weight:600;color:#8B92A5;font-size:0.85rem;margin-bottom:6px;">'
+                    '<div style="font-weight:600;color:#8B95AD;font-size:0.85rem;margin-bottom:6px;">'
                     'Station Performance vs Benchmarks</div>',
                     unsafe_allow_html=True,
                 )
                 bench_html = (
-                    '<div style="background:#1E2028;border-radius:10px;padding:12px 16px;">'
+                    '<div style="background:#161821;border-radius:10px;padding:12px 16px;">'
                     '<table style="width:100%;border-collapse:collapse;">'
-                    '<tr style="border-bottom:1px solid #2D3139;">'
-                    '<th style="text-align:left;padding:8px;color:#8B92A5;font-size:0.78rem;">Station</th>'
-                    '<th style="text-align:center;padding:8px;color:#8B92A5;font-size:0.78rem;">Your Time</th>'
-                    '<th style="text-align:center;padding:8px;color:#8B92A5;font-size:0.78rem;">Field Avg</th>'
-                    '<th style="text-align:center;padding:8px;color:#8B92A5;font-size:0.78rem;">Top 3 Avg</th>'
-                    '<th style="text-align:center;padding:8px;color:#8B92A5;font-size:0.78rem;">vs Field</th>'
-                    '<th style="text-align:center;padding:8px;color:#8B92A5;font-size:0.78rem;">vs Top 3</th>'
+                    '<tr style="border-bottom:1px solid #252A35;">'
+                    '<th style="text-align:left;padding:8px;color:#8B95AD;font-size:0.78rem;">Station</th>'
+                    '<th style="text-align:center;padding:8px;color:#8B95AD;font-size:0.78rem;">Your Time</th>'
+                    '<th style="text-align:center;padding:8px;color:#8B95AD;font-size:0.78rem;">Field Avg</th>'
+                    '<th style="text-align:center;padding:8px;color:#8B95AD;font-size:0.78rem;">Top 3 Avg</th>'
+                    '<th style="text-align:center;padding:8px;color:#8B95AD;font-size:0.78rem;">vs Field</th>'
+                    '<th style="text-align:center;padding:8px;color:#8B95AD;font-size:0.78rem;">vs Top 3</th>'
                     '</tr>'
                 )
                 for s in station_splits:
                     gap_f = s["gap_vs_field"]
                     gap_t = s["gap_vs_top3"]
-                    f_color = "#00D26A" if gap_f < 0 else "#F44336"
-                    t_color = "#00D26A" if gap_t is not None and gap_t < 0 else "#F44336" if gap_t is not None else "#8B92A5"
+                    f_color = "#10B981" if gap_f < 0 else "#F43F5E"
+                    t_color = "#10B981" if gap_t is not None and gap_t < 0 else "#F43F5E" if gap_t is not None else "#8B95AD"
                     f_text = f'{gap_f:+.0f}s'
                     t_text = f'{gap_t:+.0f}s' if gap_t is not None else "—"
                     bench_html += (
-                        f'<tr style="border-bottom:1px solid #2D313922;">'
-                        f'<td style="padding:8px;color:#FAFAFA;font-weight:500;">{s["display"]}</td>'
-                        f'<td style="padding:8px;text-align:center;color:#FFD600;font-weight:600;">{s["athlete_display"]}</td>'
-                        f'<td style="padding:8px;text-align:center;color:#C9CDD5;">{s["field_avg_display"]}</td>'
-                        f'<td style="padding:8px;text-align:center;color:#C9CDD5;">{s["top3_avg_display"]}</td>'
+                        f'<tr style="border-bottom:1px solid #252A3522;">'
+                        f'<td style="padding:8px;color:#E8ECF4;font-weight:500;">{s["display"]}</td>'
+                        f'<td style="padding:8px;text-align:center;color:#FBBF24;font-weight:600;">{s["athlete_display"]}</td>'
+                        f'<td style="padding:8px;text-align:center;color:#A0A8BE;">{s["field_avg_display"]}</td>'
+                        f'<td style="padding:8px;text-align:center;color:#A0A8BE;">{s["top3_avg_display"]}</td>'
                         f'<td style="padding:8px;text-align:center;color:{f_color};font-weight:600;">{f_text}</td>'
                         f'<td style="padding:8px;text-align:center;color:{t_color};font-weight:600;">{t_text}</td>'
                         f'</tr>'
@@ -3949,35 +4421,35 @@ with tab_hyrox:
             if prios:
                 st.markdown("")
                 st.markdown(
-                    '<div style="font-weight:600;color:#F44336;font-size:0.85rem;margin-bottom:6px;">'
-                    '🎯 Training Priorities (Biggest Improvement Potential)</div>',
+                    '<div style="font-weight:600;color:#F43F5E;font-size:0.85rem;margin-bottom:6px;">'
+                    'Training Priorities (Biggest Improvement Potential)</div>',
                     unsafe_allow_html=True,
                 )
                 # Show top 8 priorities
                 top_prios = prios[:8]
                 prio_html = (
-                    '<div style="background:#1E2028;border-radius:10px;padding:12px 16px;">'
+                    '<div style="background:#161821;border-radius:10px;padding:12px 16px;">'
                     '<table style="width:100%;border-collapse:collapse;">'
-                    '<tr style="border-bottom:1px solid #2D3139;">'
-                    '<th style="text-align:center;padding:8px;color:#8B92A5;font-size:0.78rem;">#</th>'
-                    '<th style="text-align:left;padding:8px;color:#8B92A5;font-size:0.78rem;">Segment</th>'
-                    '<th style="text-align:center;padding:8px;color:#8B92A5;font-size:0.78rem;">Your Time</th>'
-                    '<th style="text-align:center;padding:8px;color:#8B92A5;font-size:0.78rem;">Top 3 Avg</th>'
-                    '<th style="text-align:center;padding:8px;color:#8B92A5;font-size:0.78rem;">Gap</th>'
-                    '<th style="text-align:center;padding:8px;color:#8B92A5;font-size:0.78rem;">Score</th>'
+                    '<tr style="border-bottom:1px solid #252A35;">'
+                    '<th style="text-align:center;padding:8px;color:#8B95AD;font-size:0.78rem;">#</th>'
+                    '<th style="text-align:left;padding:8px;color:#8B95AD;font-size:0.78rem;">Segment</th>'
+                    '<th style="text-align:center;padding:8px;color:#8B95AD;font-size:0.78rem;">Your Time</th>'
+                    '<th style="text-align:center;padding:8px;color:#8B95AD;font-size:0.78rem;">Top 3 Avg</th>'
+                    '<th style="text-align:center;padding:8px;color:#8B95AD;font-size:0.78rem;">Gap</th>'
+                    '<th style="text-align:center;padding:8px;color:#8B95AD;font-size:0.78rem;">Score</th>'
                     '</tr>'
                 )
-                priority_colors = ["#F44336", "#F44336", "#F44336", "#FF9800", "#FF9800", "#FFD600", "#FFD600", "#8B92A5"]
+                priority_colors = ["#F43F5E", "#F43F5E", "#F43F5E", "#F59E0B", "#F59E0B", "#FBBF24", "#FBBF24", "#8B95AD"]
                 for i, p in enumerate(top_prios):
-                    pc = priority_colors[i] if i < len(priority_colors) else "#8B92A5"
-                    t_icon = "🏃" if p["is_running"] else "💪"
+                    pc = priority_colors[i] if i < len(priority_colors) else "#8B95AD"
+                    t_icon = "R" if p["is_running"] else "S"
                     prio_html += (
-                        f'<tr style="border-bottom:1px solid #2D313922;">'
+                        f'<tr style="border-bottom:1px solid #252A3522;">'
                         f'<td style="padding:8px;text-align:center;color:{pc};font-weight:700;">#{p["rank"]}</td>'
-                        f'<td style="padding:8px;color:#FAFAFA;font-weight:500;">{t_icon} {p["display"]}</td>'
-                        f'<td style="padding:8px;text-align:center;color:#FFD600;">{p["athlete_display"]}</td>'
-                        f'<td style="padding:8px;text-align:center;color:#C9CDD5;">{p["top3_avg_display"]}</td>'
-                        f'<td style="padding:8px;text-align:center;color:#F44336;font-weight:600;">+{p["gap_seconds"]:.0f}s</td>'
+                        f'<td style="padding:8px;color:#E8ECF4;font-weight:500;">{t_icon} {p["display"]}</td>'
+                        f'<td style="padding:8px;text-align:center;color:#FBBF24;">{p["athlete_display"]}</td>'
+                        f'<td style="padding:8px;text-align:center;color:#A0A8BE;">{p["top3_avg_display"]}</td>'
+                        f'<td style="padding:8px;text-align:center;color:#F43F5E;font-weight:600;">+{p["gap_seconds"]:.0f}s</td>'
                         f'<td style="padding:8px;text-align:center;color:{pc};font-weight:600;">{p["priority_score"]:.1f}</td>'
                         f'</tr>'
                     )
@@ -3990,9 +4462,9 @@ with tab_hyrox:
             if prios:
                 st.markdown("")
                 st.markdown(
-                    '<div style="font-weight:600;color:#AB47BC;font-size:0.85rem;margin-bottom:6px;">'
-                    '🤖 AI Improvement Plan</div>'
-                    '<p style="color:#8B92A5;font-size:0.8rem;margin-bottom:8px;">'
+                    '<div style="font-weight:600;color:#8B5CF6;font-size:0.85rem;margin-bottom:6px;">'
+                    'AI Improvement Plan</div>'
+                    '<p style="color:#8B95AD;font-size:0.8rem;margin-bottom:8px;">'
                     'Ask the AI coach to create a targeted training plan to improve your weakest areas.</p>',
                     unsafe_allow_html=True,
                 )
@@ -4029,7 +4501,7 @@ with tab_hyrox:
                         if r_coach.status_code == 200:
                             plan_reply = r_coach.json().get("reply", "")
                             st.markdown(
-                                f'<div style="background:#1E2028;border:1px solid #AB47BC44;border-radius:10px;'
+                                f'<div style="background:#161821;border:1px solid #8B5CF644;border-radius:10px;'
                                 f'padding:16px;margin-top:8px;color:#E0E0E0;font-size:0.9rem;line-height:1.6;">'
                                 f'{plan_reply}</div>',
                                 unsafe_allow_html=True,
@@ -4043,8 +4515,8 @@ with tab_hyrox:
         if len(results) >= 2:
             st.markdown("")
             st.markdown(
-                '<div style="font-weight:600;color:#8B92A5;font-size:0.85rem;margin-bottom:6px;">'
-                '📈 Race History</div>',
+                '<div style="font-weight:600;color:#8B95AD;font-size:0.85rem;margin-bottom:6px;">'
+                'Race History</div>',
                 unsafe_allow_html=True,
             )
             try:
@@ -4056,27 +4528,27 @@ with tab_hyrox:
                     if races_data:
                         # Race summary table
                         hist_html = (
-                            '<div style="background:#1E2028;border-radius:10px;padding:12px 16px;margin-bottom:1rem;">'
+                            '<div style="background:#161821;border-radius:10px;padding:12px 16px;margin-bottom:1rem;">'
                             '<table style="width:100%;border-collapse:collapse;">'
-                            '<tr style="border-bottom:1px solid #2D3139;">'
-                            '<th style="text-align:center;padding:8px;color:#8B92A5;font-size:0.78rem;">#</th>'
-                            '<th style="text-align:left;padding:8px;color:#8B92A5;font-size:0.78rem;">Event</th>'
-                            '<th style="text-align:center;padding:8px;color:#8B92A5;font-size:0.78rem;">Division</th>'
-                            '<th style="text-align:center;padding:8px;color:#8B92A5;font-size:0.78rem;">Total Time</th>'
-                            '<th style="text-align:center;padding:8px;color:#8B92A5;font-size:0.78rem;">Rank</th>'
-                            '<th style="text-align:center;padding:8px;color:#8B92A5;font-size:0.78rem;">Fade %</th>'
+                            '<tr style="border-bottom:1px solid #252A35;">'
+                            '<th style="text-align:center;padding:8px;color:#8B95AD;font-size:0.78rem;">#</th>'
+                            '<th style="text-align:left;padding:8px;color:#8B95AD;font-size:0.78rem;">Event</th>'
+                            '<th style="text-align:center;padding:8px;color:#8B95AD;font-size:0.78rem;">Division</th>'
+                            '<th style="text-align:center;padding:8px;color:#8B95AD;font-size:0.78rem;">Total Time</th>'
+                            '<th style="text-align:center;padding:8px;color:#8B95AD;font-size:0.78rem;">Rank</th>'
+                            '<th style="text-align:center;padding:8px;color:#8B95AD;font-size:0.78rem;">Fade %</th>'
                             '</tr>'
                         )
                         for rd in races_data:
-                            fade_c = "#00D26A" if rd["fade_pct"] < 8 else "#FF9800" if rd["fade_pct"] < 15 else "#F44336"
+                            fade_c = "#10B981" if rd["fade_pct"] < 8 else "#F59E0B" if rd["fade_pct"] < 15 else "#F43F5E"
                             event_label = rd.get("event_date") or rd["city"]
                             hist_html += (
-                                f'<tr style="border-bottom:1px solid #2D313922;">'
-                                f'<td style="padding:8px;text-align:center;color:#8B92A5;">{rd["index"]}</td>'
-                                f'<td style="padding:8px;color:#FAFAFA;font-weight:500;">{event_label}</td>'
-                                f'<td style="padding:8px;text-align:center;color:#C9CDD5;">{rd["division"]}</td>'
-                                f'<td style="padding:8px;text-align:center;color:#FFD600;font-weight:600;">{rd["total_display"]}</td>'
-                                f'<td style="padding:8px;text-align:center;color:#C9CDD5;">{rd["rank"]}</td>'
+                                f'<tr style="border-bottom:1px solid #252A3522;">'
+                                f'<td style="padding:8px;text-align:center;color:#8B95AD;">{rd["index"]}</td>'
+                                f'<td style="padding:8px;color:#E8ECF4;font-weight:500;">{event_label}</td>'
+                                f'<td style="padding:8px;text-align:center;color:#A0A8BE;">{rd["division"]}</td>'
+                                f'<td style="padding:8px;text-align:center;color:#FBBF24;font-weight:600;">{rd["total_display"]}</td>'
+                                f'<td style="padding:8px;text-align:center;color:#A0A8BE;">{rd["rank"]}</td>'
                                 f'<td style="padding:8px;text-align:center;color:{fade_c};">{rd["fade_pct"]:.1f}%</td>'
                                 f'</tr>'
                             )
@@ -4092,22 +4564,20 @@ with tab_hyrox:
                                 x=trend_labels,
                                 y=[t / 60 for t in total_trend],
                                 mode="lines+markers",
-                                line=dict(color="#FF9800", width=3),
-                                marker=dict(size=10, color="#FF9800"),
+                                line=dict(color="#F59E0B", width=3),
+                                marker=dict(size=10, color="#F59E0B"),
                                 hovertemplate="%{x}<br>%{y:.1f} min<extra></extra>",
                             ))
                             improving = prog.get("improving", False)
                             trend_title = "Total Time Trend"
                             if improving:
-                                trend_title += " 📈 Improving!"
+                                trend_title += " Improving!"
                             fig_trend.update_layout(
                                 title=trend_title,
                                 yaxis_title="Total Time (min)", yaxis_autorange="reversed",
-                                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                                font=dict(color="#C9CDD4", size=11),
+                                **_PF_CHART_LAYOUT,
                                 margin=dict(l=50, r=20, t=40, b=50), height=300,
-                                xaxis=dict(gridcolor="rgba(255,255,255,0.05)", tickangle=-30),
-                                yaxis=dict(gridcolor="rgba(255,255,255,0.08)"),
+                                xaxis=dict(gridcolor="rgba(148,163,194,0.06)", tickangle=-30, zeroline=False),
                             )
                             st.plotly_chart(fig_trend, use_container_width=True, key="hyrox_trend")
 
@@ -4116,11 +4586,11 @@ with tab_hyrox:
                         if best:
                             best_event = best.get("event_date") or best.get("city", "")
                             st.markdown(
-                                f'<div style="background:#0D2818;border:1px solid #00D26A;border-radius:8px;'
+                                f'<div style="background:#0D2818;border:1px solid #10B981;border-radius:8px;'
                                 f'padding:10px 16px;margin-top:8px;">'
-                                f'<span style="color:#00D26A;font-weight:600;">🏆 Personal Best:</span> '
-                                f'<span style="color:#FAFAFA;">{best["total_display"]}</span> '
-                                f'<span style="color:#8B92A5;">at {best_event}</span>'
+                                f'<span style="color:#10B981;font-weight:600;">Personal Best:</span> '
+                                f'<span style="color:#E8ECF4;">{best["total_display"]}</span> '
+                                f'<span style="color:#8B95AD;">at {best_event}</span>'
                                 f'</div>',
                                 unsafe_allow_html=True,
                             )
@@ -4132,28 +4602,28 @@ with tab_hyrox:
                         if station_cmp and len(races_data) >= 2:
                             st.markdown("")
                             st.markdown(
-                                '<div style="font-weight:600;color:#8B92A5;font-size:0.85rem;margin-bottom:6px;">'
-                                '🔄 Station Comparison Across Races</div>',
+                                '<div style="font-weight:600;color:#8B95AD;font-size:0.85rem;margin-bottom:6px;">'
+                                'Station Comparison Across Races</div>',
                                 unsafe_allow_html=True,
                             )
 
                             # Build comparison table
                             event_labels = [rd.get("event_date") or rd["city"] for rd in races_data]
                             cmp_html = (
-                                '<div style="background:#1E2028;border-radius:10px;padding:12px 16px;overflow-x:auto;">'
+                                '<div style="background:#161821;border-radius:10px;padding:12px 16px;overflow-x:auto;">'
                                 '<table style="width:100%;border-collapse:collapse;">'
-                                '<tr style="border-bottom:1px solid #2D3139;">'
-                                '<th style="text-align:left;padding:8px;color:#8B92A5;font-size:0.78rem;">Segment</th>'
+                                '<tr style="border-bottom:1px solid #252A35;">'
+                                '<th style="text-align:left;padding:8px;color:#8B95AD;font-size:0.78rem;">Segment</th>'
                             )
                             for ev in event_labels:
-                                cmp_html += f'<th style="text-align:center;padding:8px;color:#8B92A5;font-size:0.78rem;">{ev}</th>'
-                            cmp_html += '<th style="text-align:center;padding:8px;color:#8B92A5;font-size:0.78rem;">Change</th>'
+                                cmp_html += f'<th style="text-align:center;padding:8px;color:#8B95AD;font-size:0.78rem;">{ev}</th>'
+                            cmp_html += '<th style="text-align:center;padding:8px;color:#8B95AD;font-size:0.78rem;">Change</th>'
                             cmp_html += '</tr>'
 
                             for sc in station_cmp:
-                                icon = "🏃" if sc["is_running"] else "💪"
-                                cmp_html += f'<tr style="border-bottom:1px solid #2D313922;">'
-                                cmp_html += f'<td style="padding:8px;color:#FAFAFA;font-weight:500;">{icon} {sc["display"]}</td>'
+                                icon = "R" if sc["is_running"] else "S"
+                                cmp_html += f'<tr style="border-bottom:1px solid #252A3522;">'
+                                cmp_html += f'<td style="padding:8px;color:#E8ECF4;font-weight:500;">{icon} {sc["display"]}</td>'
 
                                 # Per-race times — highlight best in green
                                 race_times = sc["times"]
@@ -4162,24 +4632,24 @@ with tab_hyrox:
 
                                 for t in race_times:
                                     if t["seconds"] is None:
-                                        cmp_html += '<td style="padding:8px;text-align:center;color:#8B92A5;">—</td>'
+                                        cmp_html += '<td style="padding:8px;text-align:center;color:#8B95AD;">—</td>'
                                     elif t["seconds"] == best_sec:
-                                        cmp_html += f'<td style="padding:8px;text-align:center;color:#00D26A;font-weight:600;">{t["display"]}</td>'
+                                        cmp_html += f'<td style="padding:8px;text-align:center;color:#10B981;font-weight:600;">{t["display"]}</td>'
                                     else:
-                                        cmp_html += f'<td style="padding:8px;text-align:center;color:#C9CDD5;">{t["display"]}</td>'
+                                        cmp_html += f'<td style="padding:8px;text-align:center;color:#A0A8BE;">{t["display"]}</td>'
 
                                 # Improvement column
                                 imp = sc.get("improvement_seconds")
                                 if imp is not None and abs(imp) >= 1:
                                     if imp > 0:
-                                        imp_c = "#00D26A"
+                                        imp_c = "#10B981"
                                         imp_text = f"-{int(imp)}s"
                                     else:
-                                        imp_c = "#F44336"
+                                        imp_c = "#F43F5E"
                                         imp_text = f"+{int(abs(imp))}s"
                                     cmp_html += f'<td style="padding:8px;text-align:center;color:{imp_c};font-weight:600;">{imp_text}</td>'
                                 else:
-                                    cmp_html += '<td style="padding:8px;text-align:center;color:#8B92A5;">—</td>'
+                                    cmp_html += '<td style="padding:8px;text-align:center;color:#8B95AD;">—</td>'
                                 cmp_html += '</tr>'
 
                             cmp_html += '</table></div>'
@@ -4190,7 +4660,7 @@ with tab_hyrox:
                             if station_only:
                                 st.markdown("")
                                 fig_cmp = go.Figure()
-                                bar_colors = ["#FF9800", "#2196F3", "#00D26A", "#AB47BC", "#F44336", "#FFD600"]
+                                bar_colors = ["#F59E0B", "#0EA5E9", "#10B981", "#8B5CF6", "#F43F5E", "#FBBF24"]
                                 for ri, rd in enumerate(races_data):
                                     race_label = rd.get("event_date") or rd["city"]
                                     y_vals = []
@@ -4204,18 +4674,17 @@ with tab_hyrox:
                                         marker_color=bar_colors[ri % len(bar_colors)],
                                         text=[sc["times"][ri]["display"] if ri < len(sc["times"]) else "—" for sc in station_only],
                                         textposition="outside",
-                                        textfont=dict(color="#C9CDD5", size=9),
+                                        textfont=dict(color="#A0A8BE", size=9),
                                     ))
                                 fig_cmp.update_layout(
                                     title="Station Times: Race-by-Race Comparison",
                                     yaxis_title="Time (min)",
                                     barmode="group",
-                                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                                    font=dict(color="#C9CDD4", size=11),
+                                    **_PF_CHART_LAYOUT,
                                     margin=dict(l=50, r=20, t=40, b=80), height=380,
-                                    xaxis=dict(gridcolor="rgba(255,255,255,0.05)", tickangle=-30),
-                                    yaxis=dict(gridcolor="rgba(255,255,255,0.08)"),
-                                    legend=dict(font=dict(color="#8B92A5")),
+                                    xaxis=dict(gridcolor="rgba(148,163,194,0.06)", tickangle=-30, zeroline=False),
+                                    yaxis=dict(gridcolor="rgba(148,163,194,0.08)", zeroline=False),
+                                    legend=dict(font=dict(color="#8B95AD")),
                                 )
                                 st.plotly_chart(fig_cmp, use_container_width=True, key="hyrox_station_cmp")
             except Exception:
@@ -4238,9 +4707,9 @@ with tab_hyrox:
         if sus_pace and pred_splits:
             st.markdown("")
             st.markdown(
-                '<div style="font-size:1.05rem;font-weight:700;color:#FF9800;margin-bottom:0.5rem;">'
-                '🏃 Running Performance Predictions</div>'
-                '<div style="font-size:0.8rem;color:#8B92A5;margin-bottom:0.8rem;">'
+                '<div style="font-size:1.05rem;font-weight:700;color:#F59E0B;margin-bottom:0.5rem;">'
+                'Running Performance Predictions</div>'
+                '<div style="font-size:0.8rem;color:#8B95AD;margin-bottom:0.8rem;">'
                 'Estimated from your Garmin fitness data (VO2max, threshold, training volume)</div>',
                 unsafe_allow_html=True,
             )
@@ -4259,7 +4728,7 @@ with tab_hyrox:
 
         # ── "Clear Results" button ──
         st.markdown("")
-        if st.button("🗑️ Clear saved results and search again", key="hyrox_clear_btn"):
+        if st.button("Clear saved results and search again", key="hyrox_clear_btn"):
             requests.delete(f"{API_BASE}/hyrox/results", headers=_auth_headers(), timeout=10)
             st.session_state.hyrox_data = None
             st.session_state.hyrox_preview = None
@@ -4272,7 +4741,7 @@ with tab_hyrox:
 with tab_coach:
     st.markdown('<div class="pf-section-header">AI Running Coach</div>', unsafe_allow_html=True)
     st.markdown(
-        '<p style="color:#8B92A5;margin-bottom:1rem;">Ask questions about your training and get personalized advice.</p>',
+        '<p style="color:#8B95AD;margin-bottom:1rem;">Ask questions about your training and get personalized advice.</p>',
         unsafe_allow_html=True,
     )
 
@@ -4312,7 +4781,7 @@ with tab_user_settings:
             new_name = st.text_input("Name", value=st.session_state.user_name or "", key="up_name")
             new_email = st.text_input("Email", value=st.session_state.user_email or "", key="up_email")
             st.markdown(
-                '<div style="margin-top:0.5rem;font-size:0.8rem;color:#8B92A5;">'
+                '<div style="margin-top:0.5rem;font-size:0.8rem;color:#8B95AD;">'
                 "Leave blank to keep current password</div>",
                 unsafe_allow_html=True,
             )
@@ -4424,10 +4893,10 @@ with tab_user_settings:
                         st.error("Cannot reach API.")
         else:
             st.markdown(
-                '<div style="background:#00D26A22;border:1px solid #00D26A44;'
+                '<div style="background:#10B98122;border:1px solid #10B98144;'
                 "border-radius:12px;padding:1.5rem;text-align:center;margin-bottom:1rem;\">"
                 '<div style="font-size:2rem;margin-bottom:0.5rem;">⌚</div>'
-                '<div style="color:#00D26A;font-weight:600;font-size:1.1rem;">Connected</div>'
+                '<div style="color:#10B981;font-weight:600;font-size:1.1rem;">Connected</div>'
                 "</div>",
                 unsafe_allow_html=True,
             )
@@ -4469,7 +4938,7 @@ with tab_user_settings:
     sent_reqs = friends_data.get("sent", [])
 
     # Search and add friends
-    search_q = st.text_input("🔍 Find people", placeholder="Search by name or email...", key="friend_search")
+    search_q = st.text_input("Find people", placeholder="Search by name or email...", key="friend_search")
     if search_q and len(search_q) >= 2:
         try:
             sr = requests.get(
@@ -4489,20 +4958,20 @@ with tab_user_settings:
             with col_info:
                 st.markdown(
                     f'<div style="padding:0.4rem 0;">'
-                    f'<span style="color:#FAFAFA;font-weight:500;">{su["name"]}</span>'
-                    f'<span style="color:#8B92A5;font-size:0.85rem;margin-left:0.5rem;">{su["email"]}</span>'
+                    f'<span style="color:#E8ECF4;font-weight:500;">{su["name"]}</span>'
+                    f'<span style="color:#8B95AD;font-size:0.85rem;margin-left:0.5rem;">{su["email"]}</span>'
                     f'</div>',
                     unsafe_allow_html=True,
                 )
             with col_action:
                 if su["id"] in existing_friend_ids:
-                    st.markdown('<span style="color:#00D26A;font-size:0.85rem;">✅ Friends</span>',
+                    st.markdown('<span style="color:#10B981;font-size:0.85rem;">✓ Friends</span>',
                                 unsafe_allow_html=True)
                 elif su["id"] in pending_sent_ids:
-                    st.markdown('<span style="color:#FFB800;font-size:0.85rem;">⏳ Pending</span>',
+                    st.markdown('<span style="color:#FFB800;font-size:0.85rem;">Pending</span>',
                                 unsafe_allow_html=True)
                 elif su["id"] in pending_recv_ids:
-                    st.markdown('<span style="color:#4DA6FF;font-size:0.85rem;">📩 Accept below</span>',
+                    st.markdown('<span style="color:#4DA6FF;font-size:0.85rem;">Accept below</span>',
                                 unsafe_allow_html=True)
                 else:
                     if st.button("Add", key=f"add_friend_{su['id']}", use_container_width=True):
@@ -4524,12 +4993,12 @@ with tab_user_settings:
             col_info, col_accept, col_reject = st.columns([3, 1, 1])
             with col_info:
                 st.markdown(
-                    f'<div style="padding:0.3rem 0;color:#FAFAFA;">{pr["name"]}'
-                    f'<span style="color:#8B92A5;font-size:0.8rem;margin-left:0.4rem;">{pr["email"]}</span></div>',
+                    f'<div style="padding:0.3rem 0;color:#E8ECF4;">{pr["name"]}'
+                    f'<span style="color:#8B95AD;font-size:0.8rem;margin-left:0.4rem;">{pr["email"]}</span></div>',
                     unsafe_allow_html=True,
                 )
             with col_accept:
-                if st.button("✅", key=f"accept_{pr['friendship_id']}", use_container_width=True):
+                if st.button("✓", key=f"accept_{pr['friendship_id']}", use_container_width=True):
                     try:
                         requests.post(
                             f"{API_BASE}/friends/respond",
@@ -4540,7 +5009,7 @@ with tab_user_settings:
                     except requests.ConnectionError:
                         st.error("Cannot reach API")
             with col_reject:
-                if st.button("❌", key=f"reject_{pr['friendship_id']}", use_container_width=True):
+                if st.button("✗", key=f"reject_{pr['friendship_id']}", use_container_width=True):
                     try:
                         requests.post(
                             f"{API_BASE}/friends/respond",
@@ -4561,11 +5030,11 @@ with tab_user_settings:
                 since = fr.get("friends_since", "")[:10]
                 st.markdown(
                     f'<div style="display:flex;align-items:center;gap:0.6rem;padding:0.4rem 0;">'
-                    f'<div style="width:32px;height:32px;border-radius:50%;background:#00D26A33;'
-                    f'display:flex;align-items:center;justify-content:center;color:#00D26A;'
+                    f'<div style="width:32px;height:32px;border-radius:50%;background:#10B98133;'
+                    f'display:flex;align-items:center;justify-content:center;color:#10B981;'
                     f'font-weight:700;font-size:0.8rem;">{fr_initials}</div>'
-                    f'<div><span style="color:#FAFAFA;font-weight:500;">{fr["name"]}</span>'
-                    f'<span style="color:#8B92A5;font-size:0.75rem;margin-left:0.3rem;">since {since}</span>'
+                    f'<div><span style="color:#E8ECF4;font-weight:500;">{fr["name"]}</span>'
+                    f'<span style="color:#8B95AD;font-size:0.75rem;margin-left:0.3rem;">since {since}</span>'
                     f'</div></div>',
                     unsafe_allow_html=True,
                 )
@@ -4582,7 +5051,7 @@ with tab_user_settings:
                         st.error("Cannot reach API")
     elif not pending_reqs:
         st.markdown(
-            '<div style="text-align:center;padding:1.5rem;color:#8B92A5;">'
+            '<div style="text-align:center;padding:1.5rem;color:#8B95AD;">'
             "No friends yet — search for people above to connect!</div>",
             unsafe_allow_html=True,
         )
@@ -4624,7 +5093,7 @@ if tab_admin is not None:
 
         if not users:
             st.markdown(
-                '<p style="color:#8B92A5;text-align:center;margin:2rem 0;">No users found.</p>',
+                '<p style="color:#8B95AD;text-align:center;margin:2rem 0;">No users found.</p>',
                 unsafe_allow_html=True,
             )
         else:
@@ -4659,7 +5128,7 @@ if tab_admin is not None:
                                 <span style="font-weight:700;font-size:1rem;">{u['name']}</span>
                                 <span class="pf-badge {badge_cls}">{badge_label}</span>
                             </div>
-                            <div style="color:#8B92A5;font-size:0.82rem;">
+                            <div style="color:#8B95AD;font-size:0.82rem;">
                                 {u['email']}
                                 {f" · Garmin: {u['garmin_email']}" if u.get('garmin_email') else ""}
                             </div>""",
