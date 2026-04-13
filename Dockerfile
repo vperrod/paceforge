@@ -3,7 +3,8 @@ FROM paceforgeacr.azurecr.io/oryx-python:3.12
 WORKDIR /app
 
 # Install system deps for bcrypt, curl_cffi, and git (for pip git deps)
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN rm -f /etc/apt/sources.list.d/microsoft-prod.list \
+    && apt-get update && apt-get install -y --no-install-recommends \
     gcc libffi-dev supervisor git nginx \
     && rm -rf /var/lib/apt/lists/*
 
