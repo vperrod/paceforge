@@ -19,6 +19,7 @@ COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Copy nginx config
 COPY nginx.conf /etc/nginx/nginx.conf
+RUN rm -f /etc/nginx/sites-enabled/default /etc/nginx/conf.d/default.conf
 
 # Create data directory for SQLite + Garmin tokens
 # On Azure App Service, /home is the only persistent volume
