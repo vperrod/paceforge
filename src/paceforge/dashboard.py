@@ -949,6 +949,13 @@ _PF_CHART_LAYOUT = dict(
 )
 
 
+def _pf_layout(**overrides):
+    """Return chart layout dict with design-system defaults, accepting overrides."""
+    merged = dict(_PF_CHART_LAYOUT)
+    merged.update(overrides)
+    return merged
+
+
 # ═══════════════════════════════════════════════════════════════════════
 # HELPER: HTML rendering functions
 # ═══════════════════════════════════════════════════════════════════════
@@ -1407,12 +1414,11 @@ def _render_garmin_activity_detail(detail: dict) -> None:
                 ),
                 secondary_y=True,
             )
-            fig.update_layout(
-                **_PF_CHART_LAYOUT,
+            fig.update_layout(**_pf_layout(
                 margin=dict(l=40, r=40, t=25, b=35), height=240,
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(size=10, color="#8B95AD")),
                 bargap=0.3,
-            )
+            ))
             fig.update_yaxes(autorange="reversed", title_text="Pace (s/km)", gridcolor="rgba(148,163,194,0.08)", secondary_y=False)
             fig.update_yaxes(title_text="HR (bpm)", gridcolor="rgba(148,163,194,0.08)", secondary_y=True)
             fig.update_xaxes(title_text="Split", gridcolor="rgba(148,163,194,0.06)", dtick=1)
@@ -1425,13 +1431,12 @@ def _render_garmin_activity_detail(detail: dict) -> None:
                 text=[_fmt_pace(p) for p in paces], textposition="outside",
                 textfont=dict(color="#E8ECF4", size=9),
             ))
-            fig.update_layout(
-                **_PF_CHART_LAYOUT,
+            fig.update_layout(**_pf_layout(
                 margin=dict(l=40, r=20, t=25, b=35), height=220,
                 yaxis=dict(autorange="reversed", title="Pace (s/km)", gridcolor="rgba(148,163,194,0.08)", zeroline=False),
                 xaxis=dict(gridcolor="rgba(148,163,194,0.06)", dtick=1, title="Split", zeroline=False),
                 bargap=0.3,
-            )
+            ))
             st.plotly_chart(fig, use_container_width=True, key="splits_chart")
 
     # ── HR Zones ──
@@ -2241,15 +2246,14 @@ with tab_profile:
                         if pace_min - 0.5 <= val <= pace_max + 0.5:
                             tick_vals.append(val)
                             tick_text.append(f"{m}:{s:02d}")
-                fig_scatter.update_layout(
+                fig_scatter.update_layout(**_pf_layout(
                     title="Cardiac Efficiency: Pace vs Heart Rate",
                     xaxis_title="Pace (min/km)", yaxis_title="Avg HR (bpm)",
-                    **_PF_CHART_LAYOUT,
                     margin=dict(l=50, r=20, t=40, b=40), height=300,
                     xaxis=dict(gridcolor="rgba(148,163,194,0.06)", autorange="reversed",
                                tickvals=tick_vals, ticktext=tick_text, zeroline=False),
                     yaxis=dict(gridcolor="rgba(148,163,194,0.08)", zeroline=False),
-                )
+                ))
                 st.plotly_chart(fig_scatter, use_container_width=True, key="scatter_pace_hr")
 
         # ═════════════════════════════════════════════════════════════
@@ -2535,12 +2539,11 @@ with tab_profile:
                     fill="tozeroy", fillcolor="rgba(255,152,0,0.1)",
                     hovertemplate="%{x}<br>%{y:.2f} min/km<extra></extra>",
                 ))
-                fig_fr.update_layout(
+                fig_fr.update_layout(**_pf_layout(
                     title="Fatigue Resistance Curve (Pace vs Distance)",
                     yaxis_title="Pace (min/km)", yaxis_autorange="reversed",
-                    **_PF_CHART_LAYOUT,
                     margin=dict(l=50, r=20, t=40, b=40), height=300,
-                )
+                ))
                 st.plotly_chart(fig_fr, use_container_width=True, key="fatigue_curve")
 
         # ═════════════════════════════════════════════════════════════
@@ -2657,7 +2660,7 @@ with tab_profile:
                 sorted_acts = sorted(acts, key=lambda a: a.get("start_time", ""))
                 dates = [a.get("start_time", "")[:10] for a in sorted_acts]
 
-                chart_layout = dict(**_PF_CHART_LAYOUT)
+                chart_layout = _pf_layout()
 
                 trend_col1, trend_col2 = st.columns(2)
 
@@ -4313,14 +4316,13 @@ with tab_hyrox:
                     textfont=dict(color="#A0A8BE", size=9),
                     hovertemplate="%{x}: %{text}<extra></extra>",
                 ))
-                fig_wf.update_layout(
+                fig_wf.update_layout(**_pf_layout(
                     title="Race Segment Breakdown",
                     yaxis_title="Time (minutes)",
-                    **_PF_CHART_LAYOUT,
                     margin=dict(l=40, r=20, t=40, b=80), height=350,
                     xaxis=dict(gridcolor="rgba(148,163,194,0.06)", tickangle=-45, zeroline=False),
                     yaxis=dict(gridcolor="rgba(148,163,194,0.08)", zeroline=False),
-                )
+                ))
                 st.plotly_chart(fig_wf, use_container_width=True, key="hyrox_waterfall")
 
             # ══════════════════════════════════════════
@@ -4364,12 +4366,11 @@ with tab_hyrox:
                     textfont=dict(color="#A0A8BE", size=11),
                     hovertemplate="%{x}: %{text}/km<extra></extra>",
                 ))
-                fig_runs.update_layout(
+                fig_runs.update_layout(**_pf_layout(
                     title="Running Splits (8 x 1km)",
                     yaxis_title="Pace (min/km)", yaxis_autorange="reversed",
-                    **_PF_CHART_LAYOUT,
                     margin=dict(l=50, r=20, t=40, b=40), height=300,
-                )
+                ))
                 st.plotly_chart(fig_runs, use_container_width=True, key="hyrox_run_splits")
 
             # ══════════════════════════════════════════
@@ -4572,13 +4573,12 @@ with tab_hyrox:
                             trend_title = "Total Time Trend"
                             if improving:
                                 trend_title += " Improving!"
-                            fig_trend.update_layout(
+                            fig_trend.update_layout(**_pf_layout(
                                 title=trend_title,
                                 yaxis_title="Total Time (min)", yaxis_autorange="reversed",
-                                **_PF_CHART_LAYOUT,
                                 margin=dict(l=50, r=20, t=40, b=50), height=300,
                                 xaxis=dict(gridcolor="rgba(148,163,194,0.06)", tickangle=-30, zeroline=False),
-                            )
+                            ))
                             st.plotly_chart(fig_trend, use_container_width=True, key="hyrox_trend")
 
                         # Best race highlight
@@ -4676,16 +4676,15 @@ with tab_hyrox:
                                         textposition="outside",
                                         textfont=dict(color="#A0A8BE", size=9),
                                     ))
-                                fig_cmp.update_layout(
+                                fig_cmp.update_layout(**_pf_layout(
                                     title="Station Times: Race-by-Race Comparison",
                                     yaxis_title="Time (min)",
                                     barmode="group",
-                                    **_PF_CHART_LAYOUT,
                                     margin=dict(l=50, r=20, t=40, b=80), height=380,
                                     xaxis=dict(gridcolor="rgba(148,163,194,0.06)", tickangle=-30, zeroline=False),
                                     yaxis=dict(gridcolor="rgba(148,163,194,0.08)", zeroline=False),
                                     legend=dict(font=dict(color="#8B95AD")),
-                                )
+                                ))
                                 st.plotly_chart(fig_cmp, use_container_width=True, key="hyrox_station_cmp")
             except Exception:
                 pass
