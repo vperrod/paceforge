@@ -28,6 +28,7 @@ from paceforge.models.plan import (
 )
 from paceforge.models.profile import (
     HRZone,
+    PersonalRecord,
     RacePrediction,
     RecentActivity,
     UserFitnessProfile,
@@ -80,8 +81,58 @@ class GarminClient:
         """Submit the MFA code to complete authentication."""
         if self._client is None:
             raise RuntimeError("Call login() first before completing MFA.")
-        self._client.resume_login(self._mfa_state or {}, mfa_code)
+
+        inner = self._client.client  # the inner Client instance
+
+        # Ensure the tokenstore path is set so tokens persist after MFA
+        if self._token_dir and not getattr(inner, '_tokenstore_path', None):
+            inner._tokenstore_path = str(Path(self._token_dir).expanduser().resolve())
+
+        # Directly dispatch MFA completion based on which session attribute
+        # exists, rather than relying on resume_login which may be out-of-sync
+        # with the login strategy used.
+        if hasattr(inner, '_widget_session'):
+            ticket = inner._complete_mfa_widget(mfa_code)
+            sso_embed = f"{inner._sso}/sso/embed"
+            inner._establish_session(
+                ticket, sess=inner._widget_session, service_url=sso_embed,
+            )
+            for attr in ('_widget_session', '_widget_signin_params', '_widget_last_resp'):
+                if hasattr(inner, attr):
+                    delattr(inner, attr)
+        elif hasattr(inner, '_mfa_portal_web_session'):
+            inner._complete_mfa_portal_web(mfa_code)
+        elif hasattr(inner, '_mfa_cffi_session'):
+            inner._complete_mfa_portal(mfa_code)
+        elif hasattr(inner, '_mfa_session'):
+            inner._complete_mfa(mfa_code)
+        else:
+            raise RuntimeError(
+                "MFA session expired or was lost. Please restart the login."
+            )
+
         self._mfa_state = None
+
+        # Persist tokens after successful MFA so future logins skip MFA
+        if self._token_dir:
+            try:
+                inner.dump(str(Path(self._token_dir).expanduser().resolve()))
+            except Exception:
+                logger.debug("Token persistence after MFA failed", exc_info=True)
+
+        # Load profile/settings that Garmin.login() skips in return_on_mfa mode
+        try:
+            self._client.display_name = None
+            self._client.full_name = None
+            prof = self._client.client.connectapi(
+                "/userprofile-service/socialProfile"
+            )
+            if isinstance(prof, dict):
+                self._client.display_name = prof.get("displayName")
+                self._client.full_name = prof.get("fullName", "")
+        except Exception:
+            logger.debug("Profile fetch after MFA failed", exc_info=True)
+
         logger.info("MFA verified — authenticated with Garmin Connect")
 
     @classmethod
@@ -114,26 +165,117 @@ class GarminClient:
     def get_fitness_profile(self, lookback_days: int = 90) -> UserFitnessProfile:
         """Build an aggregated fitness profile from Garmin data."""
         today = date.today().isoformat()
+        # Garmin populates daily metrics after sleep/wakeup — use yesterday
+        # for endpoints that return empty data when today has no readings yet.
+        yesterday = (date.today() - timedelta(days=1)).isoformat()
 
         # Basic stats
         stats = self.client.get_stats(today) or {}
         hr_data = self.client.get_heart_rates(today) or {}
 
-        # VO2 max
+        # Training status — fetch first because it also carries VO2max/load
+        training_status = None
+        training_load_7day = None
+        load_focus = None
         vo2 = None
+        fitness_age = None
         try:
-            vo2_data = self.client.get_max_metrics(today)
-            if vo2_data and isinstance(vo2_data, list) and len(vo2_data) > 0:
-                vo2 = vo2_data[0].get("generic", {}).get("vo2MaxPreciseValue")
-        except Exception:
-            logger.warning("Could not fetch VO2 max", exc_info=True)
+            ts_data = self.client.get_training_status(yesterday)
+            if ts_data and isinstance(ts_data, dict):
+                # VO2max lives inside mostRecentVO2Max
+                mr_vo2 = ts_data.get("mostRecentVO2Max")
+                if mr_vo2 and isinstance(mr_vo2, dict):
+                    generic = mr_vo2.get("generic") or {}
+                    vo2 = generic.get("vo2MaxPreciseValue") or generic.get("vo2MaxValue")
+                    fitness_age = generic.get("fitnessAge")
 
-        # Training readiness
+                # Training status is nested under mostRecentTrainingStatus -> latestTrainingStatusData -> {deviceId}
+                mr_ts = ts_data.get("mostRecentTrainingStatus") or {}
+                latest_map = mr_ts.get("latestTrainingStatusData") or {}
+                if latest_map:
+                    # Pick primary device or first available
+                    device_data = None
+                    for dev_id, dev_info in latest_map.items():
+                        if isinstance(dev_info, dict):
+                            if dev_info.get("primaryTrainingDevice"):
+                                device_data = dev_info
+                                break
+                            if device_data is None:
+                                device_data = dev_info
+                    if device_data:
+                        raw_status = device_data.get("trainingStatus")
+                        if isinstance(raw_status, (int, float)):
+                            _STATUS_MAP = {
+                                0: "No Status", 1: "Detraining", 2: "Recovery",
+                                3: "Maintaining", 4: "Productive", 5: "Peaking",
+                                6: "Overreaching", 7: "Unproductive",
+                            }
+                            training_status = _STATUS_MAP.get(int(raw_status), str(raw_status))
+                        elif isinstance(raw_status, str) and raw_status:
+                            training_status = raw_status
+                        # Training load from acute load DTO
+                        acute_dto = device_data.get("acuteTrainingLoadDTO") or {}
+                        training_load_7day = (
+                            acute_dto.get("dailyTrainingLoadChronic")
+                            or acute_dto.get("dailyTrainingLoadAcute")
+                            or device_data.get("weeklyTrainingLoad")
+                        )
+
+                # Load focus from mostRecentTrainingLoadBalance
+                mr_lb = ts_data.get("mostRecentTrainingLoadBalance") or {}
+                lb_map = mr_lb.get("metricsTrainingLoadBalanceDTOMap") or {}
+                if lb_map:
+                    lb_data = None
+                    for dev_id, dev_info in lb_map.items():
+                        if isinstance(dev_info, dict):
+                            if dev_info.get("primaryTrainingDevice"):
+                                lb_data = dev_info
+                                break
+                            if lb_data is None:
+                                lb_data = dev_info
+                    if lb_data:
+                        load_focus = lb_data.get("trainingBalanceFeedbackPhrase")
+                        # Make it human-readable
+                        if load_focus:
+                            load_focus = load_focus.replace("_", " ").title()
+
+                # Fallback: flat fields (older API format)
+                if not training_status:
+                    training_status = (
+                        ts_data.get("trainingStatus")
+                        or ts_data.get("currentDayTrainingStatus")
+                        or ts_data.get("trainingStatusLabel")
+                    )
+                    if isinstance(training_status, (int, float)):
+                        _STATUS_MAP = {
+                            0: "No Status", 1: "Detraining", 2: "Recovery",
+                            3: "Maintaining", 4: "Productive", 5: "Peaking",
+                            6: "Overreaching", 7: "Unproductive",
+                        }
+                        training_status = _STATUS_MAP.get(int(training_status), str(training_status))
+        except Exception:
+            logger.warning("Could not fetch training status", exc_info=True)
+
+        # VO2 max fallback — try dedicated endpoint if not found in training status
+        if not vo2:
+            try:
+                vo2_data = self.client.get_max_metrics(yesterday)
+                if vo2_data and isinstance(vo2_data, list) and len(vo2_data) > 0:
+                    vo2 = vo2_data[0].get("generic", {}).get("vo2MaxPreciseValue")
+                    if not fitness_age:
+                        fitness_age = vo2_data[0].get("generic", {}).get("fitnessAge")
+            except Exception:
+                logger.warning("Could not fetch VO2 max", exc_info=True)
+
+        # Training readiness (returns a list, not a dict)
         readiness = None
         try:
-            tr_data = self.client.get_training_readiness(today)
+            tr_data = self.client.get_training_readiness(yesterday)
             if tr_data:
-                readiness = tr_data.get("score")
+                if isinstance(tr_data, list) and len(tr_data) > 0:
+                    readiness = tr_data[0].get("score")
+                elif isinstance(tr_data, dict):
+                    readiness = tr_data.get("score")
         except Exception:
             logger.warning("Could not fetch training readiness", exc_info=True)
 
@@ -141,41 +283,219 @@ class GarminClient:
         hrv_status = None
         hrv_value = None
         try:
-            hrv_data = self.client.get_hrv_data(today)
+            hrv_data = self.client.get_hrv_data(yesterday)
             if hrv_data:
-                hrv_status = hrv_data.get("hrvSummary", {}).get("status")
-                hrv_value = hrv_data.get("hrvSummary", {}).get("lastNightAvg")
+                summary = hrv_data.get("hrvSummary") or {}
+                hrv_status = summary.get("status")
+                hrv_value = summary.get("lastNightAvg") or summary.get("weeklyAvg")
         except Exception:
             logger.warning("Could not fetch HRV", exc_info=True)
+
+        # Lactate threshold
+        lt_hr = None
+        lt_speed = None
+        try:
+            lt_data = self.client.get_lactate_threshold(latest=True)
+            if lt_data and isinstance(lt_data, dict):
+                shr = lt_data.get("speed_and_heart_rate") or lt_data.get("speedAndHeartRate") or {}
+                if isinstance(shr, dict):
+                    lt_hr = shr.get("heartRate")
+                    lt_speed = shr.get("speed")  # m/s
+        except Exception:
+            logger.warning("Could not fetch lactate threshold", exc_info=True)
+
+        # Endurance score
+        endurance = None
+        try:
+            es_data = self.client.get_endurance_score(yesterday)
+            if es_data and isinstance(es_data, dict):
+                endurance = (
+                    es_data.get("overallScore")
+                    or es_data.get("enduranceScore")
+                    or es_data.get("compositeScore")
+                )
+        except Exception:
+            logger.warning("Could not fetch endurance score", exc_info=True)
+
+        # Body composition (weight)
+        weight = None
+        try:
+            bc_data = self.client.get_body_composition(today)
+            if bc_data and isinstance(bc_data, dict):
+                # Weight could be in grams or kg depending on API version
+                w = bc_data.get("weight")
+                if w and w > 500:  # likely grams
+                    weight = round(w / 1000, 1)
+                elif w:
+                    weight = round(w, 1)
+        except Exception:
+            logger.warning("Could not fetch body composition", exc_info=True)
+
+        # Body Battery
+        bb_current = None
+        bb_high = None
+        bb_low = None
+        try:
+            bb_data = self.client.get_body_battery(today)
+            logger.debug("Body battery raw type=%s", type(bb_data).__name__)
+            if bb_data and isinstance(bb_data, (list, dict)):
+                # Handle both list and dict response formats
+                if isinstance(bb_data, list) and len(bb_data) > 0:
+                    # The list may contain raw timeline entries or summary dicts
+                    # Look for the latest entry with a charged/level value
+                    for entry in reversed(bb_data):
+                        if isinstance(entry, dict):
+                            v = (
+                                entry.get("bodyBatteryLevel")
+                                or entry.get("charged")
+                                or entry.get("bodyBatteryStatus")
+                            )
+                            if v is not None and isinstance(v, (int, float)):
+                                bb_current = int(v)
+                                bb_high = entry.get("bodyBatteryHigh") or entry.get("high")
+                                bb_low = entry.get("bodyBatteryLow") or entry.get("low")
+                                break
+                elif isinstance(bb_data, dict):
+                    # Could be wrapped: {"bodyBatteryValuesArray": [...], ...}
+                    arr = bb_data.get("bodyBatteryValuesArray") or bb_data.get("chartValueList") or []
+                    if arr and isinstance(arr, list):
+                        for entry in reversed(arr):
+                            if isinstance(entry, (list, tuple)) and len(entry) >= 2:
+                                bb_current = int(entry[1])
+                                break
+                            elif isinstance(entry, dict):
+                                v = entry.get("value") or entry.get("bodyBatteryLevel")
+                                if v is not None:
+                                    bb_current = int(v)
+                                    break
+                    if bb_current is None:
+                        bb_current = bb_data.get("bodyBatteryLevel") or bb_data.get("charged")
+                        bb_high = bb_data.get("bodyBatteryHigh") or bb_data.get("high")
+                        bb_low = bb_data.get("bodyBatteryLow") or bb_data.get("low")
+            logger.debug("Body battery parsed: current=%s high=%s low=%s", bb_current, bb_high, bb_low)
+        except Exception:
+            logger.warning("Could not fetch body battery", exc_info=True)
+
+        # Sleep data
+        sleep_score = None
+        sleep_duration = None
+        sleep_deep = None
+        sleep_light = None
+        sleep_rem = None
+        sleep_awake = None
+        try:
+            sl_data = self.client.get_sleep_data(today)
+            logger.debug("Sleep data raw keys=%s", list(sl_data.keys()) if isinstance(sl_data, dict) else type(sl_data).__name__)
+            if sl_data and isinstance(sl_data, dict):
+                daily = sl_data.get("dailySleepDTO", sl_data)
+                sleep_score = (
+                    daily.get("sleepScores", {}).get("overall", {}).get("value")
+                    or daily.get("sleepQualityScore")
+                    or daily.get("sleepScore")
+                    or sl_data.get("sleepScores", {}).get("overall", {}).get("value")
+                )
+                sleep_duration = daily.get("sleepTimeSeconds")
+                sleep_deep = daily.get("deepSleepSeconds")
+                sleep_light = daily.get("lightSleepSeconds")
+                sleep_rem = daily.get("remSleepSeconds")
+                sleep_awake = daily.get("awakeSleepSeconds")
+            logger.debug("Sleep parsed: score=%s duration=%s", sleep_score, sleep_duration)
+        except Exception:
+            logger.warning("Could not fetch sleep data", exc_info=True)
+
+        # Stress data
+        stress_avg = None
+        stress_high = None
+        stress_low = None
+        try:
+            st_data = self.client.get_stress_data(today)
+            logger.debug("Stress data raw keys=%s", list(st_data.keys()) if isinstance(st_data, dict) else type(st_data).__name__)
+            if st_data and isinstance(st_data, dict):
+                stress_avg = (
+                    st_data.get("overallStressLevel")
+                    or st_data.get("averageStressLevel")
+                    or st_data.get("avgStressLevel")
+                )
+                stress_high = st_data.get("highStressDuration") or st_data.get("maxStressLevel")
+                stress_low = st_data.get("lowStressDuration") or st_data.get("minStressLevel")
+            logger.debug("Stress parsed: avg=%s", stress_avg)
+        except Exception:
+            logger.warning("Could not fetch stress data", exc_info=True)
 
         # Race predictions
         predictions: list[RacePrediction] = []
         try:
             rp_data = self.client.get_race_predictions()
             if rp_data:
-                for key, label in [
-                    ("5K", "5K"),
-                    ("10K", "10K"),
-                    ("half", "HALF_MARATHON"),
-                    ("marathon", "MARATHON"),
-                ]:
-                    val = rp_data.get(key)
-                    if val and val.get("predictedTime"):
-                        predictions.append(
-                            RacePrediction(
-                                distance=label,
-                                predicted_seconds=val["predictedTime"],
+                logger.debug("Race predictions raw: %s", type(rp_data).__name__)
+                if isinstance(rp_data, dict):
+                    for key, label in [
+                        ("5K", "5K"), ("5k", "5K"),
+                        ("10K", "10K"), ("10k", "10K"),
+                        ("half", "HALF_MARATHON"), ("halfMarathon", "HALF_MARATHON"),
+                        ("marathon", "MARATHON"),
+                    ]:
+                        val = rp_data.get(key)
+                        if val and isinstance(val, dict) and val.get("predictedTime"):
+                            predictions.append(
+                                RacePrediction(
+                                    distance=label,
+                                    predicted_seconds=val["predictedTime"],
+                                )
                             )
-                        )
+                elif isinstance(rp_data, list):
+                    for item in rp_data:
+                        if isinstance(item, dict):
+                            dist = item.get("raceDistance") or item.get("distance") or ""
+                            secs = item.get("predictedTime") or item.get("time") or 0
+                            if dist and secs:
+                                _DIST_NORM = {
+                                    "5K": "5K", "5k": "5K",
+                                    "10K": "10K", "10k": "10K",
+                                    "halfMarathon": "HALF_MARATHON", "half": "HALF_MARATHON",
+                                    "HALF_MARATHON": "HALF_MARATHON",
+                                    "marathon": "MARATHON", "MARATHON": "MARATHON",
+                                }
+                                label = _DIST_NORM.get(dist, dist)
+                                predictions.append(RacePrediction(distance=label, predicted_seconds=secs))
         except Exception:
             logger.warning("Could not fetch race predictions", exc_info=True)
 
-        # Recent running activities
+        # Personal records
+        personal_records: list[PersonalRecord] = []
+        try:
+            pr_data = self.client.get_personal_record()
+            if pr_data and isinstance(pr_data, (list, dict)):
+                items = pr_data if isinstance(pr_data, list) else pr_data.get("personalRecords", [])
+                _DIST_MAP = {
+                    5000: "5K", 10000: "10K", 21097: "HALF_MARATHON",
+                    21097.5: "HALF_MARATHON", 42195: "MARATHON",
+                }
+                for pr in items:
+                    if not isinstance(pr, dict):
+                        continue
+                    pr_type = pr.get("personalRecordType", "")
+                    if pr_type not in ("FASTEST_DISTANCE",):
+                        continue
+                    dist_m = pr.get("value")  # distance in meters for distance PRs
+                    # Time in seconds — try multiple possible keys
+                    time_s = pr.get("elapsedTime") or pr.get("duration") or pr.get("timeInSeconds")
+                    pr_date = pr.get("prStartTimeLocal", "")
+                    # Try to get distance label
+                    label = _DIST_MAP.get(dist_m)
+                    if label and time_s and float(time_s) > 0:
+                        personal_records.append(
+                            PersonalRecord(distance=label, time_seconds=float(time_s), record_date=str(pr_date) if pr_date else None)
+                        )
+        except Exception:
+            logger.warning("Could not fetch personal records", exc_info=True)
+
+        # Recent running activities (no cap — library auto-paginates up to 1000)
         activities: list[RecentActivity] = []
         try:
             start = (date.today() - timedelta(days=lookback_days)).isoformat()
             raw = self.client.get_activities_by_date(start, today, "running")
-            for act in (raw or [])[:20]:
+            for act in (raw or []):
                 activities.append(
                     RecentActivity(
                         activity_id=act.get("activityId", 0),
@@ -194,6 +514,14 @@ class GarminClient:
                         training_effect_anaerobic=act.get("anaerobicTrainingEffect"),
                         vo2_max_value=act.get("vO2MaxValue"),
                         avg_running_cadence=act.get("averageRunningCadenceInStepsPerMinute"),
+                        # Running dynamics
+                        avg_stride_length=act.get("avgStrideLength"),
+                        avg_ground_contact_time=act.get("avgGroundContactTime"),
+                        avg_vertical_oscillation=act.get("avgVerticalOscillation"),
+                        avg_vertical_ratio=act.get("avgVerticalRatio"),
+                        avg_power=act.get("avgPower"),
+                        elevation_gain=act.get("elevationGain"),
+                        avg_respiration_rate=act.get("avgRespirationRate"),
                     )
                 )
         except Exception:
@@ -225,14 +553,39 @@ class GarminClient:
             garmin_display_name=stats.get("displayName"),
             vo2_max=vo2,
             resting_hr=hr_data.get("restingHeartRate"),
-            max_hr=hr_data.get("maxHeartRate") or stats.get("maxAvgHeartRate"),
+            max_hr=max(
+                (a.max_hr for a in activities if a.max_hr),
+                default=None,
+            ) or hr_data.get("maxHeartRate") or stats.get("maxAvgHeartRate"),
             hr_zones=zones,
             training_readiness=readiness,
+            training_status=training_status,
             hrv_status=hrv_status,
             hrv_last_night=hrv_value,
             weekly_mileage_km=weekly_km,
+            lactate_threshold_hr=lt_hr,
+            lactate_threshold_speed=lt_speed,
+            endurance_score=endurance,
+            weight_kg=weight,
             race_predictions=predictions,
+            personal_records=personal_records,
             recent_activities=activities,
+            # New fields
+            body_battery_current=bb_current,
+            body_battery_high=bb_high,
+            body_battery_low=bb_low,
+            sleep_score=sleep_score,
+            sleep_duration_seconds=sleep_duration,
+            sleep_deep_seconds=sleep_deep,
+            sleep_light_seconds=sleep_light,
+            sleep_rem_seconds=sleep_rem,
+            sleep_awake_seconds=sleep_awake,
+            stress_avg=stress_avg,
+            stress_high=stress_high,
+            stress_low=stress_low,
+            training_load_7day=training_load_7day,
+            load_focus=load_focus,
+            fitness_age=fitness_age,
         )
 
     # ── Activity detail ──────────────────────────────────────────────
@@ -277,15 +630,17 @@ class GarminClient:
 
     # ── Write operations ─────────────────────────────────────────────
 
-    def push_workout(self, workout: Workout, schedule_date: date | None = None) -> dict:
+    def push_workout(self, workout: Workout, schedule_date: date | None = None, plan_paces: dict | None = None) -> dict:
         """Upload a structured running workout to Garmin Connect and optionally schedule it."""
         garmin_steps = []
         for i, step in enumerate(workout.steps):
             garmin_steps.append(_to_garmin_step(step, order=i + 1))
 
+        description = _build_garmin_description(workout, plan_paces)
+
         garmin_workout = RunningWorkout(
             workoutName=workout.name,
-            description=workout.description,
+            description=description,
             estimatedDurationInSecs=int(workout.estimated_duration_seconds or 3600),
             workoutSegments=[
                 WorkoutSegment(
@@ -306,15 +661,101 @@ class GarminClient:
 
         return result
 
-    def push_plan_week(self, workouts: list[Workout]) -> list[dict]:
+    def push_plan_week(self, workouts: list[Workout], plan_paces: dict | None = None) -> list[dict]:
         """Push a list of workouts (typically one week) to Garmin Connect."""
         results = []
         for w in workouts:
             if w.workout_type.value == "rest":
                 continue
-            r = self.push_workout(w, schedule_date=w.scheduled_date)
+            r = self.push_workout(w, schedule_date=w.scheduled_date, plan_paces=plan_paces)
             results.append(r)
         return results
+
+
+def _fmt_pace(sec_per_km: float | None) -> str:
+    """Format sec/km as M:SS/km."""
+    if not sec_per_km or sec_per_km <= 0:
+        return ""
+    m, s = divmod(int(sec_per_km), 60)
+    return f"{m}:{s:02d}/km"
+
+
+def _build_garmin_description(workout: Workout, plan_paces: dict | None = None) -> str:
+    """Build a rich workout description for the Garmin watch preview screen.
+
+    Includes purpose, distance/duration, step breakdown with target paces,
+    and coaching notes. Kept under ~450 chars to stay within Garmin's limit.
+    """
+    parts = []
+
+    # Line 1: Purpose + distance/duration
+    header = ""
+    if workout.purpose:
+        purpose_label = workout.purpose.value.replace("_", " ").title()
+        header = f"Goal: {purpose_label}"
+    dist_km = round(workout.estimated_distance_meters / 1000, 1) if workout.estimated_distance_meters else 0
+    dur_min = round(workout.estimated_duration_seconds / 60) if workout.estimated_duration_seconds else 0
+    summary_parts = []
+    if dist_km:
+        summary_parts.append(f"{dist_km}km")
+    if dur_min:
+        summary_parts.append(f"~{dur_min}min")
+    if header and summary_parts:
+        header += f" | {' '.join(summary_parts)}"
+    elif summary_parts:
+        header = ' '.join(summary_parts)
+    if header:
+        parts.append(header)
+
+    # Pace reference line
+    if plan_paces:
+        pace_items = []
+        label_map = [("easy_pace", "Easy"), ("marathon_pace", "MP"), ("threshold_pace", "Thresh"), ("interval_pace", "Intv")]
+        for key, label in label_map:
+            val = plan_paces.get(key)
+            if val:
+                pace_items.append(f"{label} {_fmt_pace(val)}")
+        if pace_items:
+            parts.append("Paces: " + " | ".join(pace_items))
+
+    # Step breakdown (compact)
+    if workout.steps:
+        step_lines = []
+        for step in workout.steps:
+            if step.repeat_count and step.steps:
+                # Repeat group
+                sub = step.steps[0] if step.steps else None
+                desc = sub.description if sub and sub.description else "interval"
+                pace = ""
+                if sub and sub.target_low:
+                    pace = f" @ {_fmt_pace(sub.target_low)}"
+                dist_part = ""
+                if sub and sub.distance_meters:
+                    dist_part = f" {sub.distance_meters/1000:.1f}km" if sub.distance_meters >= 1000 else f" {int(sub.distance_meters)}m"
+                step_lines.append(f"{step.repeat_count}x{dist_part} {desc}{pace}")
+            else:
+                desc = step.description or step.step_type.value
+                pace = ""
+                if step.target_low and step.target_low > 0:
+                    pace = f" ({_fmt_pace(step.target_low)})"
+                dur = ""
+                if step.distance_meters:
+                    dur = f"{step.distance_meters/1000:.1f}km " if step.distance_meters >= 1000 else f"{int(step.distance_meters)}m "
+                elif step.duration_seconds:
+                    dur = f"{int(step.duration_seconds/60)}min "
+                step_lines.append(f"{dur}{desc}{pace}")
+        if step_lines:
+            parts.append("Steps: " + " > ".join(step_lines))
+
+    # Coaching notes
+    if workout.notes:
+        parts.append(workout.notes)
+
+    result = "\n".join(parts)
+    # Truncate to stay within Garmin's limit
+    if len(result) > 450:
+        result = result[:447] + "..."
+    return result or workout.description
 
 
 def _meters_per_sec_to_sec_per_km(speed: float | None) -> float | None:

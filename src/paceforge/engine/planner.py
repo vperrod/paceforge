@@ -1,7 +1,14 @@
-"""Plan generator — converts a template + fitness profile + goal into a concrete TrainingPlan."""
+"""Plan generator — converts a fitness profile + goal into a concrete TrainingPlan.
+
+Supports two modes:
+1. **AI-powered** (default when OpenAI key is available): An LLM designs a personalised
+   plan blueprint, which the deterministic WorkoutFactory converts into structured workouts.
+2. **Template-based** (fallback): Uses YAML templates with algorithmic workout rotation.
+"""
 
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import date, timedelta
 from pathlib import Path
@@ -13,6 +20,7 @@ from paceforge.engine.vdot import (
     TrainingPaces,
     paces_from_race,
     paces_from_vdot,
+    vdot_from_race,
 )
 from paceforge.engine.workouts import WorkoutFactory
 from paceforge.models.plan import (
@@ -27,6 +35,8 @@ from paceforge.models.plan import (
 )
 from paceforge.models.profile import TrainingGoal, UserFitnessProfile
 
+logger = logging.getLogger(__name__)
+
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 
 # Map goal type + experience to template file
@@ -40,6 +50,13 @@ _TEMPLATE_MAP: dict[str, str] = {
     "HYROX_beginner": "hyrox_intermediate.yaml",
     "HYROX_intermediate": "hyrox_intermediate.yaml",
     "HYROX_advanced": "hyrox_intermediate.yaml",
+    # 5K/10K reuse half-marathon templates with shorter duration
+    "5K_beginner": "half_marathon_beginner.yaml",
+    "5K_intermediate": "half_marathon_intermediate.yaml",
+    "5K_advanced": "half_marathon_intermediate.yaml",
+    "10K_beginner": "half_marathon_beginner.yaml",
+    "10K_intermediate": "half_marathon_intermediate.yaml",
+    "10K_advanced": "half_marathon_advanced.yaml",
 }
 
 # ── Workout rotation pools per phase ────────────────────────────────
@@ -93,11 +110,21 @@ _FOCUS_TAPER = [
 def generate_plan(
     profile: UserFitnessProfile,
     goal: TrainingGoal,
+    *,
+    openai_api_key: str | None = None,
+    openai_model: str = "gpt-4o-mini",
+    anthropic_api_key: str | None = None,
+    anthropic_model: str = "claude-sonnet-4-20250514",
+    llm_provider: str = "",
 ) -> TrainingPlan:
-    """Generate a full training plan from a user profile and goal."""
+    """Generate a full training plan from a user profile and goal.
+
+    Uses AI Plan Architect when an LLM API key is available.
+    Falls back to template-based generation only if no key is configured.
+    """
 
     # 1. Determine training paces
-    paces = _derive_paces(profile)
+    paces, pace_source = _derive_paces(profile)
     # Override with user-provided custom paces if given
     if paces and (goal.custom_easy_pace or goal.custom_marathon_pace or goal.custom_threshold_pace):
         paces = TrainingPaces(
@@ -109,6 +136,7 @@ def generate_plan(
             interval=paces.interval,
             repetition=paces.repetition,
         )
+        pace_source += " + custom overrides"
     elif not paces and (goal.custom_easy_pace or goal.custom_marathon_pace or goal.custom_threshold_pace):
         easy = goal.custom_easy_pace or 360
         marathon = goal.custom_marathon_pace or 300
@@ -122,14 +150,309 @@ def generate_plan(
             interval=threshold - 20,
             repetition=threshold - 40,
         )
+        pace_source = "Custom paces (manual input)"
 
-    # 2. Load template (still used for volume_progression, phases, peak_weekly_km)
+    # Build athlete summary for plan context
+    athlete_summary = _build_athlete_summary(profile, pace_source)
+
+    # 2. Resolve LLM provider and key
+    provider, api_key, model = _resolve_llm(
+        llm_provider, openai_api_key, openai_model, anthropic_api_key, anthropic_model,
+    )
+
+    # 3. Try AI-powered plan generation
+    if api_key:
+        try:
+            plan = _generate_ai_plan(profile, goal, paces, api_key, model, provider,
+                                     pace_source=pace_source, athlete_summary=athlete_summary)
+            if plan:
+                return plan
+        except Exception as e:
+            logger.error("AI plan generation failed (%s/%s): %s", provider, model, e, exc_info=True)
+            raise  # Let the caller see the real error
+
+    # 4. Fallback: template-based generation (no API key configured)
+    logger.info("No LLM API key configured — using template plan")
+    return _generate_template_plan(profile, goal, paces, pace_source=pace_source, athlete_summary=athlete_summary)
+
+
+def _resolve_llm(
+    llm_provider: str,
+    openai_api_key: str | None,
+    openai_model: str,
+    anthropic_api_key: str | None,
+    anthropic_model: str,
+) -> tuple[str, str | None, str]:
+    """Return (provider, api_key, model) based on config and available keys."""
+    if llm_provider == "anthropic" and anthropic_api_key:
+        return "anthropic", anthropic_api_key, anthropic_model
+    if llm_provider == "openai" and openai_api_key:
+        return "openai", openai_api_key, openai_model
+    # Auto-detect: prefer anthropic if key is available
+    if anthropic_api_key:
+        return "anthropic", anthropic_api_key, anthropic_model
+    if openai_api_key:
+        return "openai", openai_api_key, openai_model
+    return "none", None, ""
+
+
+def _generate_ai_plan(
+    profile: UserFitnessProfile,
+    goal: TrainingGoal,
+    paces: TrainingPaces | None,
+    api_key: str,
+    model: str,
+    provider: str = "openai",
+    *,
+    pace_source: str = "",
+    athlete_summary: str = "",
+) -> TrainingPlan:
+    """Generate a fully AI-designed plan with detailed per-day workouts.
+
+    The AI creates every workout with specific paces, distances, steps,
+    and coaching notes — producing unique, non-repetitive training plans.
+    """
+    from paceforge.engine.ai_planner import generate_blueprint
+
+    blueprint = generate_blueprint(
+        profile, goal,
+        api_key=api_key, model=model, provider=provider,
+        paces=paces,
+    )
+
+    # Compute plan start
+    if goal.start_date:
+        plan_start = goal.start_date
+        plan_start = plan_start - timedelta(days=plan_start.weekday())
+    else:
+        plan_start = goal.target_date - timedelta(weeks=blueprint.total_weeks)
+        plan_start = plan_start - timedelta(days=plan_start.weekday())
+
+    _DAY_OFFSETS = {
+        "monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3,
+        "friday": 4, "saturday": 5, "sunday": 6,
+    }
+
+    weeks: list[TrainingWeek] = []
+    for wk_data in blueprint.weeks:
+        wk_num = wk_data.get("week_number", len(weeks) + 1)
+        wk_idx = wk_num - 1
+        week_start = plan_start + timedelta(weeks=wk_idx)
+        phase = wk_data.get("phase", "Build")
+        focus = wk_data.get("focus", "")
+
+        ai_workouts = wk_data.get("workouts", [])
+        workouts: list[Workout] = []
+
+        # Build set of days the AI assigned workouts to
+        ai_days: set[str] = set()
+        for wk_wo in ai_workouts:
+            day_name = wk_wo.get("day", "").lower()
+            ai_days.add(day_name)
+
+        # Generate 7-day week: AI workouts on assigned days, rest on others
+        all_days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+        for day_name in all_days:
+            workout_date = week_start + timedelta(days=_DAY_OFFSETS[day_name])
+
+            # Find AI workout for this day
+            ai_wo = next((w for w in ai_workouts if w.get("day", "").lower() == day_name), None)
+
+            if ai_wo:
+                workout = _parse_ai_workout(ai_wo, paces, workout_date)
+            else:
+                workout = Workout(
+                    workout_type=WorkoutType.REST,
+                    name="Rest Day",
+                    scheduled_date=workout_date,
+                )
+            workouts.append(workout)
+
+        actual_km = round(sum(
+            (w.estimated_distance_meters or 0) / 1000
+            for w in workouts
+            if w.workout_type != WorkoutType.REST
+        ), 1)
+
+        weeks.append(TrainingWeek(
+            week_number=wk_num,
+            phase=phase,
+            total_distance_km=actual_km,
+            workouts=workouts,
+            focus=focus,
+        ))
+
+    return TrainingPlan(
+        plan_id=str(uuid.uuid4())[:8],
+        name=blueprint.plan_name,
+        goal_type=goal.goal_type.value,
+        target_date=goal.target_date,
+        target_time_seconds=goal.target_time_seconds,
+        total_weeks=blueprint.total_weeks,
+        weeks=weeks,
+        easy_pace=paces.easy_low if paces else None,
+        marathon_pace=paces.marathon if paces else None,
+        threshold_pace=paces.threshold if paces else None,
+        interval_pace=paces.interval if paces else None,
+        repetition_pace=paces.repetition if paces else None,
+        vdot=paces.vdot if paces else None,
+        pace_source=pace_source,
+        rationale=blueprint.rationale,
+        tips=blueprint.tips,
+        athlete_summary=athlete_summary,
+    )
+
+
+def _parse_ai_workout(
+    ai_wo: dict,
+    paces: TrainingPaces | None,
+    workout_date: date,
+) -> Workout:
+    """Parse an AI-generated workout dict into a Workout model."""
+    # Map workout_type string to enum
+    wtype_str = ai_wo.get("workout_type", "easy_run").lower()
+    try:
+        wtype = WorkoutType(wtype_str)
+    except ValueError:
+        # Map common AI variations
+        _TYPE_MAP = {
+            "easy": WorkoutType.EASY_RUN,
+            "long": WorkoutType.LONG_RUN,
+            "interval": WorkoutType.INTERVALS,
+            "vo2_max": WorkoutType.VO2MAX,
+            "vo2": WorkoutType.VO2MAX,
+            "threshold_cruise": WorkoutType.THRESHOLD,
+            "cruise_intervals": WorkoutType.THRESHOLD,
+            "hill_repeats": WorkoutType.HILLS,
+            "hill": WorkoutType.HILLS,
+            "speed_work": WorkoutType.SPEED,
+            "race": WorkoutType.RACE_PACE,
+            "recovery": WorkoutType.RECOVERY,
+        }
+        wtype = _TYPE_MAP.get(wtype_str, WorkoutType.EASY_RUN)
+
+    # Map purpose string to enum
+    purpose = None
+    purpose_str = ai_wo.get("purpose", "")
+    if purpose_str:
+        try:
+            purpose = TrainingPurpose(purpose_str)
+        except ValueError:
+            pass
+
+    # Parse steps
+    steps: list[WorkoutStep] = []
+    for step_data in ai_wo.get("steps", []):
+        steps.extend(_parse_ai_step(step_data, paces))
+
+    dist_km = ai_wo.get("estimated_distance_km", 0)
+    dur_min = ai_wo.get("estimated_duration_minutes", 0)
+
+    return Workout(
+        workout_type=wtype,
+        name=ai_wo.get("name", "Workout"),
+        description=ai_wo.get("description", ""),
+        scheduled_date=workout_date,
+        estimated_distance_meters=round(dist_km * 1000) if dist_km else None,
+        estimated_duration_seconds=round(dur_min * 60) if dur_min else None,
+        steps=steps,
+        notes=ai_wo.get("notes", ""),
+        purpose=purpose,
+    )
+
+
+def _parse_ai_step(step_data: dict, paces: TrainingPaces | None) -> list[WorkoutStep]:
+    """Parse a single AI step dict into WorkoutStep(s).
+
+    Handles repeat_count by creating a repeat group step.
+    """
+    try:
+        stype = WorkoutStepType(step_data.get("step_type", "active").lower())
+    except ValueError:
+        stype = WorkoutStepType.ACTIVE
+
+    # Resolve pace from zone name
+    pace_zone = step_data.get("pace_zone", "")
+    pace_low, pace_high = _resolve_pace_zone(pace_zone, paces)
+
+    dist_km = step_data.get("distance_km")
+    dur_min = step_data.get("duration_minutes")
+
+    base_step = WorkoutStep(
+        step_type=stype,
+        description=step_data.get("description", ""),
+        distance_meters=round(dist_km * 1000) if dist_km else None,
+        duration_seconds=round(dur_min * 60) if dur_min else None,
+        target_type=IntensityTarget.PACE if pace_low else IntensityTarget.OPEN,
+        target_low=pace_low,
+        target_high=pace_high,
+    )
+
+    repeat_count = step_data.get("repeat_count")
+    if repeat_count and repeat_count > 1:
+        # Create a repeat group: N × (interval + recovery)
+        recovery_step = WorkoutStep(
+            step_type=WorkoutStepType.RECOVERY,
+            description="Recovery jog",
+            duration_seconds=step_data.get("recovery_seconds", 90),
+            target_type=IntensityTarget.OPEN,
+        )
+        return [WorkoutStep(
+            step_type=WorkoutStepType.INTERVAL,
+            description=f"{repeat_count}× {base_step.description}",
+            repeat_count=repeat_count,
+            steps=[base_step, recovery_step],
+        )]
+
+    return [base_step]
+
+
+def _resolve_pace_zone(
+    zone: str,
+    paces: TrainingPaces | None,
+) -> tuple[float | None, float | None]:
+    """Convert a pace zone name to (low, high) sec/km values."""
+    if not paces or not zone:
+        return None, None
+    zone = zone.lower().strip()
+    if zone == "easy":
+        return paces.easy_low, paces.easy_high
+    elif zone == "marathon":
+        return paces.marathon - 3, paces.marathon + 3
+    elif zone == "threshold":
+        return paces.threshold - 3, paces.threshold + 3
+    elif zone in ("interval", "vo2max"):
+        return paces.interval - 3, paces.interval + 3
+    elif zone in ("repetition", "rep", "speed"):
+        return paces.repetition - 3, paces.repetition + 3
+    return None, None
+
+
+def _get_peak_km(goal_type: str, level: str) -> float:
+    """Return peak weekly km based on goal type and experience level."""
+    table = {
+        "5K":            {"beginner": 30, "intermediate": 45, "advanced": 65},
+        "10K":           {"beginner": 35, "intermediate": 55, "advanced": 75},
+        "HALF_MARATHON": {"beginner": 45, "intermediate": 65, "advanced": 85},
+        "MARATHON":      {"beginner": 55, "intermediate": 75, "advanced": 110},
+        "HYROX":         {"beginner": 30, "intermediate": 40, "advanced": 55},
+    }
+    return table.get(goal_type, table["HALF_MARATHON"]).get(level, 65)
+
+
+def _generate_template_plan(
+    profile: UserFitnessProfile,
+    goal: TrainingGoal,
+    paces: TrainingPaces | None,
+    *,
+    pace_source: str = "",
+    athlete_summary: str = "",
+) -> TrainingPlan:
+    """Fallback: generate plan from YAML templates with algorithmic rotation."""
+
     template = _load_template(goal)
-
-    # 3. Determine experience level
     level = (goal.experience_level or _estimate_level(profile)).value
 
-    # 4. Compute plan dates
     total_weeks = template["total_weeks"]
     race_date = goal.target_date
     if goal.start_date:
@@ -141,30 +464,24 @@ def generate_plan(
         plan_start = race_date - timedelta(weeks=total_weeks)
         plan_start = plan_start - timedelta(days=plan_start.weekday())
 
-    # 5. Get peak volume
     peak_km = template["peak_weekly_km"].get(level, template["peak_weekly_km"]["intermediate"])
     volume_prog = template["volume_progression"]
 
-    # 6. Build phase lookup: week_number -> phase name
     phase_map: dict[int, str] = {}
     for p in template.get("phases", []):
         for wk in p["weeks"]:
             phase_map[wk] = p["name"]
 
-    # 7. Create workout factory
     factory = WorkoutFactory(paces)
 
-    # 8. Build weeks with varied workouts
     weeks: list[TrainingWeek] = []
     for wk_idx in range(total_weeks):
         wk_num = wk_idx + 1
         week_start = plan_start + timedelta(weeks=wk_idx)
         multiplier = volume_prog[wk_idx] if wk_idx < len(volume_prog) else volume_prog[-1]
         week_km = round(peak_km * multiplier, 1)
-
         phase = phase_map.get(wk_num, "Build")
 
-        # Race week override (last week)
         is_race_week = wk_num == total_weeks and "race_week" in template
         if is_race_week:
             day_templates = template["race_week"]
@@ -175,44 +492,32 @@ def generate_plan(
                 paces=paces,
                 long_run_day=goal.long_run_day,
             )
-            # Add purpose to non-rest workouts that lack it
             for w in workouts:
                 if w.workout_type != WorkoutType.REST and w.purpose is None:
                     w.purpose = TrainingPurpose.RECOVERY
-            weeks.append(
-                TrainingWeek(
-                    week_number=wk_num,
-                    phase=phase,
-                    total_distance_km=week_km,
-                    workouts=workouts,
-                    focus="Race week — trust the training",
-                )
-            )
+            weeks.append(TrainingWeek(
+                week_number=wk_num, phase=phase, total_distance_km=week_km,
+                workouts=workouts, focus="Race week — trust the training",
+            ))
             continue
 
-        # Generate varied workouts for this week
         workouts = _build_varied_week(
-            factory=factory,
-            phase=phase,
-            week_km=week_km,
-            week_start=week_start,
-            wk_idx=wk_idx,
+            factory=factory, phase=phase, week_km=week_km,
+            week_start=week_start, wk_idx=wk_idx,
             long_run_day=goal.long_run_day,
             max_days=goal.max_days_per_week,
             training_days=goal.training_days,
         )
-
         focus = _get_focus(phase, wk_idx)
-
-        weeks.append(
-            TrainingWeek(
-                week_number=wk_num,
-                phase=phase,
-                total_distance_km=week_km,
-                workouts=workouts,
-                focus=focus,
-            )
-        )
+        actual_km = round(sum(
+            (w.estimated_distance_meters or 0) / 1000
+            for w in workouts
+            if w.workout_type != WorkoutType.REST
+        ), 1)
+        weeks.append(TrainingWeek(
+            week_number=wk_num, phase=phase, total_distance_km=actual_km or week_km,
+            workouts=workouts, focus=focus,
+        ))
 
     return TrainingPlan(
         plan_id=str(uuid.uuid4())[:8],
@@ -227,6 +532,9 @@ def generate_plan(
         threshold_pace=paces.threshold if paces else None,
         interval_pace=paces.interval if paces else None,
         repetition_pace=paces.repetition if paces else None,
+        vdot=paces.vdot if paces else None,
+        pace_source=pace_source,
+        athlete_summary=athlete_summary,
     )
 
 
@@ -405,27 +713,89 @@ def _make_long_run(factory: WorkoutFactory, lr_type: str, distance_km: float) ->
         return factory.long_run(distance_km)
 
 
-def _derive_paces(profile: UserFitnessProfile) -> TrainingPaces | None:
-    """Get training paces from VO2 max or race predictions."""
-    # Prefer VO2 max directly
-    if profile.vo2_max:
-        return paces_from_vdot(profile.vo2_max)
+def _normalize_lt_speed(raw_speed: float | None) -> float | None:
+    """Normalize Garmin LT speed to m/s.
 
-    # Fall back to race predictions
+    Garmin sometimes returns LT speed in unexpected units. Valid running
+    LT speed is roughly 2.5-6.5 m/s (6:40/km to 2:34/km).
+    """
+    if not raw_speed or raw_speed <= 0:
+        return None
+    if 2.0 <= raw_speed <= 7.0:
+        return raw_speed
+    if 200 <= raw_speed <= 700:
+        return raw_speed / 100
+    if 2000 <= raw_speed <= 7000:
+        return raw_speed / 1000
+    if raw_speed > 7000:
+        return raw_speed / 1000
+    if raw_speed < 2.0 and 2.0 <= raw_speed * 10 <= 7.0:
+        return raw_speed * 10
+    return None
+
+
+def _derive_paces(profile: UserFitnessProfile) -> tuple[TrainingPaces | None, str]:
+    """Get training paces from the best available data source.
+
+    Returns (paces, source_description).
+
+    Priority:
+    1. VO2 max (Garmin estimate — most reliable, directly maps to VDOT)
+    2. Personal records (actual race results — high confidence)
+    3. Race predictions (Garmin estimates)
+    4. Lactate threshold speed (requires unit normalization — fallback)
+    5. Recent activity fastest pace (rough VDOT estimate)
+    """
+    # Tier 1: VO2 max directly (most reliable — matches Daniels VDOT)
+    if profile.vo2_max:
+        source = f"Garmin VO2 Max ({profile.vo2_max:.1f})"
+        logger.info("Deriving paces from VO2 max (%.1f)", profile.vo2_max)
+        return paces_from_vdot(profile.vo2_max), source
+
+    # Tier 2: Personal records (actual race results)
+    for pr in profile.personal_records:
+        dist = RACE_DISTANCES.get(pr.distance)
+        if dist and pr.time_seconds > 0:
+            paces = paces_from_race(dist, pr.time_seconds)
+            mins, secs = divmod(int(pr.time_seconds), 60)
+            hrs, mins = divmod(mins, 60)
+            time_str = f"{hrs}:{mins:02d}:{secs:02d}" if hrs else f"{mins}:{secs:02d}"
+            source = f"Personal record ({pr.distance} in {time_str} → VDOT {paces.vdot:.1f})"
+            logger.info("Deriving paces from personal record (%s)", pr.distance)
+            return paces, source
+
+    # Tier 3: Race predictions
     for pred in profile.race_predictions:
         dist = RACE_DISTANCES.get(pred.distance)
         if dist and pred.predicted_seconds > 0:
-            return paces_from_race(dist, pred.predicted_seconds)
+            paces = paces_from_race(dist, pred.predicted_seconds)
+            source = f"Garmin race prediction ({pred.distance} → VDOT {paces.vdot:.1f})"
+            logger.info("Deriving paces from race prediction (%s)", pred.distance)
+            return paces, source
 
-    # Fall back to recent activity average pace → rough VDOT estimate
+    # Tier 4: Lactate threshold speed (normalize units first)
+    lt_speed = _normalize_lt_speed(profile.lactate_threshold_speed)
+    if lt_speed:
+        lt_distance = lt_speed * 3600
+        vdot = vdot_from_race(lt_distance, 3600)
+        pace_sec_km = 1000 / lt_speed
+        pm, ps = divmod(int(pace_sec_km), 60)
+        source = f"Lactate threshold speed ({pm}:{ps:02d}/km → VDOT {vdot:.1f})"
+        logger.info("Deriving paces from lactate threshold speed (VDOT=%.1f)", vdot)
+        return paces_from_vdot(vdot), source
+
+    # Tier 5: Recent activity fastest pace → rough VDOT estimate
     running = [a for a in profile.recent_activities if a.avg_pace_sec_per_km]
     if running:
-        # Use the fastest recent run as a proxy
         fastest = min(running, key=lambda a: a.avg_pace_sec_per_km or 999)
         if fastest.avg_pace_sec_per_km and fastest.distance_meters > 2000:
-            return paces_from_race(fastest.distance_meters, fastest.duration_seconds)
+            paces = paces_from_race(fastest.distance_meters, fastest.duration_seconds)
+            pm, ps = divmod(int(fastest.avg_pace_sec_per_km), 60)
+            source = f"Fastest recent activity ({pm}:{ps:02d}/km → VDOT {paces.vdot:.1f})"
+            logger.info("Deriving paces from fastest recent activity")
+            return paces, source
 
-    return None
+    return None, "No data available"
 
 
 def _estimate_level(profile: UserFitnessProfile):
@@ -438,6 +808,57 @@ def _estimate_level(profile: UserFitnessProfile):
     elif km >= 25:
         return ExperienceLevel.INTERMEDIATE
     return ExperienceLevel.BEGINNER
+
+
+def _build_athlete_summary(profile: UserFitnessProfile, pace_source: str) -> str:
+    """Build a readable summary of the athlete data used for the plan."""
+    parts = []
+    if profile.vo2_max:
+        parts.append(f"VO2 Max: {profile.vo2_max:.1f}")
+    if profile.resting_hr:
+        parts.append(f"Resting HR: {profile.resting_hr} bpm")
+    if profile.max_hr:
+        parts.append(f"Max HR: {profile.max_hr} bpm")
+    if profile.weekly_mileage_km:
+        parts.append(f"Weekly mileage: {profile.weekly_mileage_km:.1f} km")
+    if profile.training_status:
+        parts.append(f"Training status: {profile.training_status}")
+    if profile.lactate_threshold_speed and profile.lactate_threshold_speed > 0:
+        lt_speed = _normalize_lt_speed(profile.lactate_threshold_speed)
+        if lt_speed:
+            pace_sec_km = 1000 / lt_speed
+            pm, ps = divmod(int(pace_sec_km), 60)
+            parts.append(f"LT pace: {pm}:{ps:02d}/km")
+    if profile.lactate_threshold_hr:
+        parts.append(f"LT HR: {profile.lactate_threshold_hr:.0f} bpm")
+    if profile.endurance_score:
+        parts.append(f"Endurance score: {profile.endurance_score}")
+    if profile.weight_kg:
+        parts.append(f"Weight: {profile.weight_kg} kg")
+    running = [a for a in profile.recent_activities if a.avg_pace_sec_per_km]
+    if running:
+        avg_dist = sum(a.distance_meters for a in running) / len(running) / 1000
+        avg_pace = sum(a.avg_pace_sec_per_km for a in running if a.avg_pace_sec_per_km) / len(running)
+        pm, ps = divmod(int(avg_pace), 60)
+        parts.append(f"Recent runs: {len(running)} activities, avg {avg_dist:.1f}km @ {pm}:{ps:02d}/km")
+    if profile.race_predictions:
+        rp_parts = []
+        for rp in profile.race_predictions:
+            mins, secs = divmod(int(rp.predicted_seconds), 60)
+            hrs, mins = divmod(mins, 60)
+            time_str = f"{hrs}:{mins:02d}:{secs:02d}" if hrs else f"{mins}:{secs:02d}"
+            rp_parts.append(f"{rp.distance}: {time_str}")
+        parts.append(f"Race predictions: {', '.join(rp_parts)}")
+    if profile.personal_records:
+        pr_parts = []
+        for pr in profile.personal_records:
+            mins, secs = divmod(int(pr.time_seconds), 60)
+            hrs, mins = divmod(mins, 60)
+            time_str = f"{hrs}:{mins:02d}:{secs:02d}" if hrs else f"{mins}:{secs:02d}"
+            pr_parts.append(f"{pr.distance}: {time_str}")
+        parts.append(f"Personal records: {', '.join(pr_parts)}")
+    parts.append(f"Pace source: {pace_source}")
+    return " · ".join(parts)
 
 
 def _load_template(goal: TrainingGoal) -> dict:

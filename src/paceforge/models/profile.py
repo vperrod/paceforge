@@ -19,6 +19,12 @@ class RacePrediction(BaseModel):
     predicted_seconds: float
 
 
+class PersonalRecord(BaseModel):
+    distance: str  # e.g. "5K", "10K", "HALF_MARATHON", "MARATHON"
+    time_seconds: float
+    record_date: str | None = None
+
+
 class RecentActivity(BaseModel):
     activity_id: int
     name: str
@@ -34,6 +40,14 @@ class RecentActivity(BaseModel):
     training_effect_anaerobic: float | None = None
     vo2_max_value: float | None = None
     avg_running_cadence: float | None = None
+    # Running dynamics
+    avg_stride_length: float | None = Field(None, description="Average stride length in meters")
+    avg_ground_contact_time: float | None = Field(None, description="Average ground contact time in ms")
+    avg_vertical_oscillation: float | None = Field(None, description="Average vertical oscillation in cm")
+    avg_vertical_ratio: float | None = Field(None, description="Average vertical ratio in %")
+    avg_power: float | None = Field(None, description="Average running power in watts")
+    elevation_gain: float | None = Field(None, description="Total elevation gain in meters")
+    avg_respiration_rate: float | None = Field(None, description="Average respiration rate in breaths/min")
 
 
 class UserFitnessProfile(BaseModel):
@@ -45,12 +59,43 @@ class UserFitnessProfile(BaseModel):
     max_hr: int | None = None
     hr_zones: list[HRZone] = Field(default_factory=list)
     training_readiness: float | None = Field(None, description="Garmin Training Readiness score")
+    training_status: str | None = Field(None, description="e.g. 'Productive', 'Detraining', 'Peaking'")
     hrv_status: str | None = Field(None, description="e.g. 'Balanced', 'Low', 'High'")
     hrv_last_night: float | None = None
     weekly_mileage_km: float | None = Field(None, description="Average weekly running distance (km)")
+    lactate_threshold_hr: float | None = Field(None, description="Heart rate at lactate threshold (bpm)")
+    lactate_threshold_speed: float | None = Field(None, description="Speed at lactate threshold (m/s)")
+    endurance_score: float | None = Field(None, description="Garmin endurance score")
+    weight_kg: float | None = Field(None, description="Body weight in kg")
     race_predictions: list[RacePrediction] = Field(default_factory=list)
+    personal_records: list[PersonalRecord] = Field(default_factory=list)
     recent_activities: list[RecentActivity] = Field(default_factory=list)
     profile_date: date = Field(default_factory=date.today)
+
+    # Body Battery
+    body_battery_current: int | None = Field(None, description="Current body battery level (0-100)")
+    body_battery_high: int | None = None
+    body_battery_low: int | None = None
+
+    # Sleep
+    sleep_score: int | None = Field(None, description="Last night sleep quality score")
+    sleep_duration_seconds: float | None = None
+    sleep_deep_seconds: float | None = None
+    sleep_light_seconds: float | None = None
+    sleep_rem_seconds: float | None = None
+    sleep_awake_seconds: float | None = None
+
+    # Stress
+    stress_avg: int | None = Field(None, description="Daily average stress level")
+    stress_high: int | None = None
+    stress_low: int | None = None
+
+    # Training Load
+    training_load_7day: float | None = Field(None, description="7-day cumulative training load")
+    load_focus: str | None = Field(None, description="Load focus: Low Aerobic / High Aerobic / Anaerobic")
+
+    # Fitness Age
+    fitness_age: int | None = Field(None, description="Garmin estimated fitness age")
 
 
 class GoalType(str, Enum):

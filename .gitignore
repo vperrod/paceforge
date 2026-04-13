@@ -38,3 +38,8 @@ coverage.xml
 # SQLite database (contains credentials)
 paceforge.db
 *.db-journal
+
+# Downloaded logs / artifacts
+*.zip
+app_logs/
+webapp-logs/

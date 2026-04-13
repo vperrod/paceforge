@@ -30,9 +30,51 @@ CREATE TABLE IF NOT EXISTS user_data (
     plan_json       TEXT,
     activities_json TEXT,
     profile_json    TEXT,
+    hyrox_json      TEXT,
     updated_at      TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS friends (
+    id            TEXT PRIMARY KEY,
+    requester_id  TEXT NOT NULL REFERENCES users(id),
+    recipient_id  TEXT NOT NULL REFERENCES users(id),
+    status        TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'accepted', 'rejected')),
+    created_at    TEXT NOT NULL,
+    responded_at  TEXT,
+    UNIQUE(requester_id, recipient_id)
+);
+
+CREATE TABLE IF NOT EXISTS feed_events (
+    id          TEXT PRIMARY KEY,
+    user_id     TEXT NOT NULL REFERENCES users(id),
+    event_type  TEXT NOT NULL CHECK(event_type IN ('activity', 'plan', 'pb', 'hyrox', 'milestone')),
+    title       TEXT NOT NULL,
+    body        TEXT,
+    metadata    TEXT,
+    created_at  TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS feed_likes (
+    id        TEXT PRIMARY KEY,
+    event_id  TEXT NOT NULL REFERENCES feed_events(id) ON DELETE CASCADE,
+    user_id   TEXT NOT NULL REFERENCES users(id),
+    created_at TEXT NOT NULL,
+    UNIQUE(event_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS feed_comments (
+    id        TEXT PRIMARY KEY,
+    event_id  TEXT NOT NULL REFERENCES feed_events(id) ON DELETE CASCADE,
+    user_id   TEXT NOT NULL REFERENCES users(id),
+    body      TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
 """
+
+_MIGRATIONS = [
+    # Add hyrox_json column if it doesn't exist (for existing databases)
+    "ALTER TABLE user_data ADD COLUMN hyrox_json TEXT",
+]
 
 
 def _get_conn(db_path: str) -> sqlite3.Connection:
@@ -51,6 +93,13 @@ def init_db(db_path: str) -> None:
     with _lock:
         conn = _get_conn(db_path)
         conn.executescript(_SCHEMA)
+        # Apply migrations for existing databases
+        for sql in _MIGRATIONS:
+            try:
+                conn.execute(sql)
+                conn.commit()
+            except Exception:
+                pass  # Column already exists
 
 
 def close_db() -> None:
@@ -190,8 +239,9 @@ def save_user_data(
     plan_json: str | None = None,
     activities_json: str | None = None,
     profile_json: str | None = None,
+    hyrox_json: str | None = None,
 ) -> None:
-    """Upsert cached user data (plan, activities, profile)."""
+    """Upsert cached user data (plan, activities, profile, hyrox)."""
     now = datetime.now(timezone.utc).isoformat()
     with _lock:
         conn = _get_conn(db_path)
@@ -210,6 +260,9 @@ def save_user_data(
             if profile_json is not None:
                 sets.append("profile_json = ?")
                 vals.append(profile_json)
+            if hyrox_json is not None:
+                sets.append("hyrox_json = ?")
+                vals.append(hyrox_json)
             vals.append(user_id)
             conn.execute(
                 f"UPDATE user_data SET {', '.join(sets)} WHERE user_id = ?",
@@ -217,9 +270,9 @@ def save_user_data(
             )
         else:
             conn.execute(
-                "INSERT INTO user_data (user_id, plan_json, activities_json, profile_json, updated_at) "
-                "VALUES (?, ?, ?, ?, ?)",
-                (user_id, plan_json, activities_json, profile_json, now),
+                "INSERT INTO user_data (user_id, plan_json, activities_json, profile_json, hyrox_json, updated_at) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (user_id, plan_json, activities_json, profile_json, hyrox_json, now),
             )
         conn.commit()
 
@@ -241,3 +294,246 @@ def reset_connection() -> None:
         if _connection:
             _connection.close()
         _connection = None
+
+
+# ── Friends ───────────────────────────────────────────────────────────
+
+
+def search_users(db_path: str, query: str, *, exclude_user_id: str | None = None) -> list[dict]:
+    """Search approved users by name or email (partial match)."""
+    with _lock:
+        conn = _get_conn(db_path)
+        rows = conn.execute(
+            "SELECT id, name, email FROM users "
+            "WHERE status = 'approved' AND (name LIKE ? OR email LIKE ?) "
+            "ORDER BY name LIMIT 20",
+            (f"%{query}%", f"%{query}%"),
+        ).fetchall()
+    results = [dict(r) for r in rows]
+    if exclude_user_id:
+        results = [r for r in results if r["id"] != exclude_user_id]
+    return results
+
+
+def send_friend_request(db_path: str, requester_id: str, recipient_id: str) -> dict | None:
+    """Send a friend request. Returns the friendship row or None if already exists."""
+    if requester_id == recipient_id:
+        return None
+    fid = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    with _lock:
+        conn = _get_conn(db_path)
+        # Check for existing relationship in either direction
+        existing = conn.execute(
+            "SELECT * FROM friends WHERE "
+            "(requester_id = ? AND recipient_id = ?) OR "
+            "(requester_id = ? AND recipient_id = ?)",
+            (requester_id, recipient_id, recipient_id, requester_id),
+        ).fetchone()
+        if existing:
+            return _row_to_dict(existing)
+        conn.execute(
+            "INSERT INTO friends (id, requester_id, recipient_id, status, created_at) "
+            "VALUES (?, ?, ?, 'pending', ?)",
+            (fid, requester_id, recipient_id, now),
+        )
+        conn.commit()
+        row = conn.execute("SELECT * FROM friends WHERE id = ?", (fid,)).fetchone()
+    return _row_to_dict(row)
+
+
+def respond_friend_request(db_path: str, friendship_id: str, *, accept: bool) -> dict | None:
+    """Accept or reject a friend request."""
+    now = datetime.now(timezone.utc).isoformat()
+    status = "accepted" if accept else "rejected"
+    with _lock:
+        conn = _get_conn(db_path)
+        conn.execute(
+            "UPDATE friends SET status = ?, responded_at = ? WHERE id = ? AND status = 'pending'",
+            (status, now, friendship_id),
+        )
+        conn.commit()
+        row = conn.execute("SELECT * FROM friends WHERE id = ?", (friendship_id,)).fetchone()
+    return _row_to_dict(row)
+
+
+def remove_friend(db_path: str, friendship_id: str) -> None:
+    """Remove a friendship (either party can remove)."""
+    with _lock:
+        conn = _get_conn(db_path)
+        conn.execute("DELETE FROM friends WHERE id = ?", (friendship_id,))
+        conn.commit()
+
+
+def list_friends(db_path: str, user_id: str) -> list[dict]:
+    """List accepted friends with their user info."""
+    with _lock:
+        conn = _get_conn(db_path)
+        rows = conn.execute(
+            "SELECT f.id AS friendship_id, f.created_at AS friends_since, "
+            "u.id, u.name, u.email "
+            "FROM friends f "
+            "JOIN users u ON u.id = CASE WHEN f.requester_id = ? THEN f.recipient_id ELSE f.requester_id END "
+            "WHERE (f.requester_id = ? OR f.recipient_id = ?) AND f.status = 'accepted' "
+            "ORDER BY u.name",
+            (user_id, user_id, user_id),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_friend_ids(db_path: str, user_id: str) -> list[str]:
+    """Return IDs of all accepted friends."""
+    with _lock:
+        conn = _get_conn(db_path)
+        rows = conn.execute(
+            "SELECT CASE WHEN requester_id = ? THEN recipient_id ELSE requester_id END AS friend_id "
+            "FROM friends "
+            "WHERE (requester_id = ? OR recipient_id = ?) AND status = 'accepted'",
+            (user_id, user_id, user_id),
+        ).fetchall()
+    return [r["friend_id"] for r in rows]
+
+
+def list_pending_requests(db_path: str, user_id: str) -> list[dict]:
+    """List incoming pending friend requests."""
+    with _lock:
+        conn = _get_conn(db_path)
+        rows = conn.execute(
+            "SELECT f.id AS friendship_id, f.created_at, u.id, u.name, u.email "
+            "FROM friends f JOIN users u ON u.id = f.requester_id "
+            "WHERE f.recipient_id = ? AND f.status = 'pending' "
+            "ORDER BY f.created_at DESC",
+            (user_id,),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def list_sent_requests(db_path: str, user_id: str) -> list[dict]:
+    """List outgoing pending friend requests."""
+    with _lock:
+        conn = _get_conn(db_path)
+        rows = conn.execute(
+            "SELECT f.id AS friendship_id, f.created_at, u.id, u.name, u.email "
+            "FROM friends f JOIN users u ON u.id = f.recipient_id "
+            "WHERE f.requester_id = ? AND f.status = 'pending' "
+            "ORDER BY f.created_at DESC",
+            (user_id,),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+# ── Feed ──────────────────────────────────────────────────────────────
+
+
+def create_feed_event(
+    db_path: str,
+    user_id: str,
+    *,
+    event_type: str,
+    title: str,
+    body: str | None = None,
+    metadata: dict | None = None,
+) -> dict:
+    """Create a new feed event."""
+    import json as _json
+    eid = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    meta_str = _json.dumps(metadata) if metadata else None
+    with _lock:
+        conn = _get_conn(db_path)
+        conn.execute(
+            "INSERT INTO feed_events (id, user_id, event_type, title, body, metadata, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (eid, user_id, event_type, title, body, meta_str, now),
+        )
+        conn.commit()
+        row = conn.execute("SELECT * FROM feed_events WHERE id = ?", (eid,)).fetchone()
+    return dict(row)
+
+
+def get_feed(db_path: str, user_ids: list[str], *, limit: int = 20, offset: int = 0) -> list[dict]:
+    """Get feed events for a list of user IDs, with like/comment counts and user info."""
+    if not user_ids:
+        return []
+    placeholders = ",".join("?" for _ in user_ids)
+    with _lock:
+        conn = _get_conn(db_path)
+        rows = conn.execute(
+            f"SELECT e.*, u.name AS user_name, "
+            f"(SELECT COUNT(*) FROM feed_likes WHERE event_id = e.id) AS like_count, "
+            f"(SELECT COUNT(*) FROM feed_comments WHERE event_id = e.id) AS comment_count "
+            f"FROM feed_events e JOIN users u ON u.id = e.user_id "
+            f"WHERE e.user_id IN ({placeholders}) "
+            f"ORDER BY e.created_at DESC LIMIT ? OFFSET ?",
+            (*user_ids, limit, offset),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def toggle_like(db_path: str, event_id: str, user_id: str) -> bool:
+    """Toggle a like on a feed event. Returns True if liked, False if unliked."""
+    with _lock:
+        conn = _get_conn(db_path)
+        existing = conn.execute(
+            "SELECT id FROM feed_likes WHERE event_id = ? AND user_id = ?",
+            (event_id, user_id),
+        ).fetchone()
+        if existing:
+            conn.execute("DELETE FROM feed_likes WHERE id = ?", (existing["id"],))
+            conn.commit()
+            return False
+        else:
+            lid = str(uuid.uuid4())
+            now = datetime.now(timezone.utc).isoformat()
+            conn.execute(
+                "INSERT INTO feed_likes (id, event_id, user_id, created_at) VALUES (?, ?, ?, ?)",
+                (lid, event_id, user_id, now),
+            )
+            conn.commit()
+            return True
+
+
+def get_user_likes(db_path: str, user_id: str, event_ids: list[str]) -> set[str]:
+    """Return set of event_ids that user has liked."""
+    if not event_ids:
+        return set()
+    placeholders = ",".join("?" for _ in event_ids)
+    with _lock:
+        conn = _get_conn(db_path)
+        rows = conn.execute(
+            f"SELECT event_id FROM feed_likes WHERE user_id = ? AND event_id IN ({placeholders})",
+            (user_id, *event_ids),
+        ).fetchall()
+    return {r["event_id"] for r in rows}
+
+
+def add_comment(db_path: str, event_id: str, user_id: str, body: str) -> dict:
+    """Add a comment to a feed event."""
+    cid = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    with _lock:
+        conn = _get_conn(db_path)
+        conn.execute(
+            "INSERT INTO feed_comments (id, event_id, user_id, body, created_at) VALUES (?, ?, ?, ?, ?)",
+            (cid, event_id, user_id, body, now),
+        )
+        conn.commit()
+        row = conn.execute(
+            "SELECT c.*, u.name AS user_name FROM feed_comments c "
+            "JOIN users u ON u.id = c.user_id WHERE c.id = ?",
+            (cid,),
+        ).fetchone()
+    return dict(row)
+
+
+def get_comments(db_path: str, event_id: str) -> list[dict]:
+    """Get all comments for a feed event."""
+    with _lock:
+        conn = _get_conn(db_path)
+        rows = conn.execute(
+            "SELECT c.*, u.name AS user_name FROM feed_comments c "
+            "JOIN users u ON u.id = c.user_id "
+            "WHERE c.event_id = ? ORDER BY c.created_at ASC",
+            (event_id,),
+        ).fetchall()
+    return [dict(r) for r in rows]

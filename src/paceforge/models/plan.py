@@ -82,6 +82,14 @@ class Workout(BaseModel):
     notes: str = ""
     purpose: TrainingPurpose | None = None
     cadence_target: int | None = None
+    # Completion tracking
+    completed: bool = False
+    matched_activity_id: int | None = Field(None, description="Garmin activity ID matched to this workout")
+    completion_analysis: str | None = Field(None, description="AI analysis of how the workout went")
+    completion_metrics: dict | None = Field(None, description="Actual vs planned metrics from matched activity")
+    # User feedback
+    user_rpe: int | None = Field(None, description="Rate of Perceived Exertion (1-10)")
+    user_notes: str | None = Field(None, description="User notes about how the workout felt")
 
 
 class TrainingWeek(BaseModel):
@@ -108,6 +116,17 @@ class TrainingPlan(BaseModel):
     threshold_pace: float | None = None
     interval_pace: float | None = None
     repetition_pace: float | None = None
+    vdot: float | None = Field(default=None, description="Derived VDOT value used for pace calculation")
+    pace_source: str = Field(default="", description="How training paces were derived (e.g. 'Lactate threshold speed', 'VO2 Max')")
+
+    # AI-generated plan context
+    rationale: str = Field(default="", description="AI explanation of why this plan was designed this way")
+    tips: list[str] = Field(default_factory=list, description="Personalised training tips from the AI coach")
+    athlete_summary: str = Field(default="", description="Summary of athlete profile data used to generate the plan")
 
     # Plan acceptance state
     accepted: bool = False
+
+    # AI adaptation tracking
+    last_ai_review: str | None = Field(None, description="ISO timestamp of last AI plan review")
+    adaptation_notes: str | None = Field(None, description="AI explanation of last plan adaptation")

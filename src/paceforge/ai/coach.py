@@ -11,8 +11,6 @@ import json
 import logging
 from dataclasses import dataclass
 
-from openai import OpenAI
-
 from paceforge.models.plan import TrainingPlan
 from paceforge.models.profile import UserFitnessProfile
 
@@ -53,12 +51,12 @@ class Coach:
         api_key: str,
         model: str = "gpt-4o-mini",
         base_url: str | None = None,
+        provider: str = "openai",
     ) -> None:
-        kwargs: dict = {"api_key": api_key}
-        if base_url:
-            kwargs["base_url"] = base_url
-        self._client = OpenAI(**kwargs)
+        self._api_key = api_key
         self._model = model
+        self._base_url = base_url
+        self._provider = provider
         self._conversation: list[dict[str, str]] = []
 
     def _build_context(
@@ -173,19 +171,52 @@ class Coach:
         self._conversation.append({"role": "user", "content": message})
 
         try:
-            response = self._client.chat.completions.create(
-                model=self._model,
-                messages=self._conversation,
-                temperature=0.7,
-                max_tokens=1000,
-            )
-            reply = response.choices[0].message.content or "I couldn't generate a response."
+            if self._provider == "anthropic":
+                reply = self._chat_anthropic()
+            else:
+                reply = self._chat_openai()
             self._conversation.append({"role": "assistant", "content": reply})
         except Exception as e:
             logger.error("LLM call failed: %s", e, exc_info=True)
             reply = f"Sorry, I couldn't reach the AI service: {e}"
 
         return CoachResponse(reply=reply)
+
+    def _chat_openai(self) -> str:
+        from openai import OpenAI
+
+        kwargs: dict = {"api_key": self._api_key}
+        if self._base_url:
+            kwargs["base_url"] = self._base_url
+        client = OpenAI(**kwargs)
+        response = client.chat.completions.create(
+            model=self._model,
+            messages=self._conversation,
+            temperature=0.7,
+            max_tokens=1000,
+        )
+        return response.choices[0].message.content or "I couldn't generate a response."
+
+    def _chat_anthropic(self) -> str:
+        import anthropic
+
+        client = anthropic.Anthropic(api_key=self._api_key)
+        # Anthropic: system prompt separate, only user/assistant messages
+        system_parts = []
+        messages = []
+        for msg in self._conversation:
+            if msg["role"] == "system":
+                system_parts.append(msg["content"])
+            else:
+                messages.append(msg)
+        response = client.messages.create(
+            model=self._model,
+            max_tokens=1000,
+            system="\n\n".join(system_parts),
+            messages=messages,
+            temperature=0.7,
+        )
+        return response.content[0].text
 
     def reset_conversation(self) -> None:
         """Clear conversation history for a fresh session."""
@@ -231,3 +262,128 @@ class Coach:
             profile=profile,
             plan=plan,
         )
+
+    def analyze_workout(
+        self,
+        workout: dict,
+        activity: dict,
+        profile: UserFitnessProfile | None = None,
+        user_feedback: dict | None = None,
+    ) -> str:
+        """Analyze a completed workout against the planned workout.
+
+        Returns AI-generated analysis text comparing planned vs actual metrics.
+        """
+        def _fp(sec_per_km: float | None) -> str:
+            if not sec_per_km:
+                return "N/A"
+            m, s = divmod(int(sec_per_km), 60)
+            return f"{m}:{s:02d}/km"
+
+        lines = ["Analyze this completed workout compared to what was planned.\n"]
+
+        # Planned workout details
+        lines.append("## Planned Workout")
+        lines.append(f"- Name: {workout.get('name', 'Unknown')}")
+        lines.append(f"- Type: {workout.get('workout_type', 'Unknown')}")
+        planned_dist = workout.get("estimated_distance_meters", 0)
+        if planned_dist:
+            lines.append(f"- Planned distance: {planned_dist / 1000:.1f} km")
+        planned_dur = workout.get("estimated_duration_seconds", 0)
+        if planned_dur:
+            m, s = divmod(int(planned_dur), 60)
+            lines.append(f"- Planned duration: {m}:{s:02d}")
+        if workout.get("notes"):
+            lines.append(f"- Coach notes: {workout['notes']}")
+
+        # Step targets
+        steps = workout.get("steps", [])
+        if steps:
+            lines.append("- Planned steps:")
+            for step in steps:
+                desc = step.get("description", "")
+                tl = step.get("target_low")
+                th = step.get("target_high")
+                if tl:
+                    lines.append(f"  - {desc}: {_fp(tl)} to {_fp(th)}")
+                else:
+                    lines.append(f"  - {desc}")
+
+        # Actual activity details
+        lines.append("\n## Actual Activity (from Garmin)")
+        lines.append(f"- Name: {activity.get('name', 'Unknown')}")
+        actual_dist = activity.get("distance_meters", 0)
+        if actual_dist:
+            lines.append(f"- Actual distance: {actual_dist / 1000:.1f} km")
+        actual_dur = activity.get("duration_seconds", 0)
+        if actual_dur:
+            m, s = divmod(int(actual_dur), 60)
+            lines.append(f"- Actual duration: {m}:{s:02d}")
+        if activity.get("avg_pace_sec_per_km"):
+            lines.append(f"- Average pace: {_fp(activity['avg_pace_sec_per_km'])}")
+        if activity.get("avg_hr"):
+            lines.append(f"- Average HR: {activity['avg_hr']} bpm")
+        if activity.get("max_hr"):
+            lines.append(f"- Max HR: {activity['max_hr']} bpm")
+        if activity.get("training_effect_aerobic"):
+            lines.append(f"- Aerobic training effect: {activity['training_effect_aerobic']}")
+        if activity.get("training_effect_anaerobic"):
+            lines.append(f"- Anaerobic training effect: {activity['training_effect_anaerobic']}")
+        if activity.get("avg_running_cadence"):
+            lines.append(f"- Cadence: {activity['avg_running_cadence']} spm")
+        if activity.get("elevation_gain"):
+            lines.append(f"- Elevation gain: {activity['elevation_gain']} m")
+
+        # Comparison
+        lines.append("\n## Comparison")
+        if planned_dist and actual_dist:
+            diff_pct = ((actual_dist - planned_dist) / planned_dist) * 100
+            lines.append(f"- Distance: {diff_pct:+.0f}% vs planned")
+        if planned_dur and actual_dur:
+            diff_pct = ((actual_dur - planned_dur) / planned_dur) * 100
+            lines.append(f"- Duration: {diff_pct:+.0f}% vs planned")
+
+        # User feedback
+        if user_feedback:
+            rpe = user_feedback.get("rpe")
+            notes = user_feedback.get("notes")
+            if rpe or notes:
+                lines.append("\n## Athlete Feedback")
+                if rpe:
+                    rpe_labels = {1: "Very Light", 2: "Light", 3: "Light-Moderate", 4: "Moderate",
+                                  5: "Moderate-Hard", 6: "Hard", 7: "Very Hard", 8: "Very Hard+",
+                                  9: "Near Maximum", 10: "Maximum"}
+                    lines.append(f"- RPE: {rpe}/10 ({rpe_labels.get(rpe, '')})")
+                if notes:
+                    lines.append(f"- Notes: {notes}")
+
+        lines.append(
+            "\nProvide a concise analysis (3-5 sentences) covering: "
+            "1) How well the athlete executed the workout goals, "
+            "2) Any notable positives, "
+            "3) Any concerns or suggestions for next time. "
+            "Be specific with numbers and encouraging."
+        )
+
+        # Use a fresh conversation for analysis
+        saved = self._conversation
+        self._conversation = [
+            {"role": "system", "content": SYSTEM_PROMPT},
+        ]
+        if profile:
+            ctx = self._build_context(profile, None)
+            self._conversation.append({"role": "system", "content": f"Athlete data:\n{ctx}"})
+
+        self._conversation.append({"role": "user", "content": "\n".join(lines)})
+
+        try:
+            if self._provider == "anthropic":
+                reply = self._chat_anthropic()
+            else:
+                reply = self._chat_openai()
+        except Exception as e:
+            logger.error("Workout analysis failed: %s", e, exc_info=True)
+            reply = f"Could not analyze workout: {e}"
+
+        self._conversation = saved
+        return reply

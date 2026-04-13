@@ -16,13 +16,27 @@ from pydantic import BaseModel
 from paceforge.ai.coach import Coach
 from paceforge.api.config import settings
 from paceforge.auth.database import (
+    add_comment,
+    create_feed_event,
     create_user,
+    get_comments,
+    get_feed,
+    get_friend_ids,
     get_user_by_email,
     get_user_by_id,
+    get_user_likes,
     init_db,
+    list_friends,
+    list_pending_requests,
+    list_sent_requests,
     list_users,
     load_user_data,
+    remove_friend,
+    respond_friend_request,
     save_user_data,
+    search_users,
+    send_friend_request,
+    toggle_like,
     update_garmin_email,
     update_user_profile,
     update_user_status,
@@ -60,8 +74,39 @@ logger = logging.getLogger(__name__)
 # ── Per-user state (keyed by user_id) ────────────────────────────────
 _user_garmin: dict[str, GarminClient] = {}
 _user_profile: dict[str, UserFitnessProfile] = {}
-_user_plan: dict[str, TrainingPlan] = {}
+_user_plans: dict[str, list[TrainingPlan]] = {}
 _user_coach: dict[str, Coach] = {}
+
+
+def _meters_per_sec_to_sec_per_km(speed: float | None) -> float | None:
+    if not speed or speed <= 0:
+        return None
+    return round(1000.0 / speed, 1)
+
+
+def _save_plans(uid: str) -> None:
+    """Persist all plans for a user."""
+    import json as _json
+    plans = _user_plans.get(uid, [])
+    plans_data = [p.model_dump(mode="json") for p in plans]
+    save_user_data(settings.db_path, uid, plan_json=_json.dumps(plans_data))
+
+
+def _load_plans(uid: str) -> list[TrainingPlan]:
+    """Load plans from DB cache (handles both old single-plan and new list format)."""
+    import json as _json
+    cached = load_user_data(settings.db_path, uid)
+    if not cached or not cached.get("plan_json"):
+        return []
+    try:
+        data = _json.loads(cached["plan_json"])
+    except Exception:
+        return []
+    if isinstance(data, list):
+        return [TrainingPlan.model_validate(p) for p in data]
+    elif isinstance(data, dict):
+        return [TrainingPlan.model_validate(data)]
+    return []
 
 
 @asynccontextmanager
@@ -127,6 +172,35 @@ async def require_admin(user: dict = Depends(get_current_user)) -> dict:
     return user
 
 
+def _send_registration_email(name: str, email: str, reason: str) -> None:
+    """Send admin notification email for a new registration (best-effort)."""
+    if not settings.smtp_host or not settings.notify_email:
+        return
+    import smtplib
+    from email.mime.text import MIMEText
+
+    body = (
+        f"New PaceForge registration:\n\n"
+        f"Name: {name}\n"
+        f"Email: {email}\n"
+        f"Reason: {reason or '(none)'}\n\n"
+        f"Log in to the admin panel to approve or reject."
+    )
+    msg = MIMEText(body)
+    msg["Subject"] = f"PaceForge: New registration — {name}"
+    msg["From"] = settings.smtp_from or settings.smtp_user
+    msg["To"] = settings.notify_email
+
+    try:
+        with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10) as srv:
+            srv.starttls()
+            srv.login(settings.smtp_user, settings.smtp_password)
+            srv.send_message(msg)
+        logger.info("Registration notification sent for %s", email)
+    except Exception as e:
+        logger.warning("Failed to send registration email: %s", e)
+
+
 # ── Public auth endpoints ────────────────────────────────────────────
 
 
@@ -142,6 +216,7 @@ async def register(req: RegisterRequest):
         password_hash=hash_password(req.password),
         reason=req.reason,
     )
+    _send_registration_email(req.name, req.email, req.reason)
     return {"status": "ok", "message": "Registration submitted. An admin will review your request."}
 
 
@@ -257,12 +332,34 @@ class RescheduleRequest(BaseModel):
 
 
 class AcceptPlanRequest(BaseModel):
+    plan_id: str
     accepted: bool
 
 
 class DeleteWorkoutRequest(BaseModel):
     workout_name: str
     scheduled_date: str
+
+
+class MatchWorkoutRequest(BaseModel):
+    plan_id: str
+    workout_name: str
+    scheduled_date: str
+    activity_id: int
+
+
+class AnalyzeWorkoutRequest(BaseModel):
+    plan_id: str
+    workout_name: str
+    scheduled_date: str
+
+
+class WorkoutFeedbackRequest(BaseModel):
+    plan_id: str
+    workout_name: str
+    scheduled_date: str
+    rpe: int | None = None  # 1-10
+    notes: str | None = None
 
 
 # ── Helper: per-user Garmin token dir ────────────────────────────────
@@ -341,14 +438,24 @@ async def garmin_mfa(req: MfaRequest, user: dict = Depends(get_current_user)):
 
 
 @app.get("/profile", response_model=UserFitnessProfile)
-async def get_fitness_profile(user: dict = Depends(get_current_user)):
+async def get_fitness_profile(sync: bool = False, user: dict = Depends(get_current_user)):
     uid = user["id"]
+    # Try cached data first (in-memory, then DB)
+    if not sync:
+        if uid in _user_profile:
+            return _user_profile[uid]
+        cached = load_user_data(settings.db_path, uid)
+        if cached and cached.get("profile_json"):
+            profile = UserFitnessProfile.model_validate_json(cached["profile_json"])
+            _user_profile[uid] = profile
+            return profile
+    # Sync from Garmin if requested or no cached data
     garmin = _ensure_garmin(uid)
     if garmin:
         _user_profile[uid] = garmin.get_fitness_profile()
         save_user_data(settings.db_path, uid, profile_json=_user_profile[uid].model_dump_json())
         return _user_profile[uid]
-    # Fall back to in-memory or DB-cached profile
+    # Final fallback to cache even on sync if Garmin is unavailable
     if uid in _user_profile:
         return _user_profile[uid]
     cached = load_user_data(settings.db_path, uid)
@@ -359,19 +466,50 @@ async def get_fitness_profile(user: dict = Depends(get_current_user)):
     raise HTTPException(404, "No profile data available. Connect to Garmin to sync.")
 
 
+@app.get("/profile/analytics")
+async def get_profile_analytics(user: dict = Depends(get_current_user)):
+    """Compute derived performance analytics from the cached fitness profile."""
+    from paceforge.engine.analytics import compute_all
+
+    uid = user["id"]
+    profile = _user_profile.get(uid)
+    if not profile:
+        # Try loading from DB cache
+        cached = load_user_data(settings.db_path, uid)
+        if cached and cached.get("profile_json"):
+            profile = UserFitnessProfile.model_validate_json(cached["profile_json"])
+            _user_profile[uid] = profile
+    if not profile:
+        raise HTTPException(404, "No profile data. Sync from Garmin first.")
+    return compute_all(profile)
+
+
 @app.get("/activities", response_model=list[RecentActivity])
 async def get_activities(
-    days: int = 240, user: dict = Depends(get_current_user)
+    days: int = 240, sync: bool = False, user: dict = Depends(get_current_user)
 ):
-    """Return running activities from the last N days (default 240)."""
+    """Return running activities from the last N days (default 240).
+
+    By default returns cached data. Pass sync=true to re-fetch from Garmin.
+    """
     uid = user["id"]
+    # Try cached data first
+    if not sync:
+        cached = load_user_data(settings.db_path, uid)
+        if cached and cached.get("activities_json"):
+            activities = [RecentActivity(**a) for a in json.loads(cached["activities_json"])]
+            if activities:
+                return activities
+    # Sync from Garmin if requested or no cached data
     garmin = _ensure_garmin(uid)
     if garmin:
         profile = garmin.get_fitness_profile(lookback_days=min(days, 365))
         activities = [a.model_dump(mode="json") for a in profile.recent_activities]
         save_user_data(settings.db_path, uid, activities_json=json.dumps(activities))
+        # Auto-match activities to planned workouts
+        _auto_match_activities(uid, profile.recent_activities)
         return profile.recent_activities
-    # Fall back to cached activities
+    # Final fallback to cache
     cached = load_user_data(settings.db_path, uid)
     if cached and cached.get("activities_json"):
         return [RecentActivity(**a) for a in json.loads(cached["activities_json"])]
@@ -388,14 +526,163 @@ async def get_activity_detail(activity_id: int, user: dict = Depends(get_current
     return garmin.get_activity_detail(activity_id)
 
 
+def _get_or_create_coach(uid: str) -> Coach:
+    """Get or create a Coach instance for a user."""
+    if uid not in _user_coach:
+        coach_key = settings.anthropic_api_key or settings.openai_api_key
+        coach_model = settings.anthropic_model if settings.anthropic_api_key else settings.openai_model
+        coach_provider = "anthropic" if settings.anthropic_api_key else "openai"
+        _user_coach[uid] = Coach(api_key=coach_key, model=coach_model, provider=coach_provider)
+    return _user_coach[uid]
+
+
+def _auto_match_activities(uid: str, activities: list[RecentActivity]) -> None:
+    """Auto-match Garmin activities to planned workouts by date.
+
+    For each accepted plan, find unmatched workouts whose scheduled_date
+    matches an activity's date. Pick the best activity by closest distance.
+    Automatically runs AI analysis on newly matched workouts.
+    """
+    if uid not in _user_plans:
+        _user_plans[uid] = _load_plans(uid)
+    plans = _user_plans.get(uid, [])
+    if not plans:
+        return
+
+    from collections import defaultdict
+    acts_by_date: dict[str, list[RecentActivity]] = defaultdict(list)
+    for act in activities:
+        act_date = str(act.start_time.date()) if hasattr(act.start_time, 'date') else str(act.start_time)[:10]
+        acts_by_date[act_date].append(act)
+
+    newly_matched: list[tuple[TrainingPlan, Workout]] = []
+    for plan in plans:
+        if not plan.accepted:
+            continue
+        for week in plan.weeks:
+            for wo in week.workouts:
+                if wo.completed or wo.workout_type.value == "rest":
+                    continue
+                wo_date = str(wo.scheduled_date)
+                candidates = acts_by_date.get(wo_date, [])
+                if not candidates:
+                    continue
+                planned_dist = wo.estimated_distance_meters or 0
+                best = min(
+                    candidates,
+                    key=lambda a: abs(a.distance_meters - planned_dist) if planned_dist else 0,
+                )
+                wo.completed = True
+                wo.matched_activity_id = best.activity_id
+                wo.completion_metrics = {
+                    k: v for k, v in {
+                        "distance_meters": best.distance_meters,
+                        "duration_seconds": best.duration_seconds,
+                        "avg_pace_sec_per_km": best.avg_pace_sec_per_km,
+                        "avg_hr": best.avg_hr,
+                        "max_hr": best.max_hr,
+                        "calories": best.calories,
+                        "training_effect_aerobic": best.training_effect_aerobic,
+                        "avg_running_cadence": best.avg_running_cadence,
+                        "elevation_gain": best.elevation_gain,
+                    }.items() if v is not None
+                }
+                newly_matched.append((plan, wo))
+                candidates.remove(best)
+
+    if not newly_matched:
+        return
+    _save_plans(uid)
+    logger.info("Auto-matched %d activities for user %s", len(newly_matched), uid)
+
+    # Auto-analyze newly matched workouts (only those without existing analysis)
+    garmin = _user_garmin.get(uid)
+    for plan, wo in newly_matched:
+        if wo.completion_analysis:
+            continue
+        try:
+            # Enrich with full Garmin detail (splits, HR zones) for richer analysis
+            activity_data = dict(wo.completion_metrics or {})
+            if garmin and wo.matched_activity_id:
+                try:
+                    detail = garmin.get_activity_detail(wo.matched_activity_id)
+                    summary = detail.get("summary") or {}
+                    summary_dto = summary.get("summaryDTO") or summary
+                    activity_data.update({
+                        k: v for k, v in {
+                            "distance_meters": summary_dto.get("distance"),
+                            "duration_seconds": summary_dto.get("duration"),
+                            "avg_pace_sec_per_km": _meters_per_sec_to_sec_per_km(summary_dto.get("averageSpeed")),
+                            "avg_hr": summary_dto.get("averageHR"),
+                            "max_hr": summary_dto.get("maxHR"),
+                            "calories": summary_dto.get("calories"),
+                            "training_effect_aerobic": summary_dto.get("aerobicTrainingEffect"),
+                            "training_effect_anaerobic": summary_dto.get("anaerobicTrainingEffect"),
+                            "avg_running_cadence": summary_dto.get("averageRunningCadenceInStepsPerMinute"),
+                            "elevation_gain": summary_dto.get("elevationGain"),
+                        }.items() if v is not None
+                    })
+                    # Store full detail for dashboard graphs
+                    wo.completion_metrics = activity_data
+                    wo.completion_metrics["detail"] = {
+                        "splits": detail.get("splits"),
+                        "hr_zones": detail.get("hr_zones"),
+                        "weather": detail.get("weather"),
+                        "split_summaries": detail.get("split_summaries"),
+                    }
+                except Exception:
+                    logger.debug("Could not fetch detail for activity %s", wo.matched_activity_id)
+
+            coach = _get_or_create_coach(uid)
+            profile = _user_profile.get(uid)
+            analysis = coach.analyze_workout(
+                workout=wo.model_dump(mode="json"),
+                activity=activity_data,
+                profile=profile,
+            )
+            wo.completion_analysis = analysis
+        except Exception:
+            logger.warning("Auto-analysis failed for workout %s", wo.name, exc_info=True)
+
+    # Post feed events for newly completed workouts
+    for plan, wo in newly_matched:
+        metrics = wo.completion_metrics or {}
+        dist_km = round(metrics.get("distance_meters", 0) / 1000, 2) if metrics.get("distance_meters") else None
+        dur_min = round(metrics.get("duration_seconds", 0) / 60, 1) if metrics.get("duration_seconds") else None
+        pace = metrics.get("avg_pace_sec_per_km")
+        pace_str = f"{int(pace // 60)}:{int(pace % 60):02d}/km" if pace else None
+        parts = [f"{dist_km} km" if dist_km else None, f"{dur_min} min" if dur_min else None, pace_str]
+        body_str = " · ".join(p for p in parts if p) or None
+        try:
+            create_feed_event(
+                settings.db_path, uid,
+                event_type="activity",
+                title=f"Completed: {wo.name}",
+                body=body_str,
+                metadata={"workout_type": wo.workout_type.value, "distance_km": dist_km, "pace": pace_str},
+            )
+        except Exception:
+            logger.debug("Failed to post feed event for %s", wo.name)
+
+    _save_plans(uid)
+
+
 @app.post("/plan/generate", response_model=TrainingPlan)
 async def generate(req: GeneratePlanRequest, user: dict = Depends(get_current_user)):
     uid = user["id"]
-    garmin = _ensure_garmin(uid)
-    if not garmin:
-        raise HTTPException(401, "Not logged in to Garmin")
 
-    profile = _user_profile.get(uid) or garmin.get_fitness_profile()
+    # Try in-memory profile, then Garmin, then cached DB profile
+    profile = _user_profile.get(uid)
+    if not profile:
+        garmin = _ensure_garmin(uid)
+        if garmin:
+            profile = garmin.get_fitness_profile()
+        else:
+            cached = load_user_data(settings.db_path, uid)
+            if cached and cached.get("profile_json"):
+                profile = UserFitnessProfile.model_validate_json(cached["profile_json"])
+    if not profile:
+        raise HTTPException(400, "No fitness profile available — connect Garmin or sync first")
     _user_profile[uid] = profile
     save_user_data(settings.db_path, uid, profile_json=profile.model_dump_json())
 
@@ -412,24 +699,59 @@ async def generate(req: GeneratePlanRequest, user: dict = Depends(get_current_us
         custom_threshold_pace=req.custom_threshold_pace,
     )
 
-    _user_plan[uid] = generate_plan(profile, goal)
-    save_user_data(settings.db_path, uid, plan_json=_user_plan[uid].model_dump_json())
-    return _user_plan[uid]
+    try:
+        new_plan = generate_plan(
+            profile, goal,
+            openai_api_key=settings.openai_api_key,
+            openai_model=settings.openai_model,
+            anthropic_api_key=settings.anthropic_api_key,
+            anthropic_model=settings.anthropic_model,
+            llm_provider=settings.llm_provider,
+        )
+    except Exception as e:
+        logger.error("Plan generation failed: %s", e, exc_info=True)
+        raise HTTPException(500, f"Plan generation failed: {e}")
+
+    # Add to user's plan list
+    if uid not in _user_plans:
+        _user_plans[uid] = _load_plans(uid)
+    _user_plans[uid].append(new_plan)
+    _save_plans(uid)
+
+    # Post feed event
+    try:
+        weeks = len(new_plan.weeks)
+        goal_label = req.goal_type.value if hasattr(req.goal_type, "value") else str(req.goal_type)
+        create_feed_event(
+            settings.db_path, uid,
+            event_type="plan",
+            title=f"Started a {weeks}-week {goal_label} training plan",
+            body=f"Target date: {req.target_date}" if req.target_date else None,
+        )
+    except Exception:
+        logger.debug("Failed to post plan feed event")
+
+    return new_plan
+
+
+@app.get("/plans", response_model=list[TrainingPlan])
+async def get_plans(user: dict = Depends(get_current_user)):
+    uid = user["id"]
+    if uid not in _user_plans:
+        _user_plans[uid] = _load_plans(uid)
+    return _user_plans[uid]
 
 
 @app.get("/plan", response_model=TrainingPlan | None)
 async def get_plan(user: dict = Depends(get_current_user)):
+    """Legacy endpoint — returns the most recent plan."""
     uid = user["id"]
-    plan = _user_plan.get(uid)
-    if not plan:
-        # Try loading from DB
-        cached = load_user_data(settings.db_path, uid)
-        if cached and cached.get("plan_json"):
-            plan = TrainingPlan.model_validate_json(cached["plan_json"])
-            _user_plan[uid] = plan
-    if not plan:
+    if uid not in _user_plans:
+        _user_plans[uid] = _load_plans(uid)
+    plans = _user_plans.get(uid, [])
+    if not plans:
         raise HTTPException(404, "No plan generated yet")
-    return plan
+    return plans[-1]
 
 
 @app.post("/plan/push")
@@ -438,17 +760,28 @@ async def push_plan(req: PushPlanRequest, user: dict = Depends(get_current_user)
     garmin = _ensure_garmin(uid)
     if not garmin:
         raise HTTPException(401, "Not logged in to Garmin")
-    plan = _user_plan.get(uid)
+    if uid not in _user_plans:
+        _user_plans[uid] = _load_plans(uid)
+    # Find the accepted plan to push
+    plan = next((p for p in _user_plans.get(uid, []) if p.accepted), None)
     if not plan:
-        raise HTTPException(404, "No plan generated yet")
+        raise HTTPException(404, "No accepted plan to push")
 
     weeks_to_push = plan.weeks
     if req.week_numbers:
         weeks_to_push = [w for w in plan.weeks if w.week_number in req.week_numbers]
 
+    plan_paces = {
+        "easy_pace": plan.easy_pace,
+        "marathon_pace": plan.marathon_pace,
+        "threshold_pace": plan.threshold_pace,
+        "interval_pace": plan.interval_pace,
+        "repetition_pace": plan.repetition_pace,
+    }
+
     total_pushed = 0
     for week in weeks_to_push:
-        results = garmin.push_plan_week(week.workouts)
+        results = garmin.push_plan_week(week.workouts, plan_paces=plan_paces)
         total_pushed += len(results)
 
     return {"status": "ok", "workouts_pushed": total_pushed}
@@ -457,84 +790,738 @@ async def push_plan(req: PushPlanRequest, user: dict = Depends(get_current_user)
 @app.post("/plan/reschedule")
 async def reschedule_workout(req: RescheduleRequest, user: dict = Depends(get_current_user)):
     uid = user["id"]
-    plan = _user_plan.get(uid)
-    if not plan:
-        raise HTTPException(404, "No plan generated yet")
-    for week in plan.weeks:
-        for w in week.workouts:
-            if w.name == req.workout_name and str(w.scheduled_date) == req.old_date:
-                w.scheduled_date = date.fromisoformat(req.new_date)
-                save_user_data(settings.db_path, uid, plan_json=plan.model_dump_json())
-                return {"status": "ok", "message": f"Moved '{w.name}' to {req.new_date}"}
+    if uid not in _user_plans:
+        _user_plans[uid] = _load_plans(uid)
+    for plan in _user_plans.get(uid, []):
+        for week in plan.weeks:
+            for w in week.workouts:
+                if w.name == req.workout_name and str(w.scheduled_date) == req.old_date:
+                    w.scheduled_date = date.fromisoformat(req.new_date)
+                    _save_plans(uid)
+                    return {"status": "ok", "message": f"Moved '{w.name}' to {req.new_date}"}
     raise HTTPException(404, "Workout not found")
 
 
 @app.post("/plan/delete-workout")
 async def delete_workout(req: DeleteWorkoutRequest, user: dict = Depends(get_current_user)):
     uid = user["id"]
-    plan = _user_plan.get(uid)
-    if not plan:
-        raise HTTPException(404, "No plan generated yet")
-    for week in plan.weeks:
-        for w in week.workouts:
-            if w.name == req.workout_name and str(w.scheduled_date) == req.scheduled_date:
-                week.workouts.remove(w)
-                week.total_distance_km = round(
-                    sum((wo.estimated_distance_meters or 0) for wo in week.workouts) / 1000, 1
-                )
-                save_user_data(settings.db_path, uid, plan_json=plan.model_dump_json())
-                return {"status": "ok", "message": f"Deleted '{w.name}' on {req.scheduled_date}"}
+    if uid not in _user_plans:
+        _user_plans[uid] = _load_plans(uid)
+    for plan in _user_plans.get(uid, []):
+        for week in plan.weeks:
+            for w in week.workouts:
+                if w.name == req.workout_name and str(w.scheduled_date) == req.scheduled_date:
+                    week.workouts.remove(w)
+                    week.total_distance_km = round(
+                        sum((wo.estimated_distance_meters or 0) for wo in week.workouts) / 1000, 1
+                    )
+                    _save_plans(uid)
+                    return {"status": "ok", "message": f"Deleted '{w.name}' on {req.scheduled_date}"}
     raise HTTPException(404, "Workout not found")
 
 
 @app.post("/plan/accept", response_model=TrainingPlan)
 async def accept_plan(req: AcceptPlanRequest, user: dict = Depends(get_current_user)):
     uid = user["id"]
-    plan = _user_plan.get(uid)
+    if uid not in _user_plans:
+        _user_plans[uid] = _load_plans(uid)
+    plan = next((p for p in _user_plans.get(uid, []) if p.plan_id == req.plan_id), None)
     if not plan:
-        raise HTTPException(404, "No plan generated yet")
+        raise HTTPException(404, "Plan not found")
     plan.accepted = req.accepted
-    save_user_data(settings.db_path, uid, plan_json=plan.model_dump_json())
+    _save_plans(uid)
     return plan
+
+
+@app.delete("/plan/{plan_id}")
+async def delete_plan(plan_id: str, user: dict = Depends(get_current_user)):
+    uid = user["id"]
+    if uid not in _user_plans:
+        _user_plans[uid] = _load_plans(uid)
+    plans = _user_plans.get(uid, [])
+    plan = next((p for p in plans if p.plan_id == plan_id), None)
+    if not plan:
+        raise HTTPException(404, "Plan not found")
+    plans.remove(plan)
+    _save_plans(uid)
+    return {"status": "ok", "message": f"Plan '{plan.name}' deleted"}
 
 
 @app.post("/coach/chat", response_model=ChatResponse)
 async def coach_chat(req: ChatRequest, user: dict = Depends(get_current_user)):
     uid = user["id"]
-    if not settings.openai_api_key:
+
+    # Resolve which LLM to use for coaching
+    if settings.llm_provider == "anthropic" and settings.anthropic_api_key:
+        coach_key = settings.anthropic_api_key
+        coach_model = settings.anthropic_model
+        coach_provider = "anthropic"
+    elif settings.llm_provider == "openai" and settings.openai_api_key:
+        coach_key = settings.openai_api_key
+        coach_model = settings.openai_model
+        coach_provider = "openai"
+    elif settings.anthropic_api_key:
+        coach_key = settings.anthropic_api_key
+        coach_model = settings.anthropic_model
+        coach_provider = "anthropic"
+    elif settings.openai_api_key:
+        coach_key = settings.openai_api_key
+        coach_model = settings.openai_model
+        coach_provider = "openai"
+    else:
         return ChatResponse(
             reply=(
                 "AI coaching is not configured. "
-                "Set PACEFORGE_OPENAI_API_KEY to enable."
+                "Set PACEFORGE_ANTHROPIC_API_KEY or PACEFORGE_OPENAI_API_KEY to enable."
             )
         )
+
     coach = _user_coach.get(uid)
-    if coach is None:
+    if coach is None or getattr(coach, "_provider", None) != coach_provider:
         coach = Coach(
-            api_key=settings.openai_api_key,
-            model=settings.openai_model,
+            api_key=coach_key,
+            model=coach_model,
+            provider=coach_provider,
         )
         _user_coach[uid] = coach
 
     result = coach.chat(
         message=req.message,
         profile=_user_profile.get(uid),
-        plan=_user_plan.get(uid),
+        plan=_user_plans.get(uid, [None])[-1] if _user_plans.get(uid) else None,
     )
     return ChatResponse(reply=result.reply)
 
 
 @app.post("/plan/adapt", response_model=TrainingPlan)
-async def adapt_current_plan(user: dict = Depends(get_current_user)):
+async def adapt_current_plan(plan_id: str | None = None, user: dict = Depends(get_current_user)):
     uid = user["id"]
     garmin = _ensure_garmin(uid)
     if not garmin:
         raise HTTPException(401, "Not logged in to Garmin")
-    plan = _user_plan.get(uid)
+    if uid not in _user_plans:
+        _user_plans[uid] = _load_plans(uid)
+    plans = _user_plans.get(uid, [])
+    if plan_id:
+        plan = next((p for p in plans if p.plan_id == plan_id), None)
+    else:
+        plan = plans[-1] if plans else None
     if not plan:
-        raise HTTPException(404, "No plan generated yet")
+        raise HTTPException(404, "No plan found")
     _user_profile[uid] = garmin.get_fitness_profile()
-    _user_plan[uid] = adapt_plan(plan, _user_profile[uid])
-    _user_plan[uid].accepted = False
-    save_user_data(settings.db_path, uid, plan_json=_user_plan[uid].model_dump_json())
-    return _user_plan[uid]
+    idx = plans.index(plan)
+    adapted = adapt_plan(plan, _user_profile[uid])
+    adapted.accepted = False
+    plans[idx] = adapted
+    _save_plans(uid)
+    return adapted
+
+
+@app.post("/plan/match-workout")
+async def match_workout(req: MatchWorkoutRequest, user: dict = Depends(get_current_user)):
+    """Match a Garmin activity to a planned workout and mark it complete."""
+    uid = user["id"]
+    if uid not in _user_plans:
+        _user_plans[uid] = _load_plans(uid)
+    plans = _user_plans.get(uid, [])
+    plan = next((p for p in plans if p.plan_id == req.plan_id), None)
+    if not plan:
+        raise HTTPException(404, "Plan not found")
+
+    # Find the workout
+    workout = None
+    for week in plan.weeks:
+        for wo in week.workouts:
+            if wo.name == req.workout_name and str(wo.scheduled_date) == req.scheduled_date:
+                workout = wo
+                break
+        if workout:
+            break
+    if not workout:
+        raise HTTPException(404, "Workout not found in plan")
+
+    # Fetch activity details to build completion metrics
+    garmin = _ensure_garmin(uid)
+    completion_metrics: dict = {}
+    if garmin:
+        try:
+            detail = garmin.get_activity_detail(req.activity_id)
+            summary = detail.get("summary") or {}
+            summary_dto = summary.get("summaryDTO") or summary
+            completion_metrics = {
+                "distance_meters": summary_dto.get("distance"),
+                "duration_seconds": summary_dto.get("duration"),
+                "avg_pace_sec_per_km": _meters_per_sec_to_sec_per_km(summary_dto.get("averageSpeed")),
+                "avg_hr": summary_dto.get("averageHR"),
+                "max_hr": summary_dto.get("maxHR"),
+                "calories": summary_dto.get("calories"),
+                "training_effect_aerobic": summary_dto.get("aerobicTrainingEffect"),
+                "training_effect_anaerobic": summary_dto.get("anaerobicTrainingEffect"),
+                "avg_running_cadence": summary_dto.get("averageRunningCadenceInStepsPerMinute"),
+                "elevation_gain": summary_dto.get("elevationGain"),
+            }
+            # Store full detail for dashboard graphs
+            completion_metrics["detail"] = {
+                "splits": detail.get("splits"),
+                "hr_zones": detail.get("hr_zones"),
+                "weather": detail.get("weather"),
+                "split_summaries": detail.get("split_summaries"),
+            }
+        except Exception:
+            logger.warning("Could not fetch activity detail for %s", req.activity_id)
+    # Fallback: try to find in cached activities
+    if not any(v for k, v in completion_metrics.items() if k != "detail" and v is not None):
+        cached = load_user_data(settings.db_path, uid)
+        if cached and cached.get("activities_json"):
+            for act in json.loads(cached["activities_json"]):
+                if act.get("activity_id") == req.activity_id:
+                    completion_metrics = {
+                        "distance_meters": act.get("distance_meters"),
+                        "duration_seconds": act.get("duration_seconds"),
+                        "avg_pace_sec_per_km": act.get("avg_pace_sec_per_km"),
+                        "avg_hr": act.get("avg_hr"),
+                        "max_hr": act.get("max_hr"),
+                        "calories": act.get("calories"),
+                        "training_effect_aerobic": act.get("training_effect_aerobic"),
+                        "avg_running_cadence": act.get("avg_running_cadence"),
+                        "elevation_gain": act.get("elevation_gain"),
+                    }
+                    break
+
+    workout.completed = True
+    workout.matched_activity_id = req.activity_id
+    workout.completion_metrics = {k: v for k, v in completion_metrics.items() if v is not None}
+    _save_plans(uid)
+    return {"ok": True, "workout": workout.model_dump(mode="json")}
+
+
+@app.post("/plan/analyze-workout")
+async def analyze_workout_endpoint(req: AnalyzeWorkoutRequest, user: dict = Depends(get_current_user)):
+    """Run AI analysis on a completed workout comparing planned vs actual."""
+    uid = user["id"]
+    if uid not in _user_plans:
+        _user_plans[uid] = _load_plans(uid)
+    plans = _user_plans.get(uid, [])
+    plan = next((p for p in plans if p.plan_id == req.plan_id), None)
+    if not plan:
+        raise HTTPException(404, "Plan not found")
+
+    workout = None
+    for week in plan.weeks:
+        for wo in week.workouts:
+            if wo.name == req.workout_name and str(wo.scheduled_date) == req.scheduled_date:
+                workout = wo
+                break
+        if workout:
+            break
+    if not workout:
+        raise HTTPException(404, "Workout not found in plan")
+    if not workout.completed or not workout.matched_activity_id:
+        raise HTTPException(400, "Workout is not matched to an activity yet")
+
+    # Build activity dict from completion_metrics or fetch from Garmin
+    activity_data = {k: v for k, v in (workout.completion_metrics or {}).items() if k != "detail"}
+    if not activity_data or not any(activity_data.values()):
+        garmin = _ensure_garmin(uid)
+        if garmin:
+            try:
+                detail = garmin.get_activity_detail(workout.matched_activity_id)
+                summary = detail.get("summary") or {}
+                summary_dto = summary.get("summaryDTO") or summary
+                activity_data = {
+                    "name": summary_dto.get("activityName", "Activity"),
+                    "distance_meters": summary_dto.get("distance"),
+                    "duration_seconds": summary_dto.get("duration"),
+                    "avg_pace_sec_per_km": _meters_per_sec_to_sec_per_km(summary_dto.get("averageSpeed")),
+                    "avg_hr": summary_dto.get("averageHR"),
+                    "max_hr": summary_dto.get("maxHR"),
+                    "calories": summary_dto.get("calories"),
+                    "training_effect_aerobic": summary_dto.get("aerobicTrainingEffect"),
+                    "training_effect_anaerobic": summary_dto.get("anaerobicTrainingEffect"),
+                    "avg_running_cadence": summary_dto.get("averageRunningCadenceInStepsPerMinute"),
+                    "elevation_gain": summary_dto.get("elevationGain"),
+                }
+                workout.completion_metrics = {k: v for k, v in activity_data.items() if v is not None}
+            except Exception:
+                pass
+        if not any(v for v in activity_data.values() if v is not None):
+            cached = load_user_data(settings.db_path, uid)
+            if cached and cached.get("activities_json"):
+                for act in json.loads(cached["activities_json"]):
+                    if act.get("activity_id") == workout.matched_activity_id:
+                        activity_data = act
+                        break
+    if not any(v for v in activity_data.values() if v is not None):
+        raise HTTPException(400, "No activity data available \u2014 try syncing activities from Garmin first")
+
+    coach = _get_or_create_coach(uid)
+
+    profile = _user_profile.get(uid)
+    analysis = coach.analyze_workout(
+        workout=workout.model_dump(mode="json"),
+        activity=activity_data,
+        profile=profile,
+    )
+
+    workout.completion_analysis = analysis
+    _save_plans(uid)
+    return {"ok": True, "analysis": analysis}
+
+
+@app.post("/plan/workout-feedback")
+async def workout_feedback(req: WorkoutFeedbackRequest, user: dict = Depends(get_current_user)):
+    """Save user feedback (RPE + notes) and re-run AI analysis including the feedback."""
+    uid = user["id"]
+    if uid not in _user_plans:
+        _user_plans[uid] = _load_plans(uid)
+    plans = _user_plans.get(uid, [])
+    plan = next((p for p in plans if p.plan_id == req.plan_id), None)
+    if not plan:
+        raise HTTPException(404, "Plan not found")
+
+    workout = None
+    for week in plan.weeks:
+        for wo in week.workouts:
+            if wo.name == req.workout_name and str(wo.scheduled_date) == req.scheduled_date:
+                workout = wo
+                break
+        if workout:
+            break
+    if not workout:
+        raise HTTPException(404, "Workout not found")
+    if not workout.completed:
+        raise HTTPException(400, "Workout is not completed yet")
+
+    # Save user feedback
+    if req.rpe is not None:
+        workout.user_rpe = max(1, min(10, req.rpe))
+    if req.notes is not None:
+        workout.user_notes = req.notes
+
+    # Re-run AI analysis with user feedback
+    activity_data = {k: v for k, v in (workout.completion_metrics or {}).items() if k != "detail"}
+    coach = _get_or_create_coach(uid)
+    profile = _user_profile.get(uid)
+    analysis = coach.analyze_workout(
+        workout=workout.model_dump(mode="json"),
+        activity=activity_data,
+        profile=profile,
+        user_feedback={"rpe": workout.user_rpe, "notes": workout.user_notes},
+    )
+    workout.completion_analysis = analysis
+    _save_plans(uid)
+    return {"ok": True, "analysis": analysis}
+
+
+@app.post("/plan/ai-review")
+async def ai_review_plan(plan_id: str | None = None, user: dict = Depends(get_current_user)):
+    """AI reviews completed workouts and adapts the remaining plan."""
+    from datetime import datetime
+
+    uid = user["id"]
+    if uid not in _user_plans:
+        _user_plans[uid] = _load_plans(uid)
+    plans = _user_plans.get(uid, [])
+    if plan_id:
+        plan = next((p for p in plans if p.plan_id == plan_id), None)
+    else:
+        plan = plans[-1] if plans else None
+    if not plan:
+        raise HTTPException(404, "No plan found")
+
+    # Refresh profile
+    garmin = _ensure_garmin(uid)
+    if garmin:
+        profile = garmin.get_fitness_profile()
+        _user_profile[uid] = profile
+        save_user_data(settings.db_path, uid, profile_json=profile.model_dump_json())
+    profile = _user_profile.get(uid)
+
+    # Gather completed workout summaries
+    completed = []
+    for week in plan.weeks:
+        for wo in week.workouts:
+            if wo.completed:
+                entry = {
+                    "name": wo.name,
+                    "type": wo.workout_type.value,
+                    "date": str(wo.scheduled_date),
+                    "planned_distance_km": round(wo.estimated_distance_meters / 1000, 1) if wo.estimated_distance_meters else None,
+                }
+                if wo.completion_metrics:
+                    entry["actual"] = wo.completion_metrics
+                if wo.completion_analysis:
+                    entry["ai_analysis"] = wo.completion_analysis
+                completed.append(entry)
+
+    if not completed:
+        raise HTTPException(400, "No completed workouts to review")
+
+    # Build review prompt for coach
+    coach_key = settings.anthropic_api_key or settings.openai_api_key
+    coach_model = settings.anthropic_model if settings.anthropic_api_key else settings.openai_model
+    coach_provider = "anthropic" if settings.anthropic_api_key else "openai"
+    if uid not in _user_coach:
+        _user_coach[uid] = Coach(api_key=coach_key, model=coach_model, provider=coach_provider)
+
+    review_prompt = (
+        "Review the athlete's completed workouts and provide:\n"
+        "1. Overall assessment of how training is going\n"
+        "2. Are they on track for their goal?\n"
+        "3. Any patterns (positive or concerning)?\n"
+        "4. Specific recommendations for upcoming workouts\n\n"
+        f"Goal: {plan.goal_type} by {plan.target_date}\n"
+    )
+    if plan.target_time_seconds:
+        m, s = divmod(int(plan.target_time_seconds), 60)
+        review_prompt += f"Target time: {m}:{s:02d}\n"
+    review_prompt += f"\nCompleted workouts ({len(completed)}):\n"
+    for c in completed:
+        review_prompt += f"- {c['date']} | {c['name']} ({c['type']})"
+        if c.get("actual"):
+            act = c["actual"]
+            if act.get("distance_meters"):
+                review_prompt += f" | {act['distance_meters']/1000:.1f}km"
+            if act.get("avg_pace_sec_per_km"):
+                pm, ps = divmod(int(act["avg_pace_sec_per_km"]), 60)
+                review_prompt += f" | {pm}:{ps:02d}/km"
+            if act.get("avg_hr"):
+                review_prompt += f" | HR {act['avg_hr']}"
+        if c.get("ai_analysis"):
+            review_prompt += f"\n  Analysis: {c['ai_analysis'][:200]}"
+        review_prompt += "\n"
+
+    review_result = _user_coach[uid].chat(
+        message=review_prompt,
+        profile=profile,
+        plan=plan,
+    )
+
+    plan.last_ai_review = datetime.now().isoformat()
+    plan.adaptation_notes = review_result.reply
+    _save_plans(uid)
+    return {"ok": True, "review": review_result.reply, "reviewed_at": plan.last_ai_review}
+
+
+# ── HYROX endpoints ──────────────────────────────────────────────────
+
+_user_hyrox: dict[str, list] = {}  # per-user cached HyroxRaceResult list
+
+
+def _load_hyrox(uid: str) -> dict | None:
+    """Load cached HYROX data from DB."""
+    cached = load_user_data(settings.db_path, uid)
+    if cached and cached.get("hyrox_json"):
+        return json.loads(cached["hyrox_json"])
+    return None
+
+
+def _save_hyrox(uid: str, data: dict) -> None:
+    """Persist HYROX data to DB."""
+    save_user_data(settings.db_path, uid, hyrox_json=json.dumps(data))
+
+
+@app.delete("/hyrox/results")
+async def hyrox_delete_results(user: dict = Depends(get_current_user)):
+    """Delete cached HYROX results from DB."""
+    uid = user["id"]
+    _save_hyrox(uid, {})
+    _user_hyrox.pop(uid, None)
+    return {"ok": True}
+
+
+@app.get("/hyrox/results")
+async def hyrox_get_results(user: dict = Depends(get_current_user)):
+    """Return cached HYROX results from DB (no scraping)."""
+    uid = user["id"]
+    cached = _load_hyrox(uid)
+    if cached:
+        return cached
+    return {"search_name": "", "search_gender": "", "results": []}
+
+
+@app.get("/hyrox/search")
+async def hyrox_search(
+    name: str,
+    firstname: str = "",
+    division: str = "all",
+    gender: str = "M",
+    user: dict = Depends(get_current_user),
+):
+    """Preview HYROX search results (listing only, no detail scraping).
+
+    Returns a list of race summaries for the user to select from.
+    """
+    from paceforge.hyrox.scraper import HyroxScraper
+
+    scraper = HyroxScraper()
+    try:
+        summaries = scraper.search_preview(name, firstname=firstname, division=division, gender=gender)
+    finally:
+        scraper.close()
+
+    return {"summaries": summaries}
+
+
+@app.post("/hyrox/confirm")
+async def hyrox_confirm(
+    body: dict,
+    user: dict = Depends(get_current_user),
+):
+    """Fetch full details for user-selected races and persist to DB.
+
+    Body: { name, firstname?, gender?, selected_urls: [...] }
+    """
+    from paceforge.hyrox.scraper import HyroxScraper
+
+    uid = user["id"]
+    name = body.get("name", "")
+    firstname = body.get("firstname", "")
+    gender = body.get("gender", "M")
+    selected_urls = body.get("selected_urls", [])
+
+    if not name or not selected_urls:
+        raise HTTPException(400, "name and selected_urls are required")
+
+    scraper = HyroxScraper()
+    try:
+        results = scraper.search_athlete(
+            name, firstname=firstname, division="all", gender=gender,
+            max_results=30, selected_urls=selected_urls,
+        )
+    finally:
+        scraper.close()
+
+    results_data = [r.model_dump(mode="json") for r in results]
+    cache_payload = {
+        "search_name": name,
+        "search_firstname": firstname,
+        "search_gender": gender,
+        "results": results_data,
+    }
+
+    _save_hyrox(uid, cache_payload)
+
+    # Post feed event for new HYROX results
+    try:
+        n = len(results_data)
+        create_feed_event(
+            settings.db_path, uid,
+            event_type="hyrox",
+            title=f"Added {n} HYROX race result{'s' if n != 1 else ''}",
+        )
+    except Exception:
+        logger.debug("Failed to post HYROX feed event")
+
+    return cache_payload
+
+
+@app.post("/hyrox/refresh")
+async def hyrox_refresh(user: dict = Depends(get_current_user)):
+    """Re-scrape HYROX results using the previously saved search parameters."""
+    from paceforge.hyrox.scraper import HyroxScraper
+
+    uid = user["id"]
+    cached = _load_hyrox(uid)
+    if not cached or not cached.get("search_name"):
+        raise HTTPException(400, "No previous HYROX search to refresh. Search first.")
+
+    name = cached["search_name"]
+    firstname = cached.get("search_firstname", "")
+    gender = cached.get("search_gender", "M")
+    # Preserve user's race selection
+    old_urls = {r.get("athlete_url") for r in cached.get("results", []) if r.get("athlete_url")}
+
+    scraper = HyroxScraper()
+    try:
+        results = scraper.search_athlete(
+            name, firstname=firstname, division="all", gender=gender,
+            max_results=30, selected_urls=list(old_urls) if old_urls else None,
+        )
+    finally:
+        scraper.close()
+
+    results_data = [r.model_dump(mode="json") for r in results]
+    cache_payload = {
+        "search_name": name,
+        "search_firstname": firstname,
+        "search_gender": gender,
+        "results": results_data,
+    }
+
+    _save_hyrox(uid, cache_payload)
+    return cache_payload
+
+
+@app.get("/hyrox/analyze/{race_index}")
+async def hyrox_analyze_race(race_index: int, user: dict = Depends(get_current_user)):
+    """Analyze a specific cached HYROX race result."""
+    from paceforge.hyrox.analyzer import analyze_race, compute_training_priorities
+    from paceforge.hyrox.models import HyroxRaceResult as HR
+
+    uid = user["id"]
+    cached = _load_hyrox(uid)
+    if not cached or not cached.get("results"):
+        raise HTTPException(404, "No HYROX results cached. Search first.")
+
+    results = cached["results"]
+    if race_index < 0 or race_index >= len(results):
+        raise HTTPException(400, f"Invalid race index. Must be 0-{len(results)-1}")
+
+    race = HR.model_validate(results[race_index])
+    analysis = analyze_race(race)
+    priorities = compute_training_priorities(race)
+    return {"analysis": analysis, "priorities": priorities}
+
+
+@app.get("/hyrox/progression")
+async def hyrox_progression(user: dict = Depends(get_current_user)):
+    """Compute progression trends across all cached HYROX races."""
+    from paceforge.hyrox.analyzer import compute_race_progression
+    from paceforge.hyrox.models import HyroxRaceResult as HR
+
+    uid = user["id"]
+    cached = _load_hyrox(uid)
+    if not cached or not cached.get("results"):
+        raise HTTPException(404, "No HYROX results cached. Search first.")
+
+    races = [HR.model_validate(r) for r in cached["results"]]
+    return compute_race_progression(races)
+
+
+# ── Friends ───────────────────────────────────────────────────────────
+
+
+@app.get("/users/search")
+async def user_search(q: str, user: dict = Depends(get_current_user)):
+    """Search approved users by name or email."""
+    if len(q) < 2:
+        return []
+    return search_users(settings.db_path, q, exclude_user_id=user["id"])
+
+
+@app.get("/friends")
+async def get_friends(user: dict = Depends(get_current_user)):
+    uid = user["id"]
+    return {
+        "friends": list_friends(settings.db_path, uid),
+        "pending": list_pending_requests(settings.db_path, uid),
+        "sent": list_sent_requests(settings.db_path, uid),
+    }
+
+
+@app.post("/friends/request")
+async def friend_request(body: dict, user: dict = Depends(get_current_user)):
+    recipient_id = body.get("recipient_id")
+    if not recipient_id:
+        raise HTTPException(400, "recipient_id is required")
+    result = send_friend_request(settings.db_path, user["id"], recipient_id)
+    if not result:
+        raise HTTPException(400, "Cannot send friend request")
+    return result
+
+
+@app.post("/friends/respond")
+async def friend_respond(body: dict, user: dict = Depends(get_current_user)):
+    friendship_id = body.get("friendship_id")
+    accept = body.get("accept", False)
+    if not friendship_id:
+        raise HTTPException(400, "friendship_id is required")
+    result = respond_friend_request(settings.db_path, friendship_id, accept=accept)
+    return result
+
+
+@app.delete("/friends/{friendship_id}")
+async def friend_remove(friendship_id: str, user: dict = Depends(get_current_user)):
+    remove_friend(settings.db_path, friendship_id)
+    return {"ok": True}
+
+
+# ── Feed ──────────────────────────────────────────────────────────────
+
+# Track which users have already been backfilled this process lifetime
+_backfilled_users: set[str] = set()
+
+
+def _backfill_feed_events(uid: str) -> None:
+    """Create feed events for completed workouts that don't have one yet."""
+    if uid in _backfilled_users:
+        return
+    _backfilled_users.add(uid)
+
+    if uid not in _user_plans:
+        _user_plans[uid] = _load_plans(uid)
+    plans = _user_plans.get(uid, [])
+    if not plans:
+        return
+
+    existing = get_feed(settings.db_path, [uid], limit=500)
+    existing_titles = {e.get("title", "") for e in existing}
+
+    created = 0
+    for plan in plans:
+        if not plan.accepted:
+            continue
+        for week in plan.weeks:
+            for wo in week.workouts:
+                if not wo.completed or wo.workout_type.value == "rest":
+                    continue
+                title = f"Completed: {wo.name}"
+                if title in existing_titles:
+                    continue
+                metrics = wo.completion_metrics or {}
+                dist_km = round(metrics.get("distance_meters", 0) / 1000, 2) if metrics.get("distance_meters") else None
+                dur_min = round(metrics.get("duration_seconds", 0) / 60, 1) if metrics.get("duration_seconds") else None
+                pace = metrics.get("avg_pace_sec_per_km")
+                pace_str = f"{int(pace // 60)}:{int(pace % 60):02d}/km" if pace else None
+                parts = [f"{dist_km} km" if dist_km else None, f"{dur_min} min" if dur_min else None, pace_str]
+                body_str = " · ".join(p for p in parts if p) or None
+                try:
+                    create_feed_event(
+                        settings.db_path, uid,
+                        event_type="activity",
+                        title=title,
+                        body=body_str,
+                        metadata={"workout_type": wo.workout_type.value, "distance_km": dist_km, "pace": pace_str},
+                    )
+                    created += 1
+                except Exception:
+                    pass
+    if created:
+        logger.info("Backfilled %d feed events for user %s", created, uid)
+
+
+@app.get("/feed")
+async def feed(limit: int = 20, offset: int = 0, user: dict = Depends(get_current_user)):
+    uid = user["id"]
+    _backfill_feed_events(uid)
+    friend_ids = get_friend_ids(settings.db_path, uid)
+    all_ids = [uid] + friend_ids
+    events = get_feed(settings.db_path, all_ids, limit=limit, offset=offset)
+    event_ids = [e["id"] for e in events]
+    liked = get_user_likes(settings.db_path, uid, event_ids)
+    for e in events:
+        e["liked_by_me"] = e["id"] in liked
+    return events
+
+
+@app.post("/feed/{event_id}/like")
+async def feed_like(event_id: str, user: dict = Depends(get_current_user)):
+    liked = toggle_like(settings.db_path, event_id, user["id"])
+    return {"liked": liked}
+
+
+@app.post("/feed/{event_id}/comment")
+async def feed_comment(event_id: str, body: dict, user: dict = Depends(get_current_user)):
+    text = body.get("body", "").strip()
+    if not text:
+        raise HTTPException(400, "Comment body is required")
+    if len(text) > 500:
+        raise HTTPException(400, "Comment too long (max 500 chars)")
+    comment = add_comment(settings.db_path, event_id, user["id"], text)
+    return comment
+
+
+@app.get("/feed/{event_id}/comments")
+async def feed_comments(event_id: str, user: dict = Depends(get_current_user)):
+    return get_comments(settings.db_path, event_id)

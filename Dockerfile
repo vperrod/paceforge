@@ -18,10 +18,11 @@ RUN pip install --no-cache-dir .
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Create data directory for SQLite + Garmin tokens
-RUN mkdir -p /data /data/garmin-tokens
+# On Azure App Service, /home is the only persistent volume
+RUN mkdir -p /home/data /home/data/garmin-tokens
 
-ENV PACEFORGE_DB_PATH=/data/paceforge.db
-ENV PACEFORGE_GARMIN_TOKEN_DIR=/data/garmin-tokens
+ENV PACEFORGE_DB_PATH=/home/data/paceforge.db
+ENV PACEFORGE_GARMIN_TOKEN_DIR=/home/data/garmin-tokens
 
 EXPOSE 8000 8501
 
