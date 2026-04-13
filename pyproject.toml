@@ -70,6 +70,8 @@ ignore = [
     "N814",   # camelcase imported as constant
     "SIM102", # collapsible if
     "E402",   # import not at top (conditional imports)
+    "B905",   # zip() without strict= (not needed for same-length lists)
+    "F541",   # f-string without placeholders
 ]
 
 [tool.pytest.ini_options]
