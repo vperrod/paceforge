@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import json
 from datetime import date, timedelta
+from datetime import datetime as _dt_now
 from pathlib import Path
 
 import extra_streamlit_components as stx
@@ -680,7 +681,6 @@ def _render_workout_detail(workout: dict, plan_paces: dict | None = None) -> str
     steps = workout.get("steps", [])
     name = workout.get("name", "Workout")
     purpose = workout.get("purpose", "")
-    wtype = workout.get("workout_type", "")
     est_dist = _fmt_dist(workout.get("estimated_distance_meters"))
     est_dur = _fmt_duration(workout.get("estimated_duration_seconds"))
     notes = workout.get("notes", "")
@@ -1220,7 +1220,6 @@ elif any(isinstance(pl, dict) and pl.get("accepted") for pl in (st.session_state
     )
 
 # Greeting based on time of day
-from datetime import datetime as _dt_now
 _hour = _dt_now.now().hour
 _greeting = "Good morning" if _hour < 12 else "Good afternoon" if _hour < 18 else "Good evening"
 
@@ -2003,7 +2002,7 @@ with tab_profile:
             if split:
                 rc1, rc2 = st.columns([1, 1])
                 with rc1:
-                    sp_labels = [k.replace("_", " ").title() for k in split.keys()]
+                    sp_labels = [k.replace("_", " ").title() for k in split]
                     sp_vals = list(split.values())
                     sp_colors = ["#2196F3", "#FF9800", "#F44336", "#AB47BC"]
                     fig_split = go.Figure(go.Pie(
