@@ -1594,22 +1594,20 @@ if not st.session_state._restored:
         except Exception:
             pass
 
-        # 3) Restore activities — sync fresh from Garmin if connected, otherwise load cache
+        # 3) Restore activities from DB cache (never auto-sync on startup)
         try:
             if not st.session_state.get("garmin_activities"):
-                sync_param = "&sync=true" if st.session_state.garmin_logged_in else ""
-                timeout_val = 45 if st.session_state.garmin_logged_in else 30
                 r = requests.get(
-                    f"{API_BASE}/activities?days=240{sync_param}",
+                    f"{API_BASE}/activities?days=240",
                     headers=_auth_headers(),
-                    timeout=timeout_val,
+                    timeout=15,
                 )
                 if r.status_code == 200:
                     st.session_state["garmin_activities"] = r.json()
         except Exception:
             pass
 
-        # 4) Restore fitness profile
+        # 4) Restore fitness profile from DB cache
         try:
             if not st.session_state.get("profile"):
                 r = requests.get(
@@ -1621,6 +1619,59 @@ if not st.session_state._restored:
                     st.session_state.profile = r.json()
         except Exception:
             pass
+
+        # 5) Pre-load analytics from cached profile
+        try:
+            if not st.session_state.get("analytics") and st.session_state.get("profile"):
+                r = requests.get(
+                    f"{API_BASE}/profile/analytics",
+                    headers=_auth_headers(),
+                    timeout=15,
+                )
+                if r.status_code == 200:
+                    st.session_state.analytics = r.json()
+        except Exception:
+            pass
+
+        # 6) Pre-load feed from DB
+        try:
+            if "feed_events" not in st.session_state:
+                r = requests.get(
+                    f"{API_BASE}/feed?limit=30&offset=0",
+                    headers=_auth_headers(),
+                    timeout=15,
+                )
+                st.session_state.feed_events = r.json() if r.status_code == 200 else []
+        except Exception:
+            st.session_state.feed_events = []
+
+        # 7) Pre-load friends from DB
+        try:
+            if "friends_data" not in st.session_state:
+                r = requests.get(
+                    f"{API_BASE}/friends",
+                    headers=_auth_headers(),
+                    timeout=15,
+                )
+                st.session_state.friends_data = r.json() if r.status_code == 200 else {}
+        except Exception:
+            st.session_state.friends_data = {}
+
+        # 8) Pre-load HYROX results from DB
+        try:
+            if "hyrox_data" not in st.session_state:
+                r = requests.get(
+                    f"{API_BASE}/hyrox/results",
+                    headers=_auth_headers(),
+                    timeout=10,
+                )
+                if r.status_code == 200:
+                    data = r.json()
+                    st.session_state.hyrox_data = data if data.get("results") else None
+                else:
+                    st.session_state.hyrox_data = None
+        except Exception:
+            st.session_state.hyrox_data = None
 
 # ── Sidebar ──────────────────────────────────────────────────────────
 
@@ -1664,38 +1715,68 @@ with st.sidebar:
 
 # ── Garmin Sync Status Banner ──────────────────────────────────────
 
+_last_synced = st.session_state.get("last_synced")
+_sync_text = ""
+if _last_synced:
+    try:
+        from datetime import datetime as _dt
+        _ts = _dt.fromisoformat(_last_synced.replace("Z", "+00:00"))
+        _sync_text = f"Last synced: {_ts.strftime('%b %d, %Y %H:%M UTC')}"
+    except Exception:
+        _sync_text = f"Last synced: {_last_synced[:19]}"
+
 if not st.session_state.garmin_logged_in:
-    last_synced = st.session_state.get("last_synced")
-    sync_msg = ""
-    if last_synced:
-        try:
-            from datetime import datetime as _dt
-            ts = _dt.fromisoformat(last_synced.replace("Z", "+00:00"))
-            sync_msg = f" · Last synced: {ts.strftime('%b %d, %Y %H:%M UTC')}"
-        except Exception:
-            sync_msg = f" · Last synced: {last_synced[:19]}"
     st.markdown(
         f'<div style="background:#2D2000;border:1px solid #F59E0B;border-radius:8px;'
         f'padding:0.5rem 1rem;margin-bottom:1rem;color:#FFB74D;font-size:0.85rem;">'
-        f'Garmin not connected — showing cached data{sync_msg}. '
+        f'Garmin not connected — showing cached data'
+        f'{" · " + _sync_text if _sync_text else ""}. '
         f'Connect via the sidebar to refresh.</div>',
         unsafe_allow_html=True,
     )
 else:
-    last_synced = st.session_state.get("last_synced")
-    if last_synced:
-        try:
-            from datetime import datetime as _dt
-            ts = _dt.fromisoformat(last_synced.replace("Z", "+00:00"))
-            sync_text = f"Last synced: {ts.strftime('%b %d, %Y %H:%M UTC')}"
-        except Exception:
-            sync_text = f"Last synced: {last_synced[:19]}"
+    _banner_cols = st.columns([5, 1])
+    with _banner_cols[0]:
         st.markdown(
             f'<div style="background:#0D2818;border:1px solid #10B981;border-radius:8px;'
-            f'padding:0.5rem 1rem;margin-bottom:1rem;color:#69F0AE;font-size:0.85rem;">'
-            f'Garmin connected · {sync_text}</div>',
+            f'padding:0.5rem 1rem;color:#69F0AE;font-size:0.85rem;">'
+            f'Garmin connected{" · " + _sync_text if _sync_text else ""}</div>',
             unsafe_allow_html=True,
         )
+    with _banner_cols[1]:
+        if st.button("Sync Garmin", key="sync_garmin_all", use_container_width=True):
+            with st.spinner("Syncing from Garmin Connect..."):
+                _sync_ok = []
+                _sync_err = []
+                try:
+                    r = requests.get(f"{API_BASE}/profile?sync=true", headers=_auth_headers(), timeout=60)
+                    if r.status_code == 200:
+                        st.session_state.profile = r.json()
+                        st.session_state.pop("analytics", None)
+                        _sync_ok.append("profile")
+                    else:
+                        _sync_err.append("profile")
+                except Exception:
+                    _sync_err.append("profile")
+                try:
+                    r = requests.get(
+                        f"{API_BASE}/activities?days=240&sync=true",
+                        headers=_auth_headers(), timeout=60,
+                    )
+                    if r.status_code == 200:
+                        st.session_state["garmin_activities"] = r.json()
+                        st.session_state.pop("cal_selected_event", None)
+                        st.session_state.pop("cal_selected_detail", None)
+                        _sync_ok.append(f"{len(r.json())} activities")
+                    else:
+                        _sync_err.append("activities")
+                except Exception:
+                    _sync_err.append("activities")
+                if _sync_ok:
+                    st.success(f"Synced: {', '.join(_sync_ok)}")
+                if _sync_err:
+                    st.error(f"Failed to sync: {', '.join(_sync_err)}")
+                st.rerun()
 
 
 # ── User Dashboard Header ────────────────────────────────────────────
@@ -1822,15 +1903,11 @@ tab_admin = tabs[7] if st.session_state.role == "admin" else None
 with tab_feed:
     st.markdown('<div class="pf-section-header">Activity Feed</div>', unsafe_allow_html=True)
 
-    try:
-        feed_r = requests.get(
-            f"{API_BASE}/feed?limit=30&offset=0",
-            headers=_auth_headers(), timeout=15,
-        )
-        feed_events = feed_r.json() if feed_r.status_code == 200 else []
-    except requests.ConnectionError:
-        feed_events = []
-        st.error("Cannot reach API")
+    feed_events = st.session_state.get("feed_events", [])
+
+    if st.button("Refresh Feed", key="refresh_feed"):
+        st.session_state.pop("feed_events", None)
+        st.rerun()
 
     if not feed_events:
         st.markdown(
@@ -2002,17 +2079,6 @@ def _fmt_time(seconds):
 
 
 with tab_profile:
-    if st.session_state.garmin_logged_in:
-        if st.button("Sync Profile from Garmin", key="load_profile_btn"):
-            with st.spinner("Fetching from Garmin Connect..."):
-                r = requests.get(f"{API_BASE}/profile?sync=true", headers=_auth_headers(), timeout=60)
-                if r.status_code == 200:
-                    st.session_state.profile = r.json()
-                    # Clear cached analytics so they get recomputed
-                    st.session_state.pop("analytics", None)
-                else:
-                    st.error("Failed to fetch profile")
-
     p = st.session_state.profile
     if not p:
         st.markdown(_skeleton_cards(3), unsafe_allow_html=True)
@@ -3413,25 +3479,6 @@ with tab_calendar:
     st.markdown('<div class="pf-section-header">Training Calendar</div>', unsafe_allow_html=True)
 
     if True:
-        # Sync button only visible when Garmin is connected
-        if st.session_state.garmin_logged_in and st.button("\U0001f504 Sync Activities from Garmin", key="sync_activities_btn"):
-            with st.spinner("Fetching activities from Garmin Connect..."):
-                try:
-                    r = requests.get(
-                        f"{API_BASE}/activities?days=240&sync=true",
-                        headers=_auth_headers(),
-                        timeout=60,
-                    )
-                    if r.status_code == 200:
-                        st.session_state["garmin_activities"] = r.json()
-                        st.session_state["cal_selected_event"] = None
-                        st.session_state["cal_selected_detail"] = None
-                        st.success(f"Synced {len(r.json())} activities!")
-                    else:
-                        st.error(f"Failed to sync: {_error_detail(r)}")
-                except requests.ConnectionError:
-                    st.error("Cannot reach API.")
-
         cal_events = []
 
         # ── Past activities from Garmin ──
@@ -4071,16 +4118,7 @@ with tab_hyrox:
     if "hyrox_loading" not in st.session_state:
         st.session_state.hyrox_loading = False
 
-    # Auto-load from DB on first visit
-    if st.session_state.hyrox_data is None and not st.session_state.hyrox_loading:
-        try:
-            r = requests.get(f"{API_BASE}/hyrox/results", headers=_auth_headers(), timeout=10)
-            if r.status_code == 200:
-                data = r.json()
-                if data.get("results"):
-                    st.session_state.hyrox_data = data
-        except Exception:
-            pass
+    # HYROX data loaded in _restored block
 
     hx_data = st.session_state.hyrox_data
     has_results = hx_data and hx_data.get("results")
@@ -4263,17 +4301,18 @@ with tab_hyrox:
 
         selected_race = results[selected_idx]
 
-        # ── Fetch analysis for selected race ──
-        analysis_data = None
-        try:
-            r = requests.get(
-                f"{API_BASE}/hyrox/analyze/{selected_idx}",
-                headers=_auth_headers(), timeout=15,
-            )
-            if r.status_code == 200:
-                analysis_data = r.json()
-        except Exception:
-            pass
+        # ── Fetch analysis for selected race (cached per index) ──
+        _hyrox_cache_key = f"hyrox_analysis_{selected_idx}"
+        if _hyrox_cache_key not in st.session_state:
+            try:
+                r = requests.get(
+                    f"{API_BASE}/hyrox/analyze/{selected_idx}",
+                    headers=_auth_headers(), timeout=15,
+                )
+                st.session_state[_hyrox_cache_key] = r.json() if r.status_code == 200 else None
+            except Exception:
+                st.session_state[_hyrox_cache_key] = None
+        analysis_data = st.session_state[_hyrox_cache_key]
 
         if analysis_data:
             ana = analysis_data["analysis"]
@@ -4521,9 +4560,11 @@ with tab_hyrox:
                 unsafe_allow_html=True,
             )
             try:
-                rp = requests.get(f"{API_BASE}/hyrox/progression", headers=_auth_headers(), timeout=15)
-                if rp.status_code == 200:
-                    prog = rp.json()
+                if "hyrox_progression" not in st.session_state:
+                    rp = requests.get(f"{API_BASE}/hyrox/progression", headers=_auth_headers(), timeout=15)
+                    st.session_state.hyrox_progression = rp.json() if rp.status_code == 200 else None
+                prog = st.session_state.hyrox_progression
+                if prog:
                     races_data = prog.get("races", [])
 
                     if races_data:
@@ -4697,6 +4738,7 @@ with tab_hyrox:
                 r = requests.get(f"{API_BASE}/profile/analytics", headers=_auth_headers(), timeout=15)
                 if r.status_code == 200:
                     analytics = r.json()
+                    st.session_state.analytics = analytics
             except Exception:
                 pass
 
@@ -4924,13 +4966,8 @@ with tab_user_settings:
     st.markdown("---")
     st.markdown('<div class="pf-section-header">Friends</div>', unsafe_allow_html=True)
 
-    # Load friends data
-    try:
-        friends_r = requests.get(f"{API_BASE}/friends", headers=_auth_headers(), timeout=15)
-        friends_data = friends_r.json() if friends_r.status_code == 200 else {}
-    except requests.ConnectionError:
-        friends_data = {}
-        st.error("Cannot reach API")
+    # Load friends data (cached per session)
+    friends_data = st.session_state.get("friends_data", {})
 
     friends_list = friends_data.get("friends", [])
     pending_reqs = friends_data.get("pending", [])
@@ -5072,23 +5109,29 @@ if tab_admin is not None:
             )
         with refresh_col:
             if st.button("Refresh", use_container_width=True, key="admin_refresh"):
+                for k in list(st.session_state.keys()):
+                    if k.startswith("admin_users_"):
+                        del st.session_state[k]
                 st.rerun()
 
         query = f"?status={status_filter}" if status_filter != "all" else ""
-        try:
-            r = requests.get(
-                f"{API_BASE}/admin/users{query}",
-                headers=_auth_headers(),
-                timeout=15,
-            )
-            if r.status_code == 200:
-                users = r.json()
-            else:
-                users = []
-                st.error(f"Failed to load users: {_error_detail(r)}")
-        except requests.ConnectionError:
-            users = []
-            st.error("Cannot reach API")
+        _admin_cache_key = f"admin_users_{status_filter}"
+        if _admin_cache_key not in st.session_state:
+            try:
+                r = requests.get(
+                    f"{API_BASE}/admin/users{query}",
+                    headers=_auth_headers(),
+                    timeout=15,
+                )
+                if r.status_code == 200:
+                    st.session_state[_admin_cache_key] = r.json()
+                else:
+                    st.session_state[_admin_cache_key] = []
+                    st.error(f"Failed to load users: {_error_detail(r)}")
+            except (requests.ConnectionError, requests.ReadTimeout):
+                st.session_state[_admin_cache_key] = []
+                st.error("Cannot reach API")
+        users = st.session_state[_admin_cache_key]
 
         if not users:
             st.markdown(
