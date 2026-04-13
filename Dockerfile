@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM paceforgeacr.azurecr.io/oryx-python:3.12
 
 WORKDIR /app
 
