@@ -3,10 +3,18 @@ name: CD
 on:
   push:
     branches: [master]
+  workflow_dispatch:
+    inputs:
+      deploy_production:
+        description: "Deploy to production (promotes staging image)"
+        required: true
+        type: boolean
+        default: false
 
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
 
     steps:
       - uses: actions/checkout@v4
@@ -27,9 +35,10 @@ jobs:
       - name: Run tests
         run: pytest tests/ -v --tb=short
 
-  deploy:
+  deploy-staging:
     needs: lint-and-test
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
 
     steps:
       - uses: actions/checkout@v4
@@ -39,14 +48,37 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Build and push image to ACR
+      - name: Build and push image to ACR (dev tag)
         run: |
           az acr build \
             --registry paceforgeacr \
-            --image paceforge:latest \
+            --image paceforge:dev \
             --no-logs \
             .
 
-      - name: Restart Web App
+      - name: Restart Staging Web App
+        run: |
+          az webapp restart --name paceforge-dev --resource-group paceforge-rg
+
+  deploy-production:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && inputs.deploy_production
+    environment: production
+
+    steps:
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Promote staging image to production
+        run: |
+          az acr import \
+            --name paceforgeacr \
+            --source paceforgeacr.azurecr.io/paceforge:dev \
+            --image paceforge:latest \
+            --force
+
+      - name: Restart Production Web App
         run: |
           az webapp restart --name paceforge-app --resource-group paceforge-rg
