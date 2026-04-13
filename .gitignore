@@ -43,3 +43,9 @@ paceforge.db
 *.zip
 app_logs/
 webapp-logs/
+
+# Mobile (Expo / React Native)
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
+mobile/*.tsbuildinfo
