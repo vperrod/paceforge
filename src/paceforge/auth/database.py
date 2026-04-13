@@ -69,11 +69,38 @@ CREATE TABLE IF NOT EXISTS feed_comments (
     body      TEXT NOT NULL,
     created_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+    id         TEXT PRIMARY KEY,
+    user_id    TEXT NOT NULL REFERENCES users(id),
+    token_hash TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    revoked    INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS device_tokens (
+    id         TEXT PRIMARY KEY,
+    user_id    TEXT NOT NULL REFERENCES users(id),
+    platform   TEXT NOT NULL CHECK(platform IN ('ios', 'android', 'web')),
+    token      TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    UNIQUE(user_id, token)
+);
 """
 
 _MIGRATIONS = [
     # Add hyrox_json column if it doesn't exist (for existing databases)
     "ALTER TABLE user_data ADD COLUMN hyrox_json TEXT",
+    # Create refresh_tokens and device_tokens for mobile support
+    """CREATE TABLE IF NOT EXISTS refresh_tokens (
+        id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id),
+        token_hash TEXT NOT NULL, expires_at TEXT NOT NULL,
+        revoked INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL)""",
+    """CREATE TABLE IF NOT EXISTS device_tokens (
+        id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id),
+        platform TEXT NOT NULL CHECK(platform IN ('ios', 'android', 'web')),
+        token TEXT NOT NULL, created_at TEXT NOT NULL, UNIQUE(user_id, token))""",
 ]
 
 
@@ -537,3 +564,94 @@ def get_comments(db_path: str, event_id: str) -> list[dict]:
             (event_id,),
         ).fetchall()
     return [dict(r) for r in rows]
+
+
+# ── Refresh Tokens ───────────────────────────────────────────────────
+
+import hashlib
+
+
+def _hash_token(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def store_refresh_token(db_path: str, user_id: str, token: str, expires_at: str) -> str:
+    """Store a hashed refresh token. Returns the record id."""
+    rid = uuid.uuid4().hex
+    now = datetime.now(UTC).isoformat()
+    with _lock:
+        conn = _get_conn(db_path)
+        conn.execute(
+            "INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at, created_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (rid, user_id, _hash_token(token), expires_at, now),
+        )
+        conn.commit()
+    return rid
+
+
+def validate_refresh_token(db_path: str, user_id: str, token: str) -> bool:
+    """Check if a refresh token is valid (exists, not revoked, not expired)."""
+    token_hash = _hash_token(token)
+    now = datetime.now(UTC).isoformat()
+    with _lock:
+        conn = _get_conn(db_path)
+        row = conn.execute(
+            "SELECT id FROM refresh_tokens "
+            "WHERE user_id = ? AND token_hash = ? AND revoked = 0 AND expires_at > ?",
+            (user_id, token_hash, now),
+        ).fetchone()
+    return row is not None
+
+
+def revoke_refresh_token(db_path: str, user_id: str, token: str) -> None:
+    """Revoke a specific refresh token."""
+    token_hash = _hash_token(token)
+    with _lock:
+        conn = _get_conn(db_path)
+        conn.execute(
+            "UPDATE refresh_tokens SET revoked = 1 WHERE user_id = ? AND token_hash = ?",
+            (user_id, token_hash),
+        )
+        conn.commit()
+
+
+def revoke_all_refresh_tokens(db_path: str, user_id: str) -> None:
+    """Revoke all refresh tokens for a user (logout everywhere)."""
+    with _lock:
+        conn = _get_conn(db_path)
+        conn.execute(
+            "UPDATE refresh_tokens SET revoked = 1 WHERE user_id = ?",
+            (user_id,),
+        )
+        conn.commit()
+
+
+# ── Device Tokens (Push Notifications) ───────────────────────────────
+
+
+def register_device_token(db_path: str, user_id: str, platform: str, token: str) -> dict:
+    """Register a device push notification token. Upserts on (user_id, token)."""
+    did = uuid.uuid4().hex
+    now = datetime.now(UTC).isoformat()
+    with _lock:
+        conn = _get_conn(db_path)
+        conn.execute(
+            "INSERT INTO device_tokens (id, user_id, platform, token, created_at) "
+            "VALUES (?, ?, ?, ?, ?) "
+            "ON CONFLICT(user_id, token) DO UPDATE SET platform = excluded.platform, created_at = excluded.created_at",
+            (did, user_id, platform, token, now),
+        )
+        conn.commit()
+    return {"id": did, "user_id": user_id, "platform": platform, "token": token}
+
+
+def remove_device_token(db_path: str, user_id: str, token: str) -> None:
+    """Remove a device token."""
+    with _lock:
+        conn = _get_conn(db_path)
+        conn.execute(
+            "DELETE FROM device_tokens WHERE user_id = ? AND token = ?",
+            (user_id, token),
+        )
+        conn.commit()

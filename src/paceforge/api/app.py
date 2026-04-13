@@ -31,19 +31,26 @@ from paceforge.auth.database import (
     list_sent_requests,
     list_users,
     load_user_data,
+    register_device_token,
+    remove_device_token,
     remove_friend,
     respond_friend_request,
+    revoke_refresh_token,
     save_user_data,
     search_users,
     send_friend_request,
+    store_refresh_token,
     toggle_like,
     update_garmin_email,
     update_user_profile,
     update_user_status,
+    validate_refresh_token,
 )
 from paceforge.auth.models import (
     AppLoginRequest,
+    DeviceTokenRequest,
     ProfileUpdateRequest,
+    RefreshRequest,
     RegisterRequest,
     TokenResponse,
     UserOut,
@@ -51,7 +58,9 @@ from paceforge.auth.models import (
 )
 from paceforge.auth.security import (
     create_access_token,
+    create_refresh_token,
     decode_access_token,
+    decode_refresh_token,
     hash_password,
     verify_password,
 )
@@ -229,8 +238,70 @@ async def app_login(req: AppLoginRequest):
         raise HTTPException(403, "Your account is pending admin approval")
     if user["status"] == "rejected":
         raise HTTPException(403, "Your account has been rejected")
-    token = create_access_token(user["id"], user["role"], settings.jwt_secret)
-    return TokenResponse(access_token=token, role=user["role"], name=user["name"], email=user["email"])
+    access = create_access_token(user["id"], user["role"], settings.jwt_secret)
+    refresh = create_refresh_token(user["id"], settings.jwt_secret)
+    # Decode refresh to get expiry for DB storage
+    refresh_payload = decode_refresh_token(refresh, settings.jwt_secret)
+    from datetime import UTC, datetime
+    expires_at = datetime.fromtimestamp(refresh_payload["exp"], tz=UTC).isoformat()
+    store_refresh_token(settings.db_path, user["id"], refresh, expires_at)
+    return TokenResponse(
+        access_token=access, refresh_token=refresh,
+        role=user["role"], name=user["name"], email=user["email"],
+    )
+
+
+@app.post("/auth/refresh", response_model=TokenResponse)
+async def auth_refresh(req: RefreshRequest):
+    """Exchange a valid refresh token for a new access + refresh token pair."""
+    try:
+        payload = decode_refresh_token(req.refresh_token, settings.jwt_secret)
+    except pyjwt.ExpiredSignatureError:
+        raise HTTPException(401, "Refresh token has expired")
+    except pyjwt.InvalidTokenError:
+        raise HTTPException(401, "Invalid refresh token")
+
+    user_id = payload["sub"]
+    if not validate_refresh_token(settings.db_path, user_id, req.refresh_token):
+        raise HTTPException(401, "Refresh token revoked or invalid")
+
+    user = get_user_by_id(settings.db_path, user_id)
+    if not user or user["status"] != "approved":
+        raise HTTPException(401, "Account not active")
+
+    # Rotate: revoke old refresh token, issue new pair
+    revoke_refresh_token(settings.db_path, user_id, req.refresh_token)
+    new_access = create_access_token(user["id"], user["role"], settings.jwt_secret)
+    new_refresh = create_refresh_token(user["id"], settings.jwt_secret)
+    refresh_payload = decode_refresh_token(new_refresh, settings.jwt_secret)
+    from datetime import UTC, datetime
+    expires_at = datetime.fromtimestamp(refresh_payload["exp"], tz=UTC).isoformat()
+    store_refresh_token(settings.db_path, user["id"], new_refresh, expires_at)
+    return TokenResponse(
+        access_token=new_access, refresh_token=new_refresh,
+        role=user["role"], name=user["name"], email=user["email"],
+    )
+
+
+@app.post("/auth/logout")
+async def auth_logout(req: RefreshRequest, user: dict = Depends(get_current_user)):
+    """Revoke the provided refresh token."""
+    revoke_refresh_token(settings.db_path, user["id"], req.refresh_token)
+    return {"ok": True}
+
+
+@app.post("/auth/device-token")
+async def auth_device_token(req: DeviceTokenRequest, user: dict = Depends(get_current_user)):
+    """Register a push notification device token."""
+    register_device_token(settings.db_path, user["id"], req.platform, req.token)
+    return {"ok": True}
+
+
+@app.delete("/auth/device-token")
+async def auth_remove_device_token(req: DeviceTokenRequest, user: dict = Depends(get_current_user)):
+    """Remove a push notification device token."""
+    remove_device_token(settings.db_path, user["id"], req.token)
+    return {"ok": True}
 
 
 @app.get("/auth/profile", response_model=UserOut)

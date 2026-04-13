@@ -19,10 +19,20 @@ class AppLoginRequest(BaseModel):
 
 class TokenResponse(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
     role: str
     name: str
     email: str
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str
+
+
+class DeviceTokenRequest(BaseModel):
+    platform: str = Field(..., pattern="^(ios|android|web)$")
+    token: str = Field(..., min_length=1, max_length=512)
 
 
 class UserOut(BaseModel):

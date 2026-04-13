@@ -680,7 +680,7 @@ def _render_workout_detail(workout: dict, plan_paces: dict | None = None) -> str
     steps = workout.get("steps", [])
     name = workout.get("name", "Workout")
     purpose = workout.get("purpose", "")
-    workout.get("workout_type", "")
+    wtype = workout.get("workout_type", "")
     est_dist = _fmt_dist(workout.get("estimated_distance_meters"))
     est_dur = _fmt_duration(workout.get("estimated_duration_seconds"))
     notes = workout.get("notes", "")
@@ -1221,7 +1221,6 @@ elif any(isinstance(pl, dict) and pl.get("accepted") for pl in (st.session_state
 
 # Greeting based on time of day
 from datetime import datetime as _dt_now
-
 _hour = _dt_now.now().hour
 _greeting = "Good morning" if _hour < 12 else "Good afternoon" if _hour < 18 else "Good evening"
 
@@ -1337,7 +1336,7 @@ with tab_feed:
                         st.error("Cannot reach API")
 
             with col_comment:
-                if st.button("💬 Comment", key=f"feed_toggle_comment_{ev['id']}_{idx}", use_container_width=True):
+                if st.button(f"💬 Comment", key=f"feed_toggle_comment_{ev['id']}_{idx}", use_container_width=True):
                     if st.session_state.get(f"show_comments_{ev['id']}"):
                         st.session_state[f"show_comments_{ev['id']}"] = False
                     else:
@@ -1664,7 +1663,7 @@ with tab_profile:
                            if a.get("avg_pace_sec_per_km") and a.get("avg_hr")]
             if scatter_data:
                 st.markdown("")
-                paces_v, hrs_v = zip(*scatter_data, strict=False)
+                paces_v, hrs_v = zip(*scatter_data)
                 # Format paces as MM:SS for display
                 pace_labels = [f"{int(pv)//60}:{int(pv)%60:02d}" for pv in paces_v]
                 fig_scatter = go.Figure()
@@ -1935,7 +1934,7 @@ with tab_profile:
                     pb_t = pbs.get(nk)
                     gp_t = garmin_preds.get(nk)
                     if pb_t or gp_t:
-                        comp_html += '<div style="padding:6px 0;border-bottom:1px solid #2D313933;">'
+                        comp_html += f'<div style="padding:6px 0;border-bottom:1px solid #2D313933;">'
                         comp_html += f'<span style="color:#FAFAFA;font-weight:500;width:120px;display:inline-block;">{pred["distance"]}</span>'
                         comp_html += f'<span style="color:#FFD600;margin-right:16px;">VDOT: {_fmt_time(pred["predicted_seconds"])}</span>'
                         if gp_t:
@@ -2004,7 +2003,7 @@ with tab_profile:
             if split:
                 rc1, rc2 = st.columns([1, 1])
                 with rc1:
-                    sp_labels = [k.replace("_", " ").title() for k in split]
+                    sp_labels = [k.replace("_", " ").title() for k in split.keys()]
                     sp_vals = list(split.values())
                     sp_colors = ["#2196F3", "#FF9800", "#F44336", "#AB47BC"]
                     fig_split = go.Figure(go.Pie(
@@ -2121,7 +2120,7 @@ with tab_profile:
                 if any(pv is not None for pv in paces_list):
                     with trend_col1:
                         pace_vals, pace_dates, pace_labels_t = [], [], []
-                        for d, pv in zip(dates, paces_list, strict=False):
+                        for d, pv in zip(dates, paces_list):
                             if pv and pv > 0:
                                 pace_vals.append(pv / 60)
                                 pace_dates.append(d)
@@ -2156,7 +2155,7 @@ with tab_profile:
                 if any(h is not None for h in hr_list):
                     with trend_col2:
                         hr_vals, hr_dates = [], []
-                        for d, hv in zip(dates, hr_list, strict=False):
+                        for d, hv in zip(dates, hr_list):
                             if hv and hv > 0:
                                 hr_vals.append(hv)
                                 hr_dates.append(d)
@@ -2176,7 +2175,7 @@ with tab_profile:
                 if any(cv is not None for cv in cadence_list):
                     with trend_col3:
                         cad_vals, cad_dates = [], []
-                        for d, cv in zip(dates, cadence_list, strict=False):
+                        for d, cv in zip(dates, cadence_list):
                             if cv and cv > 0:
                                 cad_vals.append(cv)
                                 cad_dates.append(d)
@@ -2194,7 +2193,7 @@ with tab_profile:
                 if any(v is not None for v in vo2_list):
                     with trend_col4:
                         vo2_vals, vo2_dates = [], []
-                        for d, vv in zip(dates, vo2_list, strict=False):
+                        for d, vv in zip(dates, vo2_list):
                             if vv and vv > 0:
                                 vo2_vals.append(vv)
                                 vo2_dates.append(d)
@@ -2218,7 +2217,7 @@ with tab_profile:
                         fig_te = go.Figure()
                         ta_vals, ta_dates = [], []
                         tn_vals, tn_dates = [], []
-                        for i, (d, av, nv) in enumerate(zip(dates, te_aer, te_ana, strict=False)):
+                        for i, (d, av, nv) in enumerate(zip(dates, te_aer, te_ana)):
                             if av:
                                 ta_vals.append(av); ta_dates.append(d)
                             if nv:
@@ -2242,7 +2241,7 @@ with tab_profile:
                 if any(d is not None for d in dist_list):
                     with trend_col6:
                         d_vals, d_dates = [], []
-                        for d, dv in zip(dates, dist_list, strict=False):
+                        for d, dv in zip(dates, dist_list):
                             if dv and dv > 0:
                                 d_vals.append(dv / 1000)
                                 d_dates.append(d)
@@ -2775,7 +2774,7 @@ with tab_plan:
                     unsafe_allow_html=True,
                 )
 
-                for _w_idx, w in enumerate(week.get("workouts", [])):
+                for w_idx, w in enumerate(week.get("workouts", [])):
                     wtype = w.get("workout_type", "rest")
                     color = _WORKOUT_COLORS.get(wtype, "#607D8B")
 
@@ -4110,7 +4109,7 @@ with tab_hyrox:
 
                             for sc in station_cmp:
                                 icon = "🏃" if sc["is_running"] else "💪"
-                                cmp_html += '<tr style="border-bottom:1px solid #2D313922;">'
+                                cmp_html += f'<tr style="border-bottom:1px solid #2D313922;">'
                                 cmp_html += f'<td style="padding:8px;color:#FAFAFA;font-weight:500;">{icon} {sc["display"]}</td>'
 
                                 # Per-race times — highlight best in green
