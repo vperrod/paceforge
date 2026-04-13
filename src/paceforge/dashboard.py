@@ -441,6 +441,37 @@ hr { border-color: #2D3139 !important; }
 header { visibility: hidden; }
 footer { visibility: hidden; }
 
+/* ── Loading overlay — replaces confusing grey-out ─── */
+[data-testid="stAppViewContainer"][data-stale="true"]::after {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(26, 29, 35, 0.75);
+    z-index: 99998;
+    pointer-events: all;
+}
+[data-testid="stAppViewContainer"][data-stale="true"]::before {
+    content: 'Loading...';
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 99999;
+    color: #FAFAFA;
+    font-size: 1.1rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    padding: 1rem 2rem;
+    background: #242830;
+    border: 1px solid #00D26A;
+    border-radius: 12px;
+    box-shadow: 0 0 30px rgba(0, 210, 106, 0.15);
+    animation: pf-pulse 1.5s ease-in-out infinite;
+}
+@keyframes pf-pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 30px rgba(0,210,106,0.15); }
+    50% { opacity: 0.85; box-shadow: 0 0 50px rgba(0,210,106,0.3); }
+}
+
 /* ── Mobile Responsive ─────────────────────────────────────────────── */
 @media (max-width: 768px) {
     .block-container {
@@ -1023,50 +1054,62 @@ if st.session_state.jwt is None:
 # ── Auto-restore Garmin connection, plan, and activities on load ─────
 if not st.session_state._restored:
     st.session_state._restored = True
-    try:
+    with st.spinner("Loading your training data..."):
         # 1) Check Garmin connection (triggers auto-reconnect from cached tokens)
-        r = requests.get(
-            f"{API_BASE}/garmin/status",
-            headers=_auth_headers(),
-            timeout=15,
-        )
-        if r.status_code == 200:
-            status_data = r.json()
-            if status_data.get("connected"):
-                st.session_state.garmin_logged_in = True
-            st.session_state["last_synced"] = status_data.get("last_synced")
-
-        # 2) Restore plans from DB cache
-        if not st.session_state.plans:
+        try:
             r = requests.get(
-                f"{API_BASE}/plans",
-                headers=_auth_headers(),
-                timeout=10,
-            )
-            if r.status_code == 200:
-                st.session_state.plans = r.json()
-
-        # 3) Restore cached activities
-        if not st.session_state.get("garmin_activities"):
-            r = requests.get(
-                f"{API_BASE}/activities?days=240",
-                headers=_auth_headers(),
-                timeout=30,
-            )
-            if r.status_code == 200:
-                st.session_state["garmin_activities"] = r.json()
-
-        # 4) Restore fitness profile
-        if not st.session_state.get("profile"):
-            r = requests.get(
-                f"{API_BASE}/profile",
+                f"{API_BASE}/garmin/status",
                 headers=_auth_headers(),
                 timeout=15,
             )
             if r.status_code == 200:
-                st.session_state.profile = r.json()
-    except Exception:
-        pass  # Non-critical — user can manually sync
+                status_data = r.json()
+                if status_data.get("connected"):
+                    st.session_state.garmin_logged_in = True
+                st.session_state["last_synced"] = status_data.get("last_synced")
+        except Exception:
+            pass
+
+        # 2) Restore plans from DB cache
+        try:
+            if not st.session_state.plans:
+                r = requests.get(
+                    f"{API_BASE}/plans",
+                    headers=_auth_headers(),
+                    timeout=10,
+                )
+                if r.status_code == 200:
+                    st.session_state.plans = r.json()
+        except Exception:
+            pass
+
+        # 3) Restore activities — sync fresh from Garmin if connected, otherwise load cache
+        try:
+            if not st.session_state.get("garmin_activities"):
+                sync_param = "&sync=true" if st.session_state.garmin_logged_in else ""
+                timeout_val = 45 if st.session_state.garmin_logged_in else 30
+                r = requests.get(
+                    f"{API_BASE}/activities?days=240{sync_param}",
+                    headers=_auth_headers(),
+                    timeout=timeout_val,
+                )
+                if r.status_code == 200:
+                    st.session_state["garmin_activities"] = r.json()
+        except Exception:
+            pass
+
+        # 4) Restore fitness profile
+        try:
+            if not st.session_state.get("profile"):
+                r = requests.get(
+                    f"{API_BASE}/profile",
+                    headers=_auth_headers(),
+                    timeout=15,
+                )
+                if r.status_code == 200:
+                    st.session_state.profile = r.json()
+        except Exception:
+            pass
 
 # ── Sidebar ──────────────────────────────────────────────────────────
 
@@ -3087,18 +3130,19 @@ with tab_calendar:
                         act_id_to_fetch = props["matched_activity_id"]
 
                     if act_id_to_fetch:
-                        try:
-                            r = requests.get(
-                                f"{API_BASE}/activities/{act_id_to_fetch}",
-                                headers=_auth_headers(),
-                                timeout=30,
-                            )
-                            if r.status_code == 200:
-                                st.session_state["cal_selected_detail"] = r.json()
-                            else:
+                        with st.spinner("Loading activity details..."):
+                            try:
+                                r = requests.get(
+                                    f"{API_BASE}/activities/{act_id_to_fetch}",
+                                    headers=_auth_headers(),
+                                    timeout=30,
+                                )
+                                if r.status_code == 200:
+                                    st.session_state["cal_selected_detail"] = r.json()
+                                else:
+                                    st.session_state["cal_selected_detail"] = None
+                            except requests.ConnectionError:
                                 st.session_state["cal_selected_detail"] = None
-                        except requests.ConnectionError:
-                            st.session_state["cal_selected_detail"] = None
                     else:
                         st.session_state["cal_selected_detail"] = None
 
