@@ -1571,7 +1571,7 @@ if not st.session_state._restored:
             r = requests.get(
                 f"{API_BASE}/garmin/status",
                 headers=_auth_headers(),
-                timeout=15,
+                timeout=10,
             )
             if r.status_code == 200:
                 status_data = r.json()
@@ -1600,7 +1600,7 @@ if not st.session_state._restored:
                 r = requests.get(
                     f"{API_BASE}/activities?days=240",
                     headers=_auth_headers(),
-                    timeout=15,
+                    timeout=10,
                 )
                 if r.status_code == 200:
                     st.session_state["garmin_activities"] = r.json()
@@ -1613,7 +1613,7 @@ if not st.session_state._restored:
                 r = requests.get(
                     f"{API_BASE}/profile",
                     headers=_auth_headers(),
-                    timeout=15,
+                    timeout=10,
                 )
                 if r.status_code == 200:
                     st.session_state.profile = r.json()
@@ -1626,52 +1626,12 @@ if not st.session_state._restored:
                 r = requests.get(
                     f"{API_BASE}/profile/analytics",
                     headers=_auth_headers(),
-                    timeout=15,
+                    timeout=10,
                 )
                 if r.status_code == 200:
                     st.session_state.analytics = r.json()
         except Exception:
             pass
-
-        # 6) Pre-load feed from DB
-        try:
-            if "feed_events" not in st.session_state:
-                r = requests.get(
-                    f"{API_BASE}/feed?limit=30&offset=0",
-                    headers=_auth_headers(),
-                    timeout=15,
-                )
-                st.session_state.feed_events = r.json() if r.status_code == 200 else []
-        except Exception:
-            st.session_state.feed_events = []
-
-        # 7) Pre-load friends from DB
-        try:
-            if "friends_data" not in st.session_state:
-                r = requests.get(
-                    f"{API_BASE}/friends",
-                    headers=_auth_headers(),
-                    timeout=15,
-                )
-                st.session_state.friends_data = r.json() if r.status_code == 200 else {}
-        except Exception:
-            st.session_state.friends_data = {}
-
-        # 8) Pre-load HYROX results from DB
-        try:
-            if "hyrox_data" not in st.session_state:
-                r = requests.get(
-                    f"{API_BASE}/hyrox/results",
-                    headers=_auth_headers(),
-                    timeout=10,
-                )
-                if r.status_code == 200:
-                    data = r.json()
-                    st.session_state.hyrox_data = data if data.get("results") else None
-                else:
-                    st.session_state.hyrox_data = None
-        except Exception:
-            st.session_state.hyrox_data = None
 
 # ── Sidebar ──────────────────────────────────────────────────────────
 
@@ -1776,7 +1736,8 @@ else:
                     st.success(f"Synced: {', '.join(_sync_ok)}")
                 if _sync_err:
                     st.error(f"Failed to sync: {', '.join(_sync_err)}")
-                st.rerun()
+                if _sync_ok and not _sync_err:
+                    st.rerun()
 
 
 # ── User Dashboard Header ────────────────────────────────────────────
@@ -1903,7 +1864,16 @@ tab_admin = tabs[7] if st.session_state.role == "admin" else None
 with tab_feed:
     st.markdown('<div class="pf-section-header">Activity Feed</div>', unsafe_allow_html=True)
 
-    feed_events = st.session_state.get("feed_events", [])
+    if "feed_events" not in st.session_state:
+        try:
+            feed_r = requests.get(
+                f"{API_BASE}/feed?limit=30&offset=0",
+                headers=_auth_headers(), timeout=10,
+            )
+            st.session_state.feed_events = feed_r.json() if feed_r.status_code == 200 else []
+        except Exception:
+            st.session_state.feed_events = []
+    feed_events = st.session_state.feed_events
 
     if st.button("Refresh Feed", key="refresh_feed"):
         st.session_state.pop("feed_events", None)
@@ -4118,7 +4088,16 @@ with tab_hyrox:
     if "hyrox_loading" not in st.session_state:
         st.session_state.hyrox_loading = False
 
-    # HYROX data loaded in _restored block
+    # Lazy-load HYROX data on first tab visit
+    if st.session_state.hyrox_data is None and not st.session_state.hyrox_loading:
+        try:
+            r = requests.get(f"{API_BASE}/hyrox/results", headers=_auth_headers(), timeout=10)
+            if r.status_code == 200:
+                data = r.json()
+                if data.get("results"):
+                    st.session_state.hyrox_data = data
+        except Exception:
+            pass
 
     hx_data = st.session_state.hyrox_data
     has_results = hx_data and hx_data.get("results")
@@ -4966,8 +4945,14 @@ with tab_user_settings:
     st.markdown("---")
     st.markdown('<div class="pf-section-header">Friends</div>', unsafe_allow_html=True)
 
-    # Load friends data (cached per session)
-    friends_data = st.session_state.get("friends_data", {})
+    # Load friends data (lazy on first visit)
+    if "friends_data" not in st.session_state:
+        try:
+            friends_r = requests.get(f"{API_BASE}/friends", headers=_auth_headers(), timeout=10)
+            st.session_state.friends_data = friends_r.json() if friends_r.status_code == 200 else {}
+        except Exception:
+            st.session_state.friends_data = {}
+    friends_data = st.session_state.friends_data
 
     friends_list = friends_data.get("friends", [])
     pending_reqs = friends_data.get("pending", [])
