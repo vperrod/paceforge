@@ -8,6 +8,7 @@ Supports two modes:
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import uuid
 from datetime import date, timedelta
@@ -335,10 +336,8 @@ def _parse_ai_workout(
     purpose = None
     purpose_str = ai_wo.get("purpose", "")
     if purpose_str:
-        try:
+        with contextlib.suppress(ValueError):
             purpose = TrainingPurpose(purpose_str)
-        except ValueError:
-            pass
 
     # Parse steps
     steps: list[WorkoutStep] = []

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from threading import Lock
 
@@ -132,7 +132,7 @@ def create_user(
 ) -> dict:
     """Insert a new user. Returns the user dict. Raises on duplicate email."""
     user_id = str(uuid.uuid4())
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     approved_at = now if status == "approved" else None
     with _lock:
         conn = _get_conn(db_path)
@@ -175,7 +175,7 @@ def update_user_status(
     db_path: str, user_id: str, *, status: str
 ) -> dict | None:
     """Set user status to 'approved' or 'rejected'. Returns updated user."""
-    now = datetime.now(timezone.utc).isoformat() if status == "approved" else None
+    now = datetime.now(UTC).isoformat() if status == "approved" else None
     with _lock:
         conn = _get_conn(db_path)
         conn.execute(
@@ -242,7 +242,7 @@ def save_user_data(
     hyrox_json: str | None = None,
 ) -> None:
     """Upsert cached user data (plan, activities, profile, hyrox)."""
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     with _lock:
         conn = _get_conn(db_path)
         existing = conn.execute(
@@ -320,7 +320,7 @@ def send_friend_request(db_path: str, requester_id: str, recipient_id: str) -> d
     if requester_id == recipient_id:
         return None
     fid = str(uuid.uuid4())
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     with _lock:
         conn = _get_conn(db_path)
         # Check for existing relationship in either direction
@@ -344,7 +344,7 @@ def send_friend_request(db_path: str, requester_id: str, recipient_id: str) -> d
 
 def respond_friend_request(db_path: str, friendship_id: str, *, accept: bool) -> dict | None:
     """Accept or reject a friend request."""
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     status = "accepted" if accept else "rejected"
     with _lock:
         conn = _get_conn(db_path)
@@ -437,7 +437,7 @@ def create_feed_event(
     """Create a new feed event."""
     import json as _json
     eid = str(uuid.uuid4())
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     meta_str = _json.dumps(metadata) if metadata else None
     with _lock:
         conn = _get_conn(db_path)
@@ -484,7 +484,7 @@ def toggle_like(db_path: str, event_id: str, user_id: str) -> bool:
             return False
         else:
             lid = str(uuid.uuid4())
-            now = datetime.now(timezone.utc).isoformat()
+            now = datetime.now(UTC).isoformat()
             conn.execute(
                 "INSERT INTO feed_likes (id, event_id, user_id, created_at) VALUES (?, ?, ?, ?)",
                 (lid, event_id, user_id, now),
@@ -510,7 +510,7 @@ def get_user_likes(db_path: str, user_id: str, event_ids: list[str]) -> set[str]
 def add_comment(db_path: str, event_id: str, user_id: str, body: str) -> dict:
     """Add a comment to a feed event."""
     cid = str(uuid.uuid4())
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     with _lock:
         conn = _get_conn(db_path)
         conn.execute(

@@ -14,15 +14,10 @@ from garminconnect.workout import (
     StepType,
     TargetType,
     WorkoutSegment,
-    create_cooldown_step,
-    create_interval_step,
-    create_recovery_step,
     create_repeat_group,
-    create_warmup_step,
 )
 
 from paceforge.models.plan import (
-    IntensityTarget,
     Workout,
     WorkoutStepType,
 )
@@ -136,7 +131,7 @@ class GarminClient:
         logger.info("MFA verified — authenticated with Garmin Connect")
 
     @classmethod
-    def try_reconnect(cls, email: str, token_dir: str) -> "GarminClient | None":
+    def try_reconnect(cls, email: str, token_dir: str) -> GarminClient | None:
         """Attempt to restore a session from cached tokens (no password needed).
 
         Returns a connected GarminClient on success, or None if tokens are
@@ -195,7 +190,7 @@ class GarminClient:
                 if latest_map:
                     # Pick primary device or first available
                     device_data = None
-                    for dev_id, dev_info in latest_map.items():
+                    for _dev_id, dev_info in latest_map.items():
                         if isinstance(dev_info, dict):
                             if dev_info.get("primaryTrainingDevice"):
                                 device_data = dev_info
@@ -226,7 +221,7 @@ class GarminClient:
                 lb_map = mr_lb.get("metricsTrainingLoadBalanceDTOMap") or {}
                 if lb_map:
                     lb_data = None
-                    for dev_id, dev_info in lb_map.items():
+                    for _dev_id, dev_info in lb_map.items():
                         if isinstance(dev_info, dict):
                             if dev_info.get("primaryTrainingDevice"):
                                 lb_data = dev_info

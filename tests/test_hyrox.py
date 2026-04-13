@@ -5,8 +5,7 @@ from __future__ import annotations
 import pytest
 
 from paceforge.hyrox.models import HyroxCachedData, HyroxRaceResult, HyroxSplit
-from paceforge.hyrox.scraper import _time_to_seconds, _seconds_to_display
-
+from paceforge.hyrox.scraper import _seconds_to_display, _time_to_seconds
 
 # ── Time conversion tests ──────────────────────────────────────────
 
@@ -167,11 +166,11 @@ class TestAnalyzer:
 class TestHyroxDB:
     def test_hyrox_json_save_and_load(self, tmp_path):
         from paceforge.auth.database import (
-            init_db,
-            save_user_data,
-            load_user_data,
             create_user,
+            init_db,
+            load_user_data,
             reset_connection,
+            save_user_data,
         )
         from paceforge.auth.security import hash_password
 
@@ -205,11 +204,11 @@ class TestHyroxDB:
     def test_hyrox_json_independent_of_other_fields(self, tmp_path):
         """Saving hyrox_json should not overwrite plan_json or profile_json."""
         from paceforge.auth.database import (
-            init_db,
-            save_user_data,
-            load_user_data,
             create_user,
+            init_db,
+            load_user_data,
             reset_connection,
+            save_user_data,
         )
         from paceforge.auth.security import hash_password
 

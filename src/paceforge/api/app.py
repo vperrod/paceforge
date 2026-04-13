@@ -9,7 +9,7 @@ from datetime import date
 from pathlib import Path
 
 import jwt as pyjwt
-from fastapi import Depends, FastAPI, HTTPException, Header
+from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -58,7 +58,7 @@ from paceforge.auth.security import (
 from paceforge.engine.adaptation import adapt_plan
 from paceforge.engine.planner import generate_plan
 from paceforge.garmin.client import GarminClient
-from paceforge.models.plan import TrainingPlan
+from paceforge.models.plan import TrainingPlan, Workout
 from paceforge.models.profile import (
     ExperienceLevel,
     GoalType,

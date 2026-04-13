@@ -7,7 +7,6 @@ plan rather than generating plans from scratch.
 
 from __future__ import annotations
 
-import json
 import logging
 from dataclasses import dataclass
 
@@ -171,10 +170,7 @@ class Coach:
         self._conversation.append({"role": "user", "content": message})
 
         try:
-            if self._provider == "anthropic":
-                reply = self._chat_anthropic()
-            else:
-                reply = self._chat_openai()
+            reply = self._chat_anthropic() if self._provider == "anthropic" else self._chat_openai()
             self._conversation.append({"role": "assistant", "content": reply})
         except Exception as e:
             logger.error("LLM call failed: %s", e, exc_info=True)
@@ -377,10 +373,7 @@ class Coach:
         self._conversation.append({"role": "user", "content": "\n".join(lines)})
 
         try:
-            if self._provider == "anthropic":
-                reply = self._chat_anthropic()
-            else:
-                reply = self._chat_openai()
+            reply = self._chat_anthropic() if self._provider == "anthropic" else self._chat_openai()
         except Exception as e:
             logger.error("Workout analysis failed: %s", e, exc_info=True)
             reply = f"Could not analyze workout: {e}"

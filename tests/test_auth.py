@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import tempfile
 from datetime import timedelta
 
 import pytest
 
 from paceforge.auth.database import (
-    close_db,
     create_user,
     get_user_by_email,
     init_db,

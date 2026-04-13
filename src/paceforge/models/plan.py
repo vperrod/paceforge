@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 from datetime import date
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 
-class WorkoutStepType(str, Enum):
+class WorkoutStepType(StrEnum):
     WARMUP = "warmup"
     COOLDOWN = "cooldown"
     INTERVAL = "interval"
@@ -17,7 +17,7 @@ class WorkoutStepType(str, Enum):
     REST = "rest"
 
 
-class IntensityTarget(str, Enum):
+class IntensityTarget(StrEnum):
     """How the target is expressed."""
 
     PACE = "pace"
@@ -37,7 +37,7 @@ class WorkoutStep(BaseModel):
     steps: list[WorkoutStep] | None = Field(None, description="Sub-steps for repeat groups")
 
 
-class WorkoutType(str, Enum):
+class WorkoutType(StrEnum):
     EASY_RUN = "easy_run"
     LONG_RUN = "long_run"
     TEMPO = "tempo"
@@ -59,7 +59,7 @@ class WorkoutType(str, Enum):
     LONG_RUN_WITH_RACE_PACE = "long_run_with_race_pace"
 
 
-class TrainingPurpose(str, Enum):
+class TrainingPurpose(StrEnum):
     AEROBIC_BASE = "aerobic_base"
     VO2MAX = "vo2max"
     LACTATE_THRESHOLD = "lactate_threshold"

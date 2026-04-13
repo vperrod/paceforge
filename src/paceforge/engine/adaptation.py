@@ -5,14 +5,14 @@ from __future__ import annotations
 import logging
 from datetime import date
 
-from paceforge.engine.vdot import paces_from_race, paces_from_vdot, TrainingPaces
+from paceforge.engine.vdot import TrainingPaces, paces_from_race, paces_from_vdot
 from paceforge.models.plan import (
     IntensityTarget,
     TrainingPlan,
     Workout,
     WorkoutType,
 )
-from paceforge.models.profile import RecentActivity, UserFitnessProfile
+from paceforge.models.profile import UserFitnessProfile
 
 logger = logging.getLogger(__name__)
 
@@ -131,9 +131,7 @@ def _check_recovery_needed(profile: UserFitnessProfile) -> bool:
     """Check overtraining signals."""
     if profile.hrv_status and profile.hrv_status.lower() in ("low", "poor", "unbalanced"):
         return True
-    if profile.training_readiness is not None and profile.training_readiness < 25:
-        return True
-    return False
+    return bool(profile.training_readiness is not None and profile.training_readiness < 25)
 
 
 def _inject_recovery(plan: TrainingPlan, today: date) -> TrainingPlan:

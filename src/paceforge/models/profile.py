@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
@@ -98,7 +98,7 @@ class UserFitnessProfile(BaseModel):
     fitness_age: int | None = Field(None, description="Garmin estimated fitness age")
 
 
-class GoalType(str, Enum):
+class GoalType(StrEnum):
     FIVE_K = "5K"
     TEN_K = "10K"
     HALF_MARATHON = "HALF_MARATHON"
@@ -107,7 +107,7 @@ class GoalType(str, Enum):
     CUSTOM = "CUSTOM"
 
 
-class ExperienceLevel(str, Enum):
+class ExperienceLevel(StrEnum):
     BEGINNER = "beginner"
     INTERMEDIATE = "intermediate"
     ADVANCED = "advanced"

@@ -6,7 +6,6 @@ from paceforge.hyrox.models import (
     RUNNING_SPLITS,
     STATION_SPLITS,
     HyroxRaceResult,
-    HyroxSplit,
 )
 
 # ── Field benchmarks from 12,500-athlete analysis (season 7/8) ──────

@@ -14,7 +14,7 @@ import logging
 from dataclasses import dataclass
 
 from paceforge.engine.vdot import TrainingPaces
-from paceforge.models.profile import UserFitnessProfile, TrainingGoal
+from paceforge.models.profile import TrainingGoal, UserFitnessProfile
 
 logger = logging.getLogger(__name__)
 
@@ -264,7 +264,7 @@ def generate_blueprint(
         except json.JSONDecodeError as e:
             last_error = f"AI returned invalid JSON: {e}"
             logger.warning("Attempt %d: %s — retrying", attempt + 1, last_error)
-        except Exception as e:
+        except Exception:
             raise
     else:
         logger.error("AI plan failed after retries: %s\nRaw: %s", last_error, (raw_text or "")[:500])

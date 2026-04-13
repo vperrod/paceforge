@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import bcrypt
 import jwt
@@ -29,7 +29,7 @@ def create_access_token(
     expires_delta: timedelta | None = None,
 ) -> str:
     """Create an HS256-signed JWT with *user_id* and *role* claims."""
-    expire = datetime.now(timezone.utc) + (
+    expire = datetime.now(UTC) + (
         expires_delta or timedelta(hours=_DEFAULT_EXPIRE_HOURS)
     )
     payload = {

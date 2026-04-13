@@ -1,7 +1,6 @@
 """Tests for the VDOT pace calculator."""
 
 from paceforge.engine.vdot import (
-    RACE_DISTANCES,
     paces_from_race,
     paces_from_vdot,
     vdot_from_race,

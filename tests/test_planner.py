@@ -2,7 +2,7 @@
 
 from datetime import date, timedelta
 
-from paceforge.engine.planner import generate_plan, _DAY_OFFSETS
+from paceforge.engine.planner import _DAY_OFFSETS, generate_plan
 from paceforge.models.plan import WorkoutType
 from paceforge.models.profile import (
     ExperienceLevel,

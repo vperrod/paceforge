@@ -6,17 +6,14 @@ No API calls, no side effects — just math and domain knowledge.
 
 from __future__ import annotations
 
-import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from paceforge.engine.vdot import (
     RACE_DISTANCES,
-    TrainingPaces,
     paces_from_vdot,
     vdot_from_race,
 )
 from paceforge.models.profile import UserFitnessProfile
-
 
 # ── Data classes ─────────────────────────────────────────────────────
 
