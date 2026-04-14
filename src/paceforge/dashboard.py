@@ -1778,9 +1778,9 @@ else:
                         st.session_state.pop("analytics", None)
                         _sync_ok.append("profile")
                     else:
-                        _sync_err.append("profile")
-                except Exception:
-                    _sync_err.append("profile")
+                        _sync_err.append(f"profile ({r.status_code}: {r.text[:100]})")
+                except Exception as _e:
+                    _sync_err.append(f"profile ({_e})")
                 try:
                     r = requests.get(
                         f"{API_BASE}/activities?days=240&sync=true",
@@ -1792,9 +1792,9 @@ else:
                         st.session_state.pop("cal_selected_detail", None)
                         _sync_ok.append(f"{len(r.json())} activities")
                     else:
-                        _sync_err.append("activities")
-                except Exception:
-                    _sync_err.append("activities")
+                        _sync_err.append(f"activities ({r.status_code}: {r.text[:100]})")
+                except Exception as _e:
+                    _sync_err.append(f"activities ({_e})")
                 # Refresh plans (picks up auto-matched completions)
                 try:
                     r = requests.get(f"{API_BASE}/plans", headers=_auth_headers(), timeout=10)
