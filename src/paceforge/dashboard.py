@@ -1159,6 +1159,7 @@ for key, default in {
 # ── Restore JWT from cookie on fresh page load ──────────────────────
 if st.session_state.jwt is None:
     saved_jwt = _cookie_mgr.get("pf_jwt")
+    saved_refresh = _cookie_mgr.get("pf_refresh")
     if saved_jwt:
         # Validate the token is still accepted by the API
         try:
@@ -1174,8 +1175,43 @@ if st.session_state.jwt is None:
                 st.session_state.user_name = data.get("name", "")
                 st.session_state.user_email = data.get("email", "")
                 st.session_state.page = "app"
+            elif saved_refresh:
+                # Access token expired — try refreshing
+                rr = requests.post(
+                    f"{API_BASE}/auth/refresh",
+                    json={"refresh_token": saved_refresh},
+                    timeout=10,
+                )
+                if rr.status_code == 200:
+                    data = rr.json()
+                    st.session_state.jwt = data["access_token"]
+                    st.session_state.role = data["role"]
+                    st.session_state.user_name = data["name"]
+                    st.session_state.user_email = data.get("email", "")
+                    st.session_state.page = "app"
+                    _cookie_mgr.set("pf_jwt", data["access_token"], max_age=86400)
+                    _cookie_mgr.set("pf_refresh", data["refresh_token"], max_age=2592000)
         except Exception:
             pass  # Cookie invalid or API unreachable — show login
+    elif saved_refresh:
+        # No access token cookie but refresh token exists — try refreshing
+        try:
+            rr = requests.post(
+                f"{API_BASE}/auth/refresh",
+                json={"refresh_token": saved_refresh},
+                timeout=10,
+            )
+            if rr.status_code == 200:
+                data = rr.json()
+                st.session_state.jwt = data["access_token"]
+                st.session_state.role = data["role"]
+                st.session_state.user_name = data["name"]
+                st.session_state.user_email = data.get("email", "")
+                st.session_state.page = "app"
+                _cookie_mgr.set("pf_jwt", data["access_token"], max_age=86400)
+                _cookie_mgr.set("pf_refresh", data["refresh_token"], max_age=2592000)
+        except Exception:
+            pass
 
 
 def _auth_headers() -> dict:
@@ -1190,6 +1226,7 @@ def _logout():
     st.session_state._restored = False
     st.session_state.page = "login"
     _cookie_mgr.delete("pf_jwt")
+    _cookie_mgr.delete("pf_refresh")
 
 
 def _error_detail(r: requests.Response) -> str:
@@ -1536,6 +1573,7 @@ if st.session_state.jwt is None:
                         st.session_state.user_email = data.get("email", "")
                         st.session_state.page = "app"
                         _cookie_mgr.set("pf_jwt", data["access_token"], max_age=86400)
+                        _cookie_mgr.set("pf_refresh", data["refresh_token"], max_age=2592000)
                         st.rerun()
                     elif r.status_code == 403:
                         st.warning(_error_detail(r))
