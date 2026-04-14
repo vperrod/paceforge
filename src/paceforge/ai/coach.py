@@ -380,3 +380,105 @@ class Coach:
 
         self._conversation = saved
         return reply
+
+    def analyze_activity(
+        self,
+        activity: dict,
+        profile: UserFitnessProfile | None = None,
+    ) -> str:
+        """Analyze a standalone Garmin activity (not matched to a plan workout).
+
+        Parameters
+        ----------
+        activity : dict
+            Activity data including summary, splits, HR zones.
+        profile : UserFitnessProfile | None
+            Optional athlete profile for context.
+        """
+        act_type = activity.get("activity_type", "running")
+        name = activity.get("name", "Activity")
+        dist = activity.get("distance_meters", 0)
+        dur = activity.get("duration_seconds", 0)
+
+        lines = [f"## Activity Analysis: {name}", f"- Type: {act_type}"]
+        if dist:
+            lines.append(f"- Distance: {dist / 1000:.2f} km")
+        if dur:
+            dm, ds = divmod(int(dur), 60)
+            lines.append(f"- Duration: {dm}:{ds:02d}")
+        pace = activity.get("avg_pace_sec_per_km")
+        if pace:
+            pm, ps = divmod(int(pace), 60)
+            lines.append(f"- Avg Pace: {pm}:{ps:02d}/km")
+        for key, label in [
+            ("avg_hr", "Avg HR"), ("max_hr", "Max HR"),
+            ("calories", "Calories"), ("elevation_gain", "Elevation Gain"),
+            ("training_effect_aerobic", "Aerobic TE"),
+            ("training_effect_anaerobic", "Anaerobic TE"),
+            ("avg_running_cadence", "Cadence"),
+        ]:
+            val = activity.get(key)
+            if val:
+                lines.append(f"- {label}: {val}")
+
+        # Include splits if available
+        splits = activity.get("splits")
+        if splits:
+            lap_dtos = splits.get("lapDTOs") or []
+            if lap_dtos:
+                lines.append("\n## Splits")
+                for i, lap in enumerate(lap_dtos, 1):
+                    lap_dist = lap.get("distance", 0) / 1000
+                    lap_dur_raw = lap.get("duration", 0)
+                    lm, ls = divmod(int(lap_dur_raw), 60)
+                    lap_hr = lap.get("averageHR", "")
+                    lines.append(f"  Lap {i}: {lap_dist:.2f}km in {lm}:{ls:02d}" + (f" @ {lap_hr}bpm" if lap_hr else ""))
+
+        # HR zones if available
+        hr_zones = activity.get("hr_zones")
+        if hr_zones:
+            zone_list = hr_zones if isinstance(hr_zones, list) else hr_zones.get("hrTimeInZones", [])
+            if zone_list:
+                lines.append("\n## HR Zone Distribution")
+                for z in zone_list:
+                    zn = z.get("zoneNumber", "?")
+                    secs = z.get("secsInZone", 0)
+                    zm, zs = divmod(int(secs), 60)
+                    lines.append(f"  Zone {zn}: {zm}:{zs:02d}")
+
+        is_running = act_type in ("running", "trail_running", "treadmill_running")
+        if is_running:
+            lines.append(
+                "\nProvide a concise analysis (3-5 sentences) covering: "
+                "1) How the effort and pacing look overall, "
+                "2) Any notable positives (e.g. consistent splits, good HR management), "
+                "3) Any suggestions for improvement. "
+                "Be specific with numbers and encouraging."
+            )
+        else:
+            lines.append(
+                "\nProvide a concise analysis (3-5 sentences) covering: "
+                "1) How the effort and intensity look for this type of session, "
+                "2) Any notable positives (e.g. HR response, duration, training effect), "
+                "3) How this cross-training complements running fitness. "
+                "Be specific with numbers and encouraging."
+            )
+
+        saved = self._conversation
+        self._conversation = [
+            {"role": "system", "content": SYSTEM_PROMPT},
+        ]
+        if profile:
+            ctx = self._build_context(profile, None)
+            self._conversation.append({"role": "system", "content": f"Athlete data:\n{ctx}"})
+
+        self._conversation.append({"role": "user", "content": "\n".join(lines)})
+
+        try:
+            reply = self._chat_anthropic() if self._provider == "anthropic" else self._chat_openai()
+        except Exception as e:
+            logger.error("Activity analysis failed: %s", e, exc_info=True)
+            reply = f"Could not analyze activity: {e}"
+
+        self._conversation = saved
+        return reply

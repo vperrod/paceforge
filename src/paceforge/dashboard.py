@@ -3182,7 +3182,7 @@ with tab_plan:
                                 "custom_threshold_pace": custom_threshold,
                             },
                             headers=_auth_headers(),
-                            timeout=60,
+                            timeout=300,
                         )
                         if r.status_code == 200:
                             st.session_state.plans.append(r.json())
@@ -3803,6 +3803,36 @@ with tab_calendar:
                                 f'</div>',
                                 unsafe_allow_html=True,
                             )
+
+                        # ── AI Analysis for Garmin activities ──
+                        _ai_act_id = props.get("activity_id")
+                        if _ai_act_id:
+                            _cached_analysis = st.session_state.get(f"ai_analysis_{_ai_act_id}")
+                            if _cached_analysis:
+                                st.markdown(
+                                    f'<div class="pf-card" style="margin-top:0.5rem;border:1px solid rgba(16,185,129,0.15);">'
+                                    f'<div style="color:#10B981;font-size:0.7rem;font-weight:600;margin-bottom:0.25rem;">AI ANALYSIS</div>'
+                                    f'<div style="color:#E8ECF4;font-size:0.82rem;">{_cached_analysis}</div>'
+                                    f'</div>',
+                                    unsafe_allow_html=True,
+                                )
+                            else:
+                                if st.button("Analyze with AI", key=f"garmin_analyze_{_ai_act_id}", use_container_width=True):
+                                    with st.spinner("AI is analyzing your activity..."):
+                                        try:
+                                            r = requests.post(
+                                                f"{API_BASE}/activities/{_ai_act_id}/analyze",
+                                                headers=_auth_headers(),
+                                                timeout=60,
+                                            )
+                                            if r.status_code == 200:
+                                                result = r.json()
+                                                st.session_state[f"ai_analysis_{_ai_act_id}"] = result.get("analysis", "")
+                                                st.rerun()
+                                            else:
+                                                st.error(f"Analysis failed: {r.text}")
+                                        except Exception as _ai_err:
+                                            st.error(f"Analysis failed: {_ai_err}")
                     else:
                         # Planned workout detail
                         is_completed = props.get("completed", False)

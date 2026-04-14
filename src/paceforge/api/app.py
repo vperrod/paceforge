@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from contextlib import asynccontextmanager
@@ -631,6 +632,57 @@ async def get_activity_detail(activity_id: int, user: dict = Depends(get_current
     return garmin.get_activity_detail(activity_id)
 
 
+@app.post("/activities/{activity_id}/analyze")
+async def analyze_activity(activity_id: int, user: dict = Depends(get_current_user)):
+    """Run AI coach analysis on any synced Garmin activity."""
+    uid = user["id"]
+
+    # Check for cached analysis in preferences_json
+    cached = load_user_data(settings.db_path, uid)
+    prefs: dict = {}
+    if cached and cached.get("preferences_json"):
+        try:
+            prefs = json.loads(cached["preferences_json"])
+        except (json.JSONDecodeError, TypeError):
+            prefs = {}
+    analyses: dict = prefs.get("activity_analyses", {})
+    aid_key = str(activity_id)
+    if aid_key in analyses:
+        return {"analysis": analyses[aid_key]}
+
+    # Fetch activity detail from Garmin
+    garmin = _ensure_garmin(uid)
+    if not garmin:
+        raise HTTPException(404, "Garmin not connected")
+
+    detail = garmin.get_activity_detail(activity_id)
+
+    # Build activity dict from cached activities list
+    act_dict: dict = {}
+    if cached and cached.get("activities_json"):
+        for a in json.loads(cached["activities_json"]):
+            if a.get("activity_id") == activity_id:
+                act_dict = a
+                break
+    act_dict["splits"] = detail.get("splits")
+    act_dict["hr_zones"] = detail.get("hr_zones")
+
+    # Get profile for context
+    profile = _user_profile.get(uid)
+    if not profile and cached and cached.get("profile_json"):
+        profile = UserFitnessProfile.model_validate_json(cached["profile_json"])
+
+    coach = _get_or_create_coach(uid)
+    analysis = coach.analyze_activity(act_dict, profile=profile)
+
+    # Cache the result
+    analyses[aid_key] = analysis
+    prefs["activity_analyses"] = analyses
+    save_user_data(settings.db_path, uid, preferences_json=json.dumps(prefs))
+
+    return {"analysis": analysis}
+
+
 def _get_or_create_coach(uid: str) -> Coach:
     """Get or create a Coach instance for a user."""
     if uid not in _user_coach:
@@ -805,7 +857,8 @@ async def generate(req: GeneratePlanRequest, user: dict = Depends(get_current_us
     )
 
     try:
-        new_plan = generate_plan(
+        new_plan = await asyncio.to_thread(
+            generate_plan,
             profile, goal,
             openai_api_key=settings.openai_api_key,
             openai_model=settings.openai_model,
