@@ -4829,291 +4829,309 @@ with tab_coach:
 
 with tab_user_settings:
 
-    col_profile, col_garmin = st.columns(2, gap="large")
+    sub_account, sub_friends, sub_connections = st.tabs(["Account", "Friends", "Connections"])
 
-    # ── Account Information ──
-    with col_profile:
-        st.markdown('<div class="pf-section-header">Account Information</div>', unsafe_allow_html=True)
+    # ── Sub-tab: Account Information ──
+    with sub_account:
+        _, col_form, _ = st.columns([1, 2, 1])
+        with col_form:
+            st.markdown('<div class="pf-section-header">Account Information</div>', unsafe_allow_html=True)
 
-        with st.form("up_profile_form"):
-            new_name = st.text_input("Name", value=st.session_state.user_name or "", key="up_name")
-            new_email = st.text_input("Email", value=st.session_state.user_email or "", key="up_email")
-            st.markdown(
-                '<div style="margin-top:0.5rem;font-size:0.8rem;color:#8B95AD;">'
-                "Leave blank to keep current password</div>",
-                unsafe_allow_html=True,
-            )
-            new_password = st.text_input(
-                "New Password", type="password", placeholder="min 8 characters", key="up_new_pw"
-            )
-            confirm_password = st.text_input(
-                "Confirm New Password", type="password", key="up_confirm_pw"
-            )
-            st.markdown("---")
-            current_password = st.text_input(
-                "Current Password (required)", type="password", key="up_cur_pw"
-            )
-            save_clicked = st.form_submit_button("Save Changes", type="primary", use_container_width=True)
-
-        if save_clicked:
-            if not current_password:
-                st.error("Current password is required to make changes.")
-            elif new_password and new_password != confirm_password:
-                st.error("New passwords do not match.")
-            elif new_password and len(new_password) < 8:
-                st.error("New password must be at least 8 characters.")
-            else:
-                payload = {"current_password": current_password}
-                if new_name and new_name != st.session_state.user_name:
-                    payload["name"] = new_name
-                if new_email and new_email != st.session_state.user_email:
-                    payload["email"] = new_email
-                if new_password:
-                    payload["new_password"] = new_password
-
-                if len(payload) == 1:
-                    st.info("No changes detected.")
-                else:
-                    try:
-                        r = requests.patch(
-                            f"{API_BASE}/auth/profile",
-                            json=payload,
-                            headers=_auth_headers(),
-                            timeout=15,
-                        )
-                        if r.status_code == 200:
-                            data = r.json()
-                            st.session_state.user_name = data["name"]
-                            st.session_state.user_email = data["email"]
-                            st.success("Profile updated!")
-                            st.rerun()
-                        else:
-                            st.error(_error_detail(r))
-                    except requests.ConnectionError:
-                        st.error("Cannot reach API.")
-
-    # ── Garmin Connect ──
-    with col_garmin:
-        st.markdown('<div class="pf-section-header">Garmin Connect</div>', unsafe_allow_html=True)
-
-        if not st.session_state.garmin_logged_in:
-            if not st.session_state.mfa_required:
-                garmin_email = st.text_input("Garmin Email", key="up_garmin_email")
-                garmin_password = st.text_input("Garmin Password", type="password", key="up_garmin_pw")
-                if st.button(
-                    "Connect to Garmin",
-                    type="primary",
-                    use_container_width=True,
-                    key="up_garmin_connect",
-                ):
-                    try:
-                        with st.spinner("Authenticating (may take up to 90s)..."):
-                            r = requests.post(
-                                f"{API_BASE}/garmin/login",
-                                json={"email": garmin_email, "password": garmin_password},
-                                headers=_auth_headers(),
-                                timeout=120,
-                            )
-                        data = r.json()
-                        if r.status_code == 200 and data.get("status") == "mfa_required":
-                            st.session_state.mfa_required = True
-                            st.info("Check your email for the verification code.")
-                            st.rerun()
-                        elif r.status_code == 200:
-                            st.session_state.garmin_logged_in = True
-                            st.success("Connected!")
-                            st.rerun()
-                        else:
-                            st.error(f"Failed: {data.get('detail', r.text)}")
-                    except requests.ReadTimeout:
-                        st.error("Timed out. Wait a few minutes and retry.")
-                    except requests.ConnectionError:
-                        st.error("Cannot reach API.")
-            else:
-                st.info("Verification code sent to your email.")
-                mfa_code = st.text_input("MFA Code", placeholder="123456", key="up_mfa_input")
-                if st.button("Verify", type="primary", use_container_width=True, key="up_mfa_btn"):
-                    try:
-                        r = requests.post(
-                            f"{API_BASE}/garmin/mfa",
-                            json={"code": mfa_code},
-                            headers=_auth_headers(),
-                            timeout=30,
-                        )
-                        if r.status_code == 200:
-                            st.session_state.mfa_required = False
-                            st.session_state.garmin_logged_in = True
-                            st.success("Verified — connected!")
-                            st.rerun()
-                        else:
-                            st.error(f"MFA failed: {_error_detail(r)}")
-                    except requests.ConnectionError:
-                        st.error("Cannot reach API.")
-        else:
-            st.markdown(
-                '<div style="background:#10B98122;border:1px solid #10B98144;'
-                "border-radius:12px;padding:1.5rem;text-align:center;margin-bottom:1rem;\">"
-                '<div style="font-size:2rem;margin-bottom:0.5rem;">⌚</div>'
-                '<div style="color:#10B981;font-weight:600;font-size:1.1rem;">Connected</div>'
-                "</div>",
-                unsafe_allow_html=True,
-            )
-
-            prof = st.session_state.get("profile")
-            if prof:
+            with st.form("up_profile_form"):
+                new_name = st.text_input("Name", value=st.session_state.user_name or "", key="up_name")
+                new_email = st.text_input("Email", value=st.session_state.user_email or "", key="up_email")
                 st.markdown(
-                    f"**Display Name:** {prof.get('displayName', 'N/A')}  \n"
-                    f"**Weight:** {prof.get('weight', 'N/A')} kg  \n"
-                    f"**VO2Max Running:** {prof.get('vo2MaxRunning', 'N/A')}",
-                )
-
-            if st.button(
-                "Refresh Profile",
-                use_container_width=True,
-                key="up_refresh_profile",
-            ):
-                r = requests.get(
-                    f"{API_BASE}/profile", headers=_auth_headers(), timeout=30
-                )
-                if r.status_code == 200:
-                    st.session_state.profile = r.json()
-                    st.rerun()
-
-    # ── Friends section ──
-    st.markdown("---")
-    st.markdown('<div class="pf-section-header">Friends</div>', unsafe_allow_html=True)
-
-    # Load friends data (lazy on first visit)
-    if "friends_data" not in st.session_state:
-        try:
-            friends_r = requests.get(f"{API_BASE}/friends", headers=_auth_headers(), timeout=10)
-            st.session_state.friends_data = friends_r.json() if friends_r.status_code == 200 else {}
-        except Exception:
-            st.session_state.friends_data = {}
-    friends_data = st.session_state.friends_data
-
-    friends_list = friends_data.get("friends", [])
-    pending_reqs = friends_data.get("pending", [])
-    sent_reqs = friends_data.get("sent", [])
-
-    # Search and add friends
-    search_q = st.text_input("Find people", placeholder="Search by name or email...", key="friend_search")
-    if search_q and len(search_q) >= 2:
-        try:
-            sr = requests.get(
-                f"{API_BASE}/users/search?q={search_q}",
-                headers=_auth_headers(), timeout=10,
-            )
-            search_results = sr.json() if sr.status_code == 200 else []
-        except requests.ConnectionError:
-            search_results = []
-
-        existing_friend_ids = {f["id"] for f in friends_list}
-        pending_sent_ids = {r["id"] for r in sent_reqs}
-        pending_recv_ids = {r["id"] for r in pending_reqs}
-
-        for su in search_results:
-            col_info, col_action = st.columns([3, 1])
-            with col_info:
-                st.markdown(
-                    f'<div style="padding:0.4rem 0;">'
-                    f'<span style="color:#E8ECF4;font-weight:500;">{su["name"]}</span>'
-                    f'<span style="color:#8B95AD;font-size:0.85rem;margin-left:0.5rem;">{su["email"]}</span>'
-                    f'</div>',
+                    '<div style="margin-top:0.5rem;font-size:0.8rem;color:#8B95AD;">'
+                    "Leave blank to keep current password</div>",
                     unsafe_allow_html=True,
                 )
-            with col_action:
-                if su["id"] in existing_friend_ids:
-                    st.markdown('<span style="color:#10B981;font-size:0.85rem;">✓ Friends</span>',
-                                unsafe_allow_html=True)
-                elif su["id"] in pending_sent_ids:
-                    st.markdown('<span style="color:#FFB800;font-size:0.85rem;">Pending</span>',
-                                unsafe_allow_html=True)
-                elif su["id"] in pending_recv_ids:
-                    st.markdown('<span style="color:#4DA6FF;font-size:0.85rem;">Accept below</span>',
-                                unsafe_allow_html=True)
+                new_password = st.text_input(
+                    "New Password", type="password", placeholder="min 8 characters", key="up_new_pw"
+                )
+                confirm_password = st.text_input(
+                    "Confirm New Password", type="password", key="up_confirm_pw"
+                )
+                st.markdown("---")
+                current_password = st.text_input(
+                    "Current Password (required)", type="password", key="up_cur_pw"
+                )
+                save_clicked = st.form_submit_button("Save Changes", type="primary", use_container_width=True)
+
+            if save_clicked:
+                if not current_password:
+                    st.error("Current password is required to make changes.")
+                elif new_password and new_password != confirm_password:
+                    st.error("New passwords do not match.")
+                elif new_password and len(new_password) < 8:
+                    st.error("New password must be at least 8 characters.")
                 else:
-                    if st.button("Add", key=f"add_friend_{su['id']}", use_container_width=True):
+                    payload = {"current_password": current_password}
+                    if new_name and new_name != st.session_state.user_name:
+                        payload["name"] = new_name
+                    if new_email and new_email != st.session_state.user_email:
+                        payload["email"] = new_email
+                    if new_password:
+                        payload["new_password"] = new_password
+
+                    if len(payload) == 1:
+                        st.info("No changes detected.")
+                    else:
+                        try:
+                            r = requests.patch(
+                                f"{API_BASE}/auth/profile",
+                                json=payload,
+                                headers=_auth_headers(),
+                                timeout=15,
+                            )
+                            if r.status_code == 200:
+                                data = r.json()
+                                st.session_state.user_name = data["name"]
+                                st.session_state.user_email = data["email"]
+                                st.success("Profile updated!")
+                                st.rerun()
+                            else:
+                                st.error(_error_detail(r))
+                        except requests.ConnectionError:
+                            st.error("Cannot reach API.")
+
+    # ── Sub-tab: Friends ──
+    with sub_friends:
+        st.markdown('<div class="pf-section-header">Friends</div>', unsafe_allow_html=True)
+
+        # Load friends data (lazy on first visit)
+        if "friends_data" not in st.session_state:
+            try:
+                friends_r = requests.get(f"{API_BASE}/friends", headers=_auth_headers(), timeout=10)
+                st.session_state.friends_data = friends_r.json() if friends_r.status_code == 200 else {}
+            except Exception:
+                st.session_state.friends_data = {}
+        friends_data = st.session_state.friends_data
+
+        friends_list = friends_data.get("friends", [])
+        pending_reqs = friends_data.get("pending", [])
+        sent_reqs = friends_data.get("sent", [])
+
+        # Search and add friends
+        search_q = st.text_input("Find people", placeholder="Search by name or email...", key="friend_search")
+        if search_q and len(search_q) >= 2:
+            try:
+                sr = requests.get(
+                    f"{API_BASE}/users/search?q={search_q}",
+                    headers=_auth_headers(), timeout=10,
+                )
+                search_results = sr.json() if sr.status_code == 200 else []
+            except requests.ConnectionError:
+                search_results = []
+
+            existing_friend_ids = {f["id"] for f in friends_list}
+            pending_sent_ids = {r["id"] for r in sent_reqs}
+            pending_recv_ids = {r["id"] for r in pending_reqs}
+
+            for su in search_results:
+                col_info, col_action = st.columns([3, 1])
+                with col_info:
+                    st.markdown(
+                        f'<div style="padding:0.4rem 0;">'
+                        f'<span style="color:#E8ECF4;font-weight:500;">{su["name"]}</span>'
+                        f'<span style="color:#8B95AD;font-size:0.85rem;margin-left:0.5rem;">{su["email"]}</span>'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
+                with col_action:
+                    if su["id"] in existing_friend_ids:
+                        st.markdown('<span style="color:#10B981;font-size:0.85rem;">✓ Friends</span>',
+                                    unsafe_allow_html=True)
+                    elif su["id"] in pending_sent_ids:
+                        st.markdown('<span style="color:#FFB800;font-size:0.85rem;">Pending</span>',
+                                    unsafe_allow_html=True)
+                    elif su["id"] in pending_recv_ids:
+                        st.markdown('<span style="color:#4DA6FF;font-size:0.85rem;">Accept below</span>',
+                                    unsafe_allow_html=True)
+                    else:
+                        if st.button("Add", key=f"add_friend_{su['id']}", use_container_width=True):
+                            try:
+                                requests.post(
+                                    f"{API_BASE}/friends/request",
+                                    json={"recipient_id": su["id"]},
+                                    headers=_auth_headers(), timeout=10,
+                                )
+                                st.success(f"Request sent to {su['name']}")
+                                st.rerun()
+                            except requests.ConnectionError:
+                                st.error("Cannot reach API")
+
+        # Pending requests (incoming)
+        if pending_reqs:
+            st.markdown(f"**Pending Requests ({len(pending_reqs)})**")
+            for pr in pending_reqs:
+                col_info, col_accept, col_reject = st.columns([3, 1, 1])
+                with col_info:
+                    st.markdown(
+                        f'<div style="padding:0.3rem 0;color:#E8ECF4;">{pr["name"]}'
+                        f'<span style="color:#8B95AD;font-size:0.8rem;margin-left:0.4rem;">{pr["email"]}</span></div>',
+                        unsafe_allow_html=True,
+                    )
+                with col_accept:
+                    if st.button("✓", key=f"accept_{pr['friendship_id']}", use_container_width=True):
                         try:
                             requests.post(
-                                f"{API_BASE}/friends/request",
-                                json={"recipient_id": su["id"]},
+                                f"{API_BASE}/friends/respond",
+                                json={"friendship_id": pr["friendship_id"], "accept": True},
                                 headers=_auth_headers(), timeout=10,
                             )
-                            st.success(f"Request sent to {su['name']}")
+                            st.rerun()
+                        except requests.ConnectionError:
+                            st.error("Cannot reach API")
+                with col_reject:
+                    if st.button("✗", key=f"reject_{pr['friendship_id']}", use_container_width=True):
+                        try:
+                            requests.post(
+                                f"{API_BASE}/friends/respond",
+                                json={"friendship_id": pr["friendship_id"], "accept": False},
+                                headers=_auth_headers(), timeout=10,
+                            )
                             st.rerun()
                         except requests.ConnectionError:
                             st.error("Cannot reach API")
 
-    # Pending requests (incoming)
-    if pending_reqs:
-        st.markdown(f"**Pending Requests ({len(pending_reqs)})**")
-        for pr in pending_reqs:
-            col_info, col_accept, col_reject = st.columns([3, 1, 1])
-            with col_info:
-                st.markdown(
-                    f'<div style="padding:0.3rem 0;color:#E8ECF4;">{pr["name"]}'
-                    f'<span style="color:#8B95AD;font-size:0.8rem;margin-left:0.4rem;">{pr["email"]}</span></div>',
-                    unsafe_allow_html=True,
-                )
-            with col_accept:
-                if st.button("✓", key=f"accept_{pr['friendship_id']}", use_container_width=True):
-                    try:
-                        requests.post(
-                            f"{API_BASE}/friends/respond",
-                            json={"friendship_id": pr["friendship_id"], "accept": True},
-                            headers=_auth_headers(), timeout=10,
-                        )
-                        st.rerun()
-                    except requests.ConnectionError:
-                        st.error("Cannot reach API")
-            with col_reject:
-                if st.button("✗", key=f"reject_{pr['friendship_id']}", use_container_width=True):
-                    try:
-                        requests.post(
-                            f"{API_BASE}/friends/respond",
-                            json={"friendship_id": pr["friendship_id"], "accept": False},
-                            headers=_auth_headers(), timeout=10,
-                        )
-                        st.rerun()
-                    except requests.ConnectionError:
-                        st.error("Cannot reach API")
+        # Friends list
+        if friends_list:
+            st.markdown(f"**Friends ({len(friends_list)})**")
+            for fr in friends_list:
+                col_info, col_remove = st.columns([4, 1])
+                with col_info:
+                    fr_initials = "".join(w[0].upper() for w in fr["name"].split()[:2]) if fr.get("name") else "?"
+                    since = fr.get("friends_since", "")[:10]
+                    st.markdown(
+                        f'<div style="display:flex;align-items:center;gap:0.6rem;padding:0.4rem 0;">'
+                        f'<div style="width:32px;height:32px;border-radius:50%;background:#10B98133;'
+                        f'display:flex;align-items:center;justify-content:center;color:#10B981;'
+                        f'font-weight:700;font-size:0.8rem;">{fr_initials}</div>'
+                        f'<div><span style="color:#E8ECF4;font-weight:500;">{fr["name"]}</span>'
+                        f'<span style="color:#8B95AD;font-size:0.75rem;margin-left:0.3rem;">since {since}</span>'
+                        f'</div></div>',
+                        unsafe_allow_html=True,
+                    )
+                with col_remove:
+                    if st.button("Remove", key=f"remove_friend_{fr['friendship_id']}",
+                                  use_container_width=True, type="secondary"):
+                        try:
+                            requests.delete(
+                                f"{API_BASE}/friends/{fr['friendship_id']}",
+                                headers=_auth_headers(), timeout=10,
+                            )
+                            st.rerun()
+                        except requests.ConnectionError:
+                            st.error("Cannot reach API")
+        elif not pending_reqs:
+            st.markdown(
+                '<div style="text-align:center;padding:1.5rem;color:#8B95AD;">'
+                "No friends yet — search for people above to connect!</div>",
+                unsafe_allow_html=True,
+            )
 
-    # Friends list
-    if friends_list:
-        st.markdown(f"**Friends ({len(friends_list)})**")
-        for fr in friends_list:
-            col_info, col_remove = st.columns([4, 1])
-            with col_info:
-                fr_initials = "".join(w[0].upper() for w in fr["name"].split()[:2]) if fr.get("name") else "?"
-                since = fr.get("friends_since", "")[:10]
+    # ── Sub-tab: Connections ──
+    with sub_connections:
+        _, col_conn, _ = st.columns([1, 2, 1])
+        with col_conn:
+            st.markdown('<div class="pf-section-header">Garmin Connect</div>', unsafe_allow_html=True)
+
+            if not st.session_state.garmin_logged_in:
+                if not st.session_state.mfa_required:
+                    garmin_email = st.text_input("Garmin Email", key="up_garmin_email")
+                    garmin_password = st.text_input("Garmin Password", type="password", key="up_garmin_pw")
+                    if st.button(
+                        "Connect to Garmin",
+                        type="primary",
+                        use_container_width=True,
+                        key="up_garmin_connect",
+                    ):
+                        try:
+                            with st.spinner("Authenticating (may take up to 90s)..."):
+                                r = requests.post(
+                                    f"{API_BASE}/garmin/login",
+                                    json={"email": garmin_email, "password": garmin_password},
+                                    headers=_auth_headers(),
+                                    timeout=120,
+                                )
+                            data = r.json()
+                            if r.status_code == 200 and data.get("status") == "mfa_required":
+                                st.session_state.mfa_required = True
+                                st.info("Check your email for the verification code.")
+                                st.rerun()
+                            elif r.status_code == 200:
+                                st.session_state.garmin_logged_in = True
+                                st.success("Connected!")
+                                st.rerun()
+                            else:
+                                st.error(f"Failed: {data.get('detail', r.text)}")
+                        except requests.ReadTimeout:
+                            st.error("Timed out. Wait a few minutes and retry.")
+                        except requests.ConnectionError:
+                            st.error("Cannot reach API.")
+                else:
+                    st.info("Verification code sent to your email.")
+                    mfa_code = st.text_input("MFA Code", placeholder="123456", key="up_mfa_input")
+                    if st.button("Verify", type="primary", use_container_width=True, key="up_mfa_btn"):
+                        try:
+                            r = requests.post(
+                                f"{API_BASE}/garmin/mfa",
+                                json={"code": mfa_code},
+                                headers=_auth_headers(),
+                                timeout=30,
+                            )
+                            if r.status_code == 200:
+                                st.session_state.mfa_required = False
+                                st.session_state.garmin_logged_in = True
+                                st.success("Verified — connected!")
+                                st.rerun()
+                            else:
+                                st.error(f"MFA failed: {_error_detail(r)}")
+                        except requests.ConnectionError:
+                            st.error("Cannot reach API.")
+            else:
                 st.markdown(
-                    f'<div style="display:flex;align-items:center;gap:0.6rem;padding:0.4rem 0;">'
-                    f'<div style="width:32px;height:32px;border-radius:50%;background:#10B98133;'
-                    f'display:flex;align-items:center;justify-content:center;color:#10B981;'
-                    f'font-weight:700;font-size:0.8rem;">{fr_initials}</div>'
-                    f'<div><span style="color:#E8ECF4;font-weight:500;">{fr["name"]}</span>'
-                    f'<span style="color:#8B95AD;font-size:0.75rem;margin-left:0.3rem;">since {since}</span>'
-                    f'</div></div>',
+                    '<div style="background:#10B98122;border:1px solid #10B98144;'
+                    "border-radius:12px;padding:1.5rem;text-align:center;margin-bottom:1rem;\">"
+                    '<div style="font-size:2rem;margin-bottom:0.5rem;">⌚</div>'
+                    '<div style="color:#10B981;font-weight:600;font-size:1.1rem;">Connected</div>'
+                    "</div>",
                     unsafe_allow_html=True,
                 )
-            with col_remove:
-                if st.button("Remove", key=f"remove_friend_{fr['friendship_id']}",
-                              use_container_width=True, type="secondary"):
-                    try:
-                        requests.delete(
-                            f"{API_BASE}/friends/{fr['friendship_id']}",
-                            headers=_auth_headers(), timeout=10,
-                        )
+
+                prof = st.session_state.get("profile")
+                if prof:
+                    st.markdown(
+                        f"**Display Name:** {prof.get('displayName', 'N/A')}  \n"
+                        f"**Weight:** {prof.get('weight', 'N/A')} kg  \n"
+                        f"**VO2Max Running:** {prof.get('vo2MaxRunning', 'N/A')}",
+                    )
+
+                if st.button(
+                    "Refresh Profile",
+                    use_container_width=True,
+                    key="up_refresh_profile",
+                ):
+                    r = requests.get(
+                        f"{API_BASE}/profile", headers=_auth_headers(), timeout=30
+                    )
+                    if r.status_code == 200:
+                        st.session_state.profile = r.json()
                         st.rerun()
-                    except requests.ConnectionError:
-                        st.error("Cannot reach API")
-    elif not pending_reqs:
-        st.markdown(
-            '<div style="text-align:center;padding:1.5rem;color:#8B95AD;">'
-            "No friends yet — search for people above to connect!</div>",
-            unsafe_allow_html=True,
-        )
+
+            # ── Future Connectors ──
+            st.markdown("---")
+            st.markdown('<div class="pf-section-header">Other Services</div>', unsafe_allow_html=True)
+            for svc in ["Strava", "Polar", "COROS"]:
+                st.markdown(
+                    f'<div style="display:flex;align-items:center;justify-content:space-between;'
+                    f'padding:0.75rem 1rem;background:#1A1D2B;border:1px solid #2A2D3B;'
+                    f'border-radius:10px;margin-bottom:0.5rem;">'
+                    f'<span style="color:#E8ECF4;font-weight:500;">{svc}</span>'
+                    f'<span style="color:#8B95AD;font-size:0.8rem;">Coming soon</span>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
 
 
 # ── Tab 7: Admin Panel ──────────────────────────────────────────────
