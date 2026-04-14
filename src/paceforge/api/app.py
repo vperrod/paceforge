@@ -613,6 +613,7 @@ async def get_activities(
             except (json.JSONDecodeError, TypeError):
                 pass
         profile = garmin.get_fitness_profile(lookback_days=min(days, 365), activity_types=_act_types)
+        logger.info("Synced %d activities (types=%s)", len(profile.recent_activities), _act_types)
         activities = [a.model_dump(mode="json") for a in profile.recent_activities]
         save_user_data(settings.db_path, uid, activities_json=json.dumps(activities))
         # Auto-match activities to planned workouts
@@ -623,6 +624,20 @@ async def get_activities(
     if cached and cached.get("activities_json"):
         return [RecentActivity(**a) for a in json.loads(cached["activities_json"])]
     return []
+
+
+@app.get("/garmin/scheduled-workouts")
+async def get_scheduled_workouts(user: dict = Depends(get_current_user)):
+    """Return workouts scheduled on the Garmin calendar."""
+    uid = user["id"]
+    garmin = _ensure_garmin(uid)
+    if not garmin:
+        return []
+    try:
+        return garmin.get_scheduled_workouts()
+    except Exception:
+        logger.warning("Failed to fetch scheduled workouts", exc_info=True)
+        return []
 
 
 @app.get("/preferences")

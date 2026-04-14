@@ -639,6 +639,30 @@ class GarminClient:
 
         return result
 
+    def get_scheduled_workouts(self) -> list[dict]:
+        """Fetch all workouts from Garmin and return those with a scheduled date."""
+        try:
+            workouts = self.client.get_workouts(start=0, limit=200)
+        except Exception:
+            logger.warning("Could not fetch Garmin workouts", exc_info=True)
+            return []
+        scheduled = []
+        for w in workouts:
+            # Garmin workouts have a 'calendarDate' when scheduled
+            cal_date = w.get("calendarDate")
+            if not cal_date:
+                continue
+            scheduled.append({
+                "workout_id": w.get("workoutId"),
+                "name": w.get("workoutName", "Workout"),
+                "description": w.get("description", ""),
+                "scheduled_date": cal_date,
+                "sport_type": w.get("sportType", {}).get("sportTypeKey", ""),
+                "estimated_duration_seconds": w.get("estimatedDurationInSecs"),
+                "estimated_distance_meters": w.get("estimatedDistanceInMeters"),
+            })
+        return scheduled
+
     # ── Write operations ─────────────────────────────────────────────
 
     def push_workout(self, workout: Workout, schedule_date: date | None = None, plan_paces: dict | None = None) -> dict:

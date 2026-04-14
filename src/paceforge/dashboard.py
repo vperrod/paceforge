@@ -1679,6 +1679,19 @@ if not st.session_state._restored:
         except Exception:
             logging.warning("Failed to restore analytics on startup", exc_info=True)
 
+        # 6) Fetch scheduled workouts from Garmin calendar
+        try:
+            if st.session_state.garmin_logged_in and not st.session_state.get("garmin_scheduled"):
+                r = requests.get(
+                    f"{API_BASE}/garmin/scheduled-workouts",
+                    headers=_auth_headers(),
+                    timeout=15,
+                )
+                if r.status_code == 200:
+                    st.session_state["garmin_scheduled"] = r.json()
+        except Exception:
+            logging.warning("Failed to fetch scheduled workouts on startup", exc_info=True)
+
     # Mark restored AFTER all API calls complete — if a CookieManager rerun
     # interrupts mid-block, this stays False so restore retries next cycle.
     st.session_state._restored = True
@@ -1787,6 +1800,13 @@ else:
                     r = requests.get(f"{API_BASE}/plans", headers=_auth_headers(), timeout=10)
                     if r.status_code == 200:
                         st.session_state.plans = r.json()
+                except Exception:
+                    pass
+                # Refresh scheduled workouts from Garmin calendar
+                try:
+                    r = requests.get(f"{API_BASE}/garmin/scheduled-workouts", headers=_auth_headers(), timeout=15)
+                    if r.status_code == 200:
+                        st.session_state["garmin_scheduled"] = r.json()
                 except Exception:
                     pass
                 if _sync_ok:
@@ -3565,6 +3585,39 @@ with tab_calendar:
                 },
             })
 
+        # ── Scheduled workouts from Garmin calendar ──
+        for i, sw in enumerate(st.session_state.get("garmin_scheduled", [])):
+            sw_date = sw.get("scheduled_date", "")
+            sw_name = sw.get("name", "Workout")
+            sw_dur = sw.get("estimated_duration_seconds")
+            sw_dist = sw.get("estimated_distance_meters")
+            _parts = []
+            if sw_dist and sw_dist > 0:
+                _parts.append(f"{sw_dist / 1000:.1f}km")
+            if sw_dur and sw_dur > 0:
+                _dm, _ds = divmod(int(sw_dur), 60)
+                _parts.append(f"{_dm}:{_ds:02d}")
+            _detail = f" ({', '.join(_parts)})" if _parts else ""
+            _sport = sw.get("sport_type", "")
+            _sw_color = "#60A5FA"  # Blue for Garmin scheduled
+            cal_events.append({
+                "id": f"garmin_sched_{i}",
+                "title": f"📅 {sw_name}{_detail}",
+                "start": sw_date,
+                "allDay": True,
+                "backgroundColor": _sw_color,
+                "borderColor": _sw_color,
+                "editable": False,
+                "extendedProps": {
+                    "source": "garmin_scheduled",
+                    "name": sw_name,
+                    "description": sw.get("description", ""),
+                    "sport_type": _sport,
+                    "estimated_duration_seconds": sw_dur or 0,
+                    "estimated_distance_meters": sw_dist or 0,
+                },
+            })
+
         # ── Planned workouts from all accepted plans ──
         for plan in st.session_state.plans:
             if not plan.get("accepted", False):
@@ -3620,6 +3673,8 @@ with tab_calendar:
                 st.markdown(
                     '<div style="display:flex;flex-wrap:wrap;gap:1rem;margin-bottom:0.5rem;font-size:0.8rem;">'
                     '<span style="color:#10B981;">● Completed</span>'
+                    '<span style="color:#A78BFA;">● Cardio/HIIT</span>'
+                    '<span style="color:#60A5FA;">● Garmin Scheduled</span>'
                     '<span style="color:#0EA5E9;">● Long Run</span>'
                     '<span style="color:#34D399;">● Easy</span>'
                     '<span style="color:#F59E0B;">● Tempo</span>'
@@ -3844,6 +3899,35 @@ with tab_calendar:
                                                 st.error(f"Analysis failed: {r.text}")
                                         except Exception as _ai_err:
                                             st.error(f"Analysis failed: {_ai_err}")
+                    elif props.get("source") == "garmin_scheduled":
+                        # Garmin scheduled workout detail
+                        sw_name = props.get("name", ev_title)
+                        sw_desc = props.get("description", "")
+                        sw_dur = props.get("estimated_duration_seconds", 0)
+                        sw_dist = props.get("estimated_distance_meters", 0)
+                        sw_sport = props.get("sport_type", "")
+                        st.markdown(
+                            f'<div style="font-weight:700;font-size:1rem;margin-bottom:0.25rem;">📅 {sw_name}</div>'
+                            f'<div style="color:#8B95AD;font-size:0.8rem;margin-bottom:0.5rem;">{ev_date} · Garmin Calendar</div>',
+                            unsafe_allow_html=True,
+                        )
+                        _sw_metrics = []
+                        if sw_dist and sw_dist > 0:
+                            _sw_metrics.append(("Distance", f"{sw_dist / 1000:.1f}km", ""))
+                        if sw_dur and sw_dur > 0:
+                            _sw_metrics.append(("Duration", _fmt_duration(sw_dur), ""))
+                        if sw_sport:
+                            _sw_metrics.append(("Sport", sw_sport.replace("_", " ").title(), ""))
+                        if _sw_metrics:
+                            st.markdown(_metrics_strip(_sw_metrics), unsafe_allow_html=True)
+                        if sw_desc:
+                            st.markdown(
+                                f'<div class="pf-card" style="margin-top:0.5rem;">'
+                                f'<div style="color:#8B95AD;font-size:0.7rem;font-weight:600;margin-bottom:0.25rem;">DESCRIPTION</div>'
+                                f'<div style="color:#E8ECF4;font-size:0.85rem;white-space:pre-wrap;">{sw_desc}</div>'
+                                f'</div>',
+                                unsafe_allow_html=True,
+                            )
                     else:
                         # Planned workout detail
                         is_completed = props.get("completed", False)
