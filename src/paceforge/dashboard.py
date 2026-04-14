@@ -1610,7 +1610,7 @@ if st.session_state.jwt is None:
 # ═══════════════════════════════════════════════════════════════════════
 
 # ── Auto-restore Garmin connection, plan, and activities on load ─────
-if not st.session_state._restored:
+if not st.session_state._restored and st.session_state.jwt:
     with st.spinner("Loading your training data..."):
         # 1) Check Garmin connection (triggers auto-reconnect from cached tokens)
         try:
