@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import json
 import logging
 from contextlib import asynccontextmanager
@@ -625,42 +624,6 @@ async def get_activities(
     if cached and cached.get("activities_json"):
         return [RecentActivity(**a) for a in json.loads(cached["activities_json"])]
     return []
-
-
-@app.get("/garmin/debug-activities")
-async def debug_activities(user: dict = Depends(get_current_user)):
-    """Debug: test what Garmin returns for each activity type."""
-    uid = user["id"]
-    garmin = _ensure_garmin(uid)
-    if not garmin:
-        return {"error": "Garmin not connected"}
-    from datetime import timedelta as _td
-    start = (date.today() - _td(days=60)).isoformat()
-    end = date.today().isoformat()
-    results = {}
-    for atype in ["running", "fitness_equipment", "multi_sport", "other", "cycling", "walking", "hiking"]:
-        try:
-            raw = garmin.client.get_activities_by_date(start, end, atype)
-            acts = []
-            for a in (raw or []):
-                acts.append({
-                    "id": a.get("activityId"),
-                    "name": a.get("activityName"),
-                    "type": a.get("activityType", {}).get("typeKey"),
-                    "date": a.get("startTimeLocal", "")[:10],
-                })
-            results[atype] = {"count": len(acts), "activities": acts[:5]}
-        except Exception as e:
-            results[atype] = {"count": 0, "error": str(e)}
-    # Also check user preferences
-    cached = load_user_data(settings.db_path, uid)
-    prefs = {}
-    if cached and cached.get("preferences_json"):
-        with contextlib.suppress(Exception):
-            prefs = json.loads(cached["preferences_json"])
-    results["_preferences"] = prefs.get("sync_activity_types", "NOT SET")
-    results["_cached_activity_count"] = len(json.loads(cached["activities_json"])) if cached and cached.get("activities_json") else 0
-    return results
 
 
 @app.get("/garmin/scheduled-workouts")

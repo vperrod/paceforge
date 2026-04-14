@@ -3525,680 +3525,598 @@ with tab_plan:
 with tab_calendar:
     st.markdown('<div class="pf-section-header">Training Calendar</div>', unsafe_allow_html=True)
 
-    # Debug info for calendar data
-    _n_acts = len(st.session_state.get("garmin_activities", []))
-    _n_plans = len(st.session_state.plans)
-    _n_accepted = sum(1 for p in st.session_state.plans if p.get("accepted", False))
-    _n_sched = len(st.session_state.get("garmin_scheduled", []))
-    _act_types = [a.get("activity_type", "?") for a in st.session_state.get("garmin_activities", [])]
-    _type_counts = {}
-    for _t in _act_types:
-        _type_counts[_t] = _type_counts.get(_t, 0) + 1
-    _type_str = ", ".join(f"{k}: {v}" for k, v in _type_counts.items()) if _type_counts else "none"
-    st.caption(f"📊 {_n_acts} activities ({_type_str}) · {_n_plans} plans ({_n_accepted} accepted) · {_n_sched} Garmin scheduled")
+    cal_events = []
 
-    # Debug: test Garmin activity type queries
-    if st.session_state.garmin_logged_in:
-        if st.button("🔍 Debug Garmin Activity Types", key="debug_garmin_types"):
-            with st.spinner("Querying Garmin for all activity types..."):
-                try:
-                    dr = requests.get(
-                        f"{API_BASE}/garmin/debug-activities",
-                        headers=_auth_headers(), timeout=30,
-                    )
-                    if dr.status_code == 200:
-                        st.json(dr.json())
-                    else:
-                        st.error(f"Debug failed: {dr.status_code} {dr.text[:200]}")
-                except Exception as _de:
-                    st.error(f"Debug failed: {_de}")
+    # ── Past activities from Garmin ──
+    # Collect activity IDs already matched to planned workouts (to avoid duplicates)
+    _matched_act_ids = set()
+    for _p in st.session_state.plans:
+        if not _p.get("accepted", False):
+            continue
+        for _wk in _p.get("weeks", []):
+            for _w in _wk.get("workouts", []):
+                if _w.get("matched_activity_id"):
+                    _matched_act_ids.add(_w["matched_activity_id"])
 
-    if True:
-        cal_events = []
+    garmin_acts = st.session_state.get("garmin_activities", [])
+    for i, act in enumerate(garmin_acts):
+        # Skip activities already matched to a planned workout
+        if act.get("activity_id") in _matched_act_ids:
+            continue
+        dist = round(act.get("distance_meters", 0) / 1000, 1)
+        pace = act.get("avg_pace_sec_per_km")
+        pace_str = ""
+        if pace:
+            pm, ps = divmod(int(pace), 60)
+            pace_str = f" @ {pm}:{ps:02d}/km"
 
-        # ── Past activities from Garmin ──
-        # Collect activity IDs already matched to planned workouts (to avoid duplicates)
-        _matched_act_ids = set()
-        for _p in st.session_state.plans:
-            if not _p.get("accepted", False):
-                continue
-            for _wk in _p.get("weeks", []):
-                for _w in _wk.get("workouts", []):
-                    if _w.get("matched_activity_id"):
-                        _matched_act_ids.add(_w["matched_activity_id"])
+        # Parse date from start_time
+        start_raw = act.get("start_time", "")
+        start_date = start_raw[:10] if start_raw else ""
 
-        garmin_acts = st.session_state.get("garmin_activities", [])
-        for i, act in enumerate(garmin_acts):
-            # Skip activities already matched to a planned workout
-            if act.get("activity_id") in _matched_act_ids:
-                continue
-            dist = round(act.get("distance_meters", 0) / 1000, 1)
-            pace = act.get("avg_pace_sec_per_km")
-            pace_str = ""
-            if pace:
-                pm, ps = divmod(int(pace), 60)
-                pace_str = f" @ {pm}:{ps:02d}/km"
+        _act_type = act.get("activity_type", "running")
+        _is_cardio = _act_type not in ("running", "trail_running", "treadmill_running")
+        if _is_cardio:
+            _dur_s = act.get("duration_seconds", 0)
+            _dur_m, _dur_sec = divmod(int(_dur_s), 60)
+            _cal_title = f"✓ {act.get('name', 'Activity')} ({_dur_m}:{_dur_sec:02d})"
+            _cal_bg = "#A78BFA"
+        else:
+            _cal_title = f"✓ {act.get('name', 'Activity')} ({dist}km{pace_str})"
+            _cal_bg = "#10B981"
 
-            # Parse date from start_time
-            start_raw = act.get("start_time", "")
-            start_date = start_raw[:10] if start_raw else ""
+        cal_events.append({
+            "id": f"act_{i}",
+            "title": _cal_title,
+            "start": start_date,
+            "allDay": True,
+            "backgroundColor": _cal_bg,
+            "borderColor": _cal_bg,
+            "editable": False,
+            "extendedProps": {
+                "source": "garmin",
+                "activity_id": act.get("activity_id"),
+                "activity_type": act.get("activity_type", "running"),
+                "distance_km": dist,
+                "pace": pace_str,
+                "duration_seconds": act.get("duration_seconds", 0),
+                "avg_hr": act.get("avg_hr"),
+            },
+        })
 
-            _act_type = act.get("activity_type", "running")
-            _is_cardio = _act_type not in ("running", "trail_running", "treadmill_running")
-            if _is_cardio:
-                _dur_s = act.get("duration_seconds", 0)
-                _dur_m, _dur_sec = divmod(int(_dur_s), 60)
-                _cal_title = f"✓ {act.get('name', 'Activity')} ({_dur_m}:{_dur_sec:02d})"
-                _cal_bg = "#A78BFA"
-            else:
-                _cal_title = f"✓ {act.get('name', 'Activity')} ({dist}km{pace_str})"
-                _cal_bg = "#10B981"
+    # ── Scheduled workouts from Garmin calendar ──
+    for i, sw in enumerate(st.session_state.get("garmin_scheduled", [])):
+        sw_date = sw.get("scheduled_date", "")
+        sw_name = sw.get("name", "Workout")
+        sw_dur = sw.get("estimated_duration_seconds")
+        sw_dist = sw.get("estimated_distance_meters")
+        _parts = []
+        if sw_dist and sw_dist > 0:
+            _parts.append(f"{sw_dist / 1000:.1f}km")
+        if sw_dur and sw_dur > 0:
+            _dm, _ds = divmod(int(sw_dur), 60)
+            _parts.append(f"{_dm}:{_ds:02d}")
+        _detail = f" ({', '.join(_parts)})" if _parts else ""
+        _sport = sw.get("sport_type", "")
+        _sw_color = "#60A5FA"  # Blue for Garmin scheduled
+        cal_events.append({
+            "id": f"garmin_sched_{i}",
+            "title": f"📅 {sw_name}{_detail}",
+            "start": sw_date,
+            "allDay": True,
+            "backgroundColor": _sw_color,
+            "borderColor": _sw_color,
+            "editable": False,
+            "extendedProps": {
+                "source": "garmin_scheduled",
+                "name": sw_name,
+                "description": sw.get("description", ""),
+                "sport_type": _sport,
+                "estimated_duration_seconds": sw_dur or 0,
+                "estimated_distance_meters": sw_dist or 0,
+            },
+        })
 
-            cal_events.append({
-                "id": f"act_{i}",
-                "title": _cal_title,
-                "start": start_date,
-                "allDay": True,
-                "backgroundColor": _cal_bg,
-                "borderColor": _cal_bg,
-                "editable": False,
-                "extendedProps": {
-                    "source": "garmin",
-                    "activity_id": act.get("activity_id"),
-                    "activity_type": act.get("activity_type", "running"),
-                    "distance_km": dist,
-                    "pace": pace_str,
-                    "duration_seconds": act.get("duration_seconds", 0),
-                    "avg_hr": act.get("avg_hr"),
-                },
-            })
+    # ── Planned workouts from all plans (accepted shown solid, pending shown muted) ──
+    for plan in st.session_state.plans:
+        _plan_accepted = plan.get("accepted", False)
+        plan_id = plan.get("plan_id", "")
+        for week in plan.get("weeks", []):
+            for j, w in enumerate(week.get("workouts", [])):
+                wtype = w.get("workout_type", "rest")
+                if wtype == "rest":
+                    continue
+                dist = round(w.get("estimated_distance_meters", 0) / 1000, 1)
+                is_completed = w.get("completed", False)
+                prefix = "✓" if is_completed else ("—" if _plan_accepted else "○")
+                if is_completed:
+                    bg_color = "#10B981"
+                elif not _plan_accepted:
+                    bg_color = "#3E4455"  # Muted for pending plans
+                else:
+                    bg_color = _WORKOUT_COLORS.get(wtype, "#607D8B")
+                cal_events.append({
+                    "id": f"plan_w{week['week_number']}_{j}",
+                    "title": f"{prefix} {w['name']} ({dist}km)",
+                    "start": w.get("scheduled_date", ""),
+                    "allDay": True,
+                    "backgroundColor": bg_color,
+                    "borderColor": bg_color,
+                    "editable": _plan_accepted and not is_completed,
+                    "extendedProps": {
+                        "source": "plan",
+                        "workout_type": wtype,
+                        "purpose": w.get("purpose", ""),
+                        "name": w["name"],
+                        "steps": json.dumps(w.get("steps", [])),
+                        "notes": w.get("notes", ""),
+                        "estimated_distance_meters": w.get("estimated_distance_meters", 0),
+                        "estimated_duration_seconds": w.get("estimated_duration_seconds", 0),
+                        "plan_id": plan_id,
+                        "completed": is_completed,
+                        "matched_activity_id": w.get("matched_activity_id"),
+                        "completion_analysis": w.get("completion_analysis", ""),
+                        "completion_metrics": json.dumps(w.get("completion_metrics") or {}),
+                        "user_rpe": w.get("user_rpe"),
+                        "user_notes": w.get("user_notes", ""),
+                    },
+                })
 
-        # ── Scheduled workouts from Garmin calendar ──
-        for i, sw in enumerate(st.session_state.get("garmin_scheduled", [])):
-            sw_date = sw.get("scheduled_date", "")
-            sw_name = sw.get("name", "Workout")
-            sw_dur = sw.get("estimated_duration_seconds")
-            sw_dist = sw.get("estimated_distance_meters")
-            _parts = []
-            if sw_dist and sw_dist > 0:
-                _parts.append(f"{sw_dist / 1000:.1f}km")
-            if sw_dur and sw_dur > 0:
-                _dm, _ds = divmod(int(sw_dur), 60)
-                _parts.append(f"{_dm}:{_ds:02d}")
-            _detail = f" ({', '.join(_parts)})" if _parts else ""
-            _sport = sw.get("sport_type", "")
-            _sw_color = "#60A5FA"  # Blue for Garmin scheduled
-            cal_events.append({
-                "id": f"garmin_sched_{i}",
-                "title": f"📅 {sw_name}{_detail}",
-                "start": sw_date,
-                "allDay": True,
-                "backgroundColor": _sw_color,
-                "borderColor": _sw_color,
-                "editable": False,
-                "extendedProps": {
-                    "source": "garmin_scheduled",
-                    "name": sw_name,
-                    "description": sw.get("description", ""),
-                    "sport_type": _sport,
-                    "estimated_duration_seconds": sw_dur or 0,
-                    "estimated_distance_meters": sw_dist or 0,
-                },
-            })
-
-        # ── Planned workouts from all plans (accepted shown solid, pending shown muted) ──
-        for plan in st.session_state.plans:
-            _plan_accepted = plan.get("accepted", False)
-            plan_id = plan.get("plan_id", "")
-            for week in plan.get("weeks", []):
-                for j, w in enumerate(week.get("workouts", [])):
-                    wtype = w.get("workout_type", "rest")
-                    if wtype == "rest":
-                        continue
-                    dist = round(w.get("estimated_distance_meters", 0) / 1000, 1)
-                    is_completed = w.get("completed", False)
-                    prefix = "✓" if is_completed else ("—" if _plan_accepted else "○")
-                    if is_completed:
-                        bg_color = "#10B981"
-                    elif not _plan_accepted:
-                        bg_color = "#3E4455"  # Muted for pending plans
-                    else:
-                        bg_color = _WORKOUT_COLORS.get(wtype, "#607D8B")
-                    cal_events.append({
-                        "id": f"plan_w{week['week_number']}_{j}",
-                        "title": f"{prefix} {w['name']} ({dist}km)",
-                        "start": w.get("scheduled_date", ""),
-                        "allDay": True,
-                        "backgroundColor": bg_color,
-                        "borderColor": bg_color,
-                        "editable": _plan_accepted and not is_completed,
-                        "extendedProps": {
-                            "source": "plan",
-                            "workout_type": wtype,
-                            "purpose": w.get("purpose", ""),
-                            "name": w["name"],
-                            "steps": json.dumps(w.get("steps", [])),
-                            "notes": w.get("notes", ""),
-                            "estimated_distance_meters": w.get("estimated_distance_meters", 0),
-                            "estimated_duration_seconds": w.get("estimated_duration_seconds", 0),
-                            "plan_id": plan_id,
-                            "completed": is_completed,
-                            "matched_activity_id": w.get("matched_activity_id"),
-                            "completion_analysis": w.get("completion_analysis", ""),
-                            "completion_metrics": json.dumps(w.get("completion_metrics") or {}),
-                            "user_rpe": w.get("user_rpe"),
-                            "user_notes": w.get("user_notes", ""),
-                        },
-                    })
-
-        if not cal_events:
+    if not cal_events:
+        st.markdown(
+            '<p style="color:#8B95AD;text-align:center;margin:2rem 0;">'
+            'Click <b>Sync Activities from Garmin</b> to load your workout history, '
+            'or generate a training plan to see future workouts.</p>',
+            unsafe_allow_html=True,
+        )
+    else:
+        # Legend + push controls row
+        legend_cols = st.columns([3, 1, 1])
+        with legend_cols[0]:
             st.markdown(
-                '<p style="color:#8B95AD;text-align:center;margin:2rem 0;">'
-                'Click <b>Sync Activities from Garmin</b> to load your workout history, '
-                'or generate a training plan to see future workouts.</p>',
+                '<div style="display:flex;flex-wrap:wrap;gap:1rem;margin-bottom:0.5rem;font-size:0.8rem;">'
+                '<span style="color:#10B981;">● Completed</span>'
+                '<span style="color:#A78BFA;">● Cardio/HIIT</span>'
+                '<span style="color:#60A5FA;">● Garmin Scheduled</span>'
+                '<span style="color:#0EA5E9;">● Long Run</span>'
+                '<span style="color:#34D399;">● Easy</span>'
+                '<span style="color:#F59E0B;">● Tempo</span>'
+                '<span style="color:#F43F5E;">● Speed</span>'
+                '</div>',
                 unsafe_allow_html=True,
             )
-        else:
-            # Legend + push controls row
-            legend_cols = st.columns([3, 1, 1])
-            with legend_cols[0]:
+            if plan and plan.get("accepted", False):
+                st.caption("Drag planned workouts to reschedule · Click any event for details")
+        with legend_cols[1]:
+            if plan and plan.get("accepted", False):
+                if st.button("AI Review Plan", key="cal_ai_review_btn", use_container_width=True):
+                    plan_id = plan.get("plan_id", "")
+                    with st.spinner("AI is reviewing your progress..."):
+                        try:
+                            r = requests.post(
+                                f"{API_BASE}/plan/ai-review",
+                                params={"plan_id": plan_id} if plan_id else {},
+                                headers=_auth_headers(),
+                                timeout=120,
+                            )
+                            if r.status_code == 200:
+                                review_data = r.json()
+                                st.session_state["ai_review_result"] = review_data.get("review", "")
+                                # Refresh plans
+                                pr = requests.get(f"{API_BASE}/plans", headers=_auth_headers(), timeout=10)
+                                if pr.status_code == 200:
+                                    st.session_state.plans = pr.json()
+                                st.rerun()
+                            else:
+                                st.error(f"Review failed: {_error_detail(r)}")
+                        except requests.ConnectionError:
+                            st.error("Cannot reach API.")
+        with legend_cols[2]:
+            if plan and plan.get("accepted", False) and st.session_state.garmin_logged_in:
+                if st.button("Push Plan to Garmin", type="primary", key="cal_push_btn", use_container_width=True):
+                    with st.spinner("Pushing all workouts to Garmin..."):
+                        try:
+                            r = requests.post(
+                                f"{API_BASE}/plan/push",
+                                json={},
+                                headers=_auth_headers(),
+                                timeout=120,
+                            )
+                            if r.status_code == 200:
+                                data = r.json()
+                                st.success(f"✓ Pushed {data.get('workouts_pushed', '?')} workouts to Garmin!")
+                            else:
+                                st.error(f"Push failed: {_error_detail(r)}")
+                        except requests.ConnectionError:
+                            st.error("Cannot reach API.")
+
+        # ── Side-by-side: Calendar (left) + Detail panel (right) ──
+        cal_col, detail_col = st.columns([2, 3])
+
+        with cal_col:
+            cal_options = {
+                "editable": True,
+                "selectable": False,
+                "headerToolbar": {
+                    "left": "today prev,next",
+                    "center": "title",
+                    "right": "dayGridMonth,dayGridWeek",
+                },
+                "initialView": "dayGridMonth",
+                "initialDate": str(date.today()),
+                "contentHeight": 420,
+                "firstDay": 1,
+            }
+
+            cal_css = """
+                .fc { background: #0F1117; color: #E8ECF4; border: none; }
+                .fc-theme-standard td, .fc-theme-standard th { border-color: #252A35; }
+                .fc-theme-standard .fc-scrollgrid { border-color: #252A35; }
+                .fc-col-header-cell { background: #1A1D2B; }
+                .fc-col-header-cell-cushion { color: #8B95AD; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; }
+                .fc-daygrid-day-number { color: #8B95AD; font-size: 0.8rem; }
+                .fc-day-today { background: rgba(0,210,106,0.06) !important; }
+                .fc-event { cursor: pointer; font-size: 0.72em; border-radius: 5px; padding: 1px 4px; border: none !important; }
+                .fc-event-title { font-weight: 600; }
+                .fc-button { background: #1A1D2B !important; border: 1px solid #2E3448 !important; color: #E8ECF4 !important; font-size: 0.8rem !important; }
+                .fc-button:hover { background: #252A35 !important; }
+                .fc-button-active { background: #10B981 !important; color: #0F1117 !important; border-color: #10B981 !important; }
+                .fc-toolbar-title { font-size: 1rem !important; font-weight: 700; color: #E8ECF4; }
+                .fc-scroller { overflow: hidden !important; }
+                .fc-daygrid-body { overflow: hidden !important; }
+            """
+
+            from streamlit_calendar import calendar as st_calendar
+
+            result = st_calendar(
+                events=cal_events,
+                options=cal_options,
+                custom_css=cal_css,
+                key="plan_calendar",
+            )
+
+            # Handle drag-to-reschedule
+            if result and result.get("callback") == "eventChange":
+                ev = result["eventChange"]
+                ev_props = ev["event"].get("extendedProps", {})
+                if ev_props.get("source") == "plan":
+                    old_start = ev["oldEvent"]["start"]
+                    new_start = ev["event"]["start"]
+                    wk_name = ev_props.get("name", ev["event"]["title"])
+                    r = requests.post(
+                        f"{API_BASE}/plan/reschedule",
+                        json={
+                            "workout_name": wk_name,
+                            "old_date": old_start[:10],
+                            "new_date": new_start[:10],
+                        },
+                        headers=_auth_headers(),
+                        timeout=10,
+                    )
+                    if r.status_code == 200:
+                        st.success(f"Moved to {new_start[:10]} — click **Push Plan to Garmin** to sync")
+                    else:
+                        st.error("Failed to reschedule")
+
+            # Handle event click — store in session_state for the detail panel
+            if result and result.get("callback") == "eventClick":
+                ev_data = result["eventClick"]["event"]
+                props = ev_data.get("extendedProps", {})
+                st.session_state["cal_selected_event"] = {
+                    "title": ev_data.get("title", ""),
+                    "start": ev_data.get("start", ""),
+                    "props": props,
+                }
+                # Pre-fetch Garmin activity detail if needed
+                act_id_to_fetch = None
+                if props.get("source") == "garmin" and props.get("activity_id"):
+                    act_id_to_fetch = props["activity_id"]
+                elif props.get("source") == "plan" and props.get("completed") and props.get("matched_activity_id"):
+                    act_id_to_fetch = props["matched_activity_id"]
+
+                if act_id_to_fetch:
+                    with st.spinner("Loading activity details..."):
+                        try:
+                            r = requests.get(
+                                f"{API_BASE}/activities/{act_id_to_fetch}",
+                                headers=_auth_headers(),
+                                timeout=30,
+                            )
+                            if r.status_code == 200:
+                                st.session_state["cal_selected_detail"] = r.json()
+                            else:
+                                st.session_state["cal_selected_detail"] = None
+                        except requests.ConnectionError:
+                            st.session_state["cal_selected_detail"] = None
+                else:
+                    st.session_state["cal_selected_detail"] = None
+
+        # ── Detail panel (right column) ──
+        with detail_col:
+            sel = st.session_state.get("cal_selected_event")
+            if sel is None:
                 st.markdown(
-                    '<div style="display:flex;flex-wrap:wrap;gap:1rem;margin-bottom:0.5rem;font-size:0.8rem;">'
-                    '<span style="color:#10B981;">● Completed</span>'
-                    '<span style="color:#A78BFA;">● Cardio/HIIT</span>'
-                    '<span style="color:#60A5FA;">● Garmin Scheduled</span>'
-                    '<span style="color:#0EA5E9;">● Long Run</span>'
-                    '<span style="color:#34D399;">● Easy</span>'
-                    '<span style="color:#F59E0B;">● Tempo</span>'
-                    '<span style="color:#F43F5E;">● Speed</span>'
+                    '<div style="display:flex;align-items:center;justify-content:center;height:400px;color:#8B95AD;text-align:center;">'
+                    '<div><div style="font-size:1rem;margin-bottom:0.5rem;color:#5C6478;">↑</div>'
+                    '<div style="font-size:0.9rem;">Click an event on the calendar<br>to view details</div></div>'
                     '</div>',
                     unsafe_allow_html=True,
                 )
-                if plan and plan.get("accepted", False):
-                    st.caption("Drag planned workouts to reschedule · Click any event for details")
-            with legend_cols[1]:
-                if plan and plan.get("accepted", False):
-                    if st.button("AI Review Plan", key="cal_ai_review_btn", use_container_width=True):
-                        plan_id = plan.get("plan_id", "")
-                        with st.spinner("AI is reviewing your progress..."):
-                            try:
-                                r = requests.post(
-                                    f"{API_BASE}/plan/ai-review",
-                                    params={"plan_id": plan_id} if plan_id else {},
-                                    headers=_auth_headers(),
-                                    timeout=120,
-                                )
-                                if r.status_code == 200:
-                                    review_data = r.json()
-                                    st.session_state["ai_review_result"] = review_data.get("review", "")
-                                    # Refresh plans
-                                    pr = requests.get(f"{API_BASE}/plans", headers=_auth_headers(), timeout=10)
-                                    if pr.status_code == 200:
-                                        st.session_state.plans = pr.json()
-                                    st.rerun()
-                                else:
-                                    st.error(f"Review failed: {_error_detail(r)}")
-                            except requests.ConnectionError:
-                                st.error("Cannot reach API.")
-            with legend_cols[2]:
-                if plan and plan.get("accepted", False) and st.session_state.garmin_logged_in:
-                    if st.button("Push Plan to Garmin", type="primary", key="cal_push_btn", use_container_width=True):
-                        with st.spinner("Pushing all workouts to Garmin..."):
-                            try:
-                                r = requests.post(
-                                    f"{API_BASE}/plan/push",
-                                    json={},
-                                    headers=_auth_headers(),
-                                    timeout=120,
-                                )
-                                if r.status_code == 200:
-                                    data = r.json()
-                                    st.success(f"✓ Pushed {data.get('workouts_pushed', '?')} workouts to Garmin!")
-                                else:
-                                    st.error(f"Push failed: {_error_detail(r)}")
-                            except requests.ConnectionError:
-                                st.error("Cannot reach API.")
+            else:
+                props = sel["props"]
+                ev_title = sel["title"]
+                ev_date = sel.get("start", "")[:10]
 
-            # ── Side-by-side: Calendar (left) + Detail panel (right) ──
-            cal_col, detail_col = st.columns([2, 3])
-
-            with cal_col:
-                cal_options = {
-                    "editable": True,
-                    "selectable": False,
-                    "headerToolbar": {
-                        "left": "today prev,next",
-                        "center": "title",
-                        "right": "dayGridMonth,dayGridWeek",
-                    },
-                    "initialView": "dayGridMonth",
-                    "initialDate": str(date.today()),
-                    "contentHeight": 420,
-                }
-
-                cal_css = """
-                    .fc { background: #0F1117; color: #E8ECF4; border: none; }
-                    .fc-theme-standard td, .fc-theme-standard th { border-color: #252A35; }
-                    .fc-theme-standard .fc-scrollgrid { border-color: #252A35; }
-                    .fc-col-header-cell { background: #1A1D2B; }
-                    .fc-col-header-cell-cushion { color: #8B95AD; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; }
-                    .fc-daygrid-day-number { color: #8B95AD; font-size: 0.8rem; }
-                    .fc-day-today { background: rgba(0,210,106,0.06) !important; }
-                    .fc-event { cursor: pointer; font-size: 0.72em; border-radius: 5px; padding: 1px 4px; border: none !important; }
-                    .fc-event-title { font-weight: 600; }
-                    .fc-button { background: #1A1D2B !important; border: 1px solid #2E3448 !important; color: #E8ECF4 !important; font-size: 0.8rem !important; }
-                    .fc-button:hover { background: #252A35 !important; }
-                    .fc-button-active { background: #10B981 !important; color: #0F1117 !important; border-color: #10B981 !important; }
-                    .fc-toolbar-title { font-size: 1rem !important; font-weight: 700; color: #E8ECF4; }
-                """
-
-                from streamlit_calendar import calendar as st_calendar
-
-                result = st_calendar(
-                    events=cal_events,
-                    options=cal_options,
-                    custom_css=cal_css,
-                    key="plan_calendar",
-                )
-
-                # Handle drag-to-reschedule
-                if result and result.get("callback") == "eventChange":
-                    ev = result["eventChange"]
-                    ev_props = ev["event"].get("extendedProps", {})
-                    if ev_props.get("source") == "plan":
-                        old_start = ev["oldEvent"]["start"]
-                        new_start = ev["event"]["start"]
-                        wk_name = ev_props.get("name", ev["event"]["title"])
-                        r = requests.post(
-                            f"{API_BASE}/plan/reschedule",
-                            json={
-                                "workout_name": wk_name,
-                                "old_date": old_start[:10],
-                                "new_date": new_start[:10],
-                            },
-                            headers=_auth_headers(),
-                            timeout=10,
-                        )
-                        if r.status_code == 200:
-                            st.success(f"Moved to {new_start[:10]} — click **Push Plan to Garmin** to sync")
-                        else:
-                            st.error("Failed to reschedule")
-
-                # Handle event click — store in session_state for the detail panel
-                if result and result.get("callback") == "eventClick":
-                    ev_data = result["eventClick"]["event"]
-                    props = ev_data.get("extendedProps", {})
-                    st.session_state["cal_selected_event"] = {
-                        "title": ev_data.get("title", ""),
-                        "start": ev_data.get("start", ""),
-                        "props": props,
-                    }
-                    # Pre-fetch Garmin activity detail if needed
-                    act_id_to_fetch = None
-                    if props.get("source") == "garmin" and props.get("activity_id"):
-                        act_id_to_fetch = props["activity_id"]
-                    elif props.get("source") == "plan" and props.get("completed") and props.get("matched_activity_id"):
-                        act_id_to_fetch = props["matched_activity_id"]
-
-                    if act_id_to_fetch:
-                        with st.spinner("Loading activity details..."):
-                            try:
-                                r = requests.get(
-                                    f"{API_BASE}/activities/{act_id_to_fetch}",
-                                    headers=_auth_headers(),
-                                    timeout=30,
-                                )
-                                if r.status_code == 200:
-                                    st.session_state["cal_selected_detail"] = r.json()
-                                else:
-                                    st.session_state["cal_selected_detail"] = None
-                            except requests.ConnectionError:
-                                st.session_state["cal_selected_detail"] = None
-                    else:
-                        st.session_state["cal_selected_detail"] = None
-
-            # ── Detail panel (right column) ──
-            with detail_col:
-                sel = st.session_state.get("cal_selected_event")
-                if sel is None:
+                if props.get("source") == "garmin":
                     st.markdown(
-                        '<div style="display:flex;align-items:center;justify-content:center;height:400px;color:#8B95AD;text-align:center;">'
-                        '<div><div style="font-size:1rem;margin-bottom:0.5rem;color:#5C6478;">↑</div>'
-                        '<div style="font-size:0.9rem;">Click an event on the calendar<br>to view details</div></div>'
-                        '</div>',
+                        f'<div style="font-weight:700;font-size:1rem;margin-bottom:0.25rem;">✓ {ev_title}</div>'
+                        f'<div style="color:#8B95AD;font-size:0.8rem;margin-bottom:0.5rem;">{ev_date}</div>',
                         unsafe_allow_html=True,
                     )
-                else:
-                    props = sel["props"]
-                    ev_title = sel["title"]
-                    ev_date = sel.get("start", "")[:10]
-
-                    if props.get("source") == "garmin":
-                        st.markdown(
-                            f'<div style="font-weight:700;font-size:1rem;margin-bottom:0.25rem;">✓ {ev_title}</div>'
-                            f'<div style="color:#8B95AD;font-size:0.8rem;margin-bottom:0.5rem;">{ev_date}</div>',
-                            unsafe_allow_html=True,
-                        )
-                        detail_data = st.session_state.get("cal_selected_detail")
-                        if detail_data:
-                            _render_garmin_activity_detail(detail_data, activity_type=props.get("activity_type", "running"))
-                        else:
-                            # Fallback: show basic info from event props
-                            dur = props.get("duration_seconds", 0)
-                            dur_m, dur_s = divmod(int(dur), 60)
-                            dist_km = props.get("distance_km", 0)
-                            pace_str = props.get("pace", "")
-                            hr_text = f" · Avg HR: {props['avg_hr']} bpm" if props.get("avg_hr") else ""
-                            _fb_type = props.get("activity_type", "running")
-                            _fb_is_run = _fb_type in ("running", "trail_running", "treadmill_running")
-                            if _fb_is_run:
-                                _fb_info = f"{dist_km}km · {dur_m}:{dur_s:02d}{pace_str}{hr_text}"
-                            else:
-                                _fb_info = f"{dur_m}:{dur_s:02d}{hr_text}"
-                            st.markdown(
-                                f'<div class="pf-card">'
-                                f'<div style="color:#E8ECF4;">{_fb_info}</div>'
-                                f'</div>',
-                                unsafe_allow_html=True,
-                            )
-
-                        # ── AI Analysis for Garmin activities ──
-                        _ai_act_id = props.get("activity_id")
-                        if _ai_act_id:
-                            _cached_analysis = st.session_state.get(f"ai_analysis_{_ai_act_id}")
-                            if _cached_analysis:
-                                st.markdown(
-                                    f'<div class="pf-card" style="margin-top:0.5rem;border:1px solid rgba(16,185,129,0.15);">'
-                                    f'<div style="color:#10B981;font-size:0.7rem;font-weight:600;margin-bottom:0.25rem;">AI ANALYSIS</div>'
-                                    f'<div style="color:#E8ECF4;font-size:0.82rem;">{_cached_analysis}</div>'
-                                    f'</div>',
-                                    unsafe_allow_html=True,
-                                )
-                            else:
-                                if st.button("Analyze with AI", key=f"garmin_analyze_{_ai_act_id}", use_container_width=True):
-                                    with st.spinner("AI is analyzing your activity..."):
-                                        try:
-                                            r = requests.post(
-                                                f"{API_BASE}/activities/{_ai_act_id}/analyze",
-                                                headers=_auth_headers(),
-                                                timeout=60,
-                                            )
-                                            if r.status_code == 200:
-                                                result = r.json()
-                                                st.session_state[f"ai_analysis_{_ai_act_id}"] = result.get("analysis", "")
-                                                st.rerun()
-                                            else:
-                                                st.error(f"Analysis failed: {r.text}")
-                                        except Exception as _ai_err:
-                                            st.error(f"Analysis failed: {_ai_err}")
-                    elif props.get("source") == "garmin_scheduled":
-                        # Garmin scheduled workout detail
-                        sw_name = props.get("name", ev_title)
-                        sw_desc = props.get("description", "")
-                        sw_dur = props.get("estimated_duration_seconds", 0)
-                        sw_dist = props.get("estimated_distance_meters", 0)
-                        sw_sport = props.get("sport_type", "")
-                        st.markdown(
-                            f'<div style="font-weight:700;font-size:1rem;margin-bottom:0.25rem;">📅 {sw_name}</div>'
-                            f'<div style="color:#8B95AD;font-size:0.8rem;margin-bottom:0.5rem;">{ev_date} · Garmin Calendar</div>',
-                            unsafe_allow_html=True,
-                        )
-                        _sw_metrics = []
-                        if sw_dist and sw_dist > 0:
-                            _sw_metrics.append(("Distance", f"{sw_dist / 1000:.1f}km", ""))
-                        if sw_dur and sw_dur > 0:
-                            _sw_metrics.append(("Duration", _fmt_duration(sw_dur), ""))
-                        if sw_sport:
-                            _sw_metrics.append(("Sport", sw_sport.replace("_", " ").title(), ""))
-                        if _sw_metrics:
-                            st.markdown(_metrics_strip(_sw_metrics), unsafe_allow_html=True)
-                        if sw_desc:
-                            st.markdown(
-                                f'<div class="pf-card" style="margin-top:0.5rem;">'
-                                f'<div style="color:#8B95AD;font-size:0.7rem;font-weight:600;margin-bottom:0.25rem;">DESCRIPTION</div>'
-                                f'<div style="color:#E8ECF4;font-size:0.85rem;white-space:pre-wrap;">{sw_desc}</div>'
-                                f'</div>',
-                                unsafe_allow_html=True,
-                            )
+                    detail_data = st.session_state.get("cal_selected_detail")
+                    if detail_data:
+                        _render_garmin_activity_detail(detail_data, activity_type=props.get("activity_type", "running"))
                     else:
-                        # Planned workout detail
-                        is_completed = props.get("completed", False)
-                        steps_json = props.get("steps", "[]")
-                        try:
-                            steps_list = json.loads(steps_json) if isinstance(steps_json, str) else steps_json
-                        except (json.JSONDecodeError, TypeError):
-                            steps_list = []
-                        workout_dict = {
-                            "name": props.get("name", ev_title),
-                            "workout_type": props.get("workout_type", ""),
-                            "purpose": props.get("purpose", ""),
-                            "notes": props.get("notes", ""),
-                            "steps": steps_list,
-                            "estimated_distance_meters": props.get("estimated_distance_meters", 0),
-                            "estimated_duration_seconds": props.get("estimated_duration_seconds", 0),
-                        }
-                        plan_paces = None
-                        accepted_plans = [p for p in st.session_state.plans if p.get("accepted")]
-                        if accepted_plans:
-                            plan_paces = {
-                                k: accepted_plans[0].get(k)
-                                for k in ("easy_pace", "marathon_pace", "threshold_pace", "interval_pace", "repetition_pace")
-                            }
+                        # Fallback: show metrics strip from event props
+                        dur = props.get("duration_seconds", 0)
+                        dur_m, dur_s = divmod(int(dur), 60)
+                        dist_km = props.get("distance_km", 0)
+                        pace_raw = props.get("pace", "")
+                        avg_hr = props.get("avg_hr")
+                        _fb_type = props.get("activity_type", "running")
+                        _fb_is_run = _fb_type in ("running", "trail_running", "treadmill_running")
+                        _fb_metrics = []
+                        if _fb_is_run and dist_km:
+                            _fb_metrics.append(("Distance", f"{dist_km}", "km"))
+                        _fb_metrics.append(("Duration", f"{dur_m}:{dur_s:02d}", ""))
+                        if pace_raw and _fb_is_run:
+                            _fb_metrics.append(("Avg Pace", pace_raw.strip(" @"), ""))
+                        if avg_hr:
+                            _fb_metrics.append(("Avg HR", f"{int(avg_hr)}", "bpm"))
+                        if _fb_metrics:
+                            st.markdown(_metrics_strip(_fb_metrics), unsafe_allow_html=True)
+                        st.markdown(
+                            '<div style="color:#8B95AD;font-size:0.75rem;margin-top:0.25rem;">'
+                            'Connect Garmin for full splits, HR zones, and charts</div>',
+                            unsafe_allow_html=True,
+                        )
 
-                        # Show completion status header
-                        if is_completed:
+                    # ── AI Analysis for Garmin activities ──
+                    _ai_act_id = props.get("activity_id")
+                    if _ai_act_id:
+                        _cached_analysis = st.session_state.get(f"ai_analysis_{_ai_act_id}")
+                        if _cached_analysis:
                             st.markdown(
-                                '<div style="background:#1B3A2A;border:1px solid #10B981;border-radius:8px;padding:0.5rem 0.75rem;margin-bottom:0.5rem;">'
-                                '<span style="color:#10B981;font-weight:700;">✓ Completed</span></div>',
+                                f'<div class="pf-card" style="margin-top:0.5rem;border:1px solid rgba(16,185,129,0.15);">'
+                                f'<div style="color:#10B981;font-size:0.7rem;font-weight:600;margin-bottom:0.25rem;">AI ANALYSIS</div>'
+                                f'<div style="color:#E8ECF4;font-size:0.82rem;">{_cached_analysis}</div>'
+                                f'</div>',
                                 unsafe_allow_html=True,
                             )
-
-                        st.markdown(
-                            _render_workout_detail(workout_dict, plan_paces),
-                            unsafe_allow_html=True,
-                        )
-                        st.markdown(
-                            f'<div style="color:#8B95AD;font-size:0.75rem;margin-top:0.5rem;">Scheduled: {ev_date}</div>',
-                            unsafe_allow_html=True,
-                        )
-
-                        # Show completion metrics if available
-                        if is_completed:
-                            metrics_json = props.get("completion_metrics", "{}")
-                            try:
-                                metrics = json.loads(metrics_json) if isinstance(metrics_json, str) else (metrics_json or {})
-                            except (json.JSONDecodeError, TypeError):
-                                metrics = {}
-
-                            # Merge in live-fetched detail EARLY so richer data populates cards
-                            detail_data = metrics.get("detail") or {}
-                            live_detail = st.session_state.get("cal_selected_detail")
-                            if live_detail:
-                                live_summary = live_detail.get("summary") or {}
-                                live_dto = live_summary.get("summaryDTO") or live_summary
-                                if not detail_data.get("splits") and live_detail.get("splits"):
-                                    detail_data["splits"] = live_detail["splits"]
-                                if not detail_data.get("hr_zones") and live_detail.get("hr_zones"):
-                                    detail_data["hr_zones"] = live_detail["hr_zones"]
-                                # Back-fill metrics from live Garmin detail
-                                for src_key, tgt_key in [
-                                    ("distance", "distance_meters"),
-                                    ("duration", "duration_seconds"),
-                                    ("averageHR", "avg_hr"),
-                                    ("maxHR", "max_hr"),
-                                    ("averageRunningCadenceInStepsPerMinute", "avg_running_cadence"),
-                                    ("calories", "calories"),
-                                    ("elevationGain", "elevation_gain"),
-                                    ("trainingEffect", "training_effect_aerobic"),
-                                    ("anaerobicTrainingEffect", "training_effect_anaerobic"),
-                                ]:
-                                    if not metrics.get(tgt_key) and live_dto.get(src_key):
-                                        metrics[tgt_key] = live_dto[src_key]
-                                # Avg pace from live speed
-                                if not metrics.get("avg_pace_sec_per_km") and live_dto.get("averageSpeed"):
-                                    metrics["avg_pace_sec_per_km"] = 1000 / live_dto["averageSpeed"]
-
-                            # ── Rich metric cards grid ──
-                            act_dist = metrics.get("distance_meters", 0)
-                            act_dur = metrics.get("duration_seconds", 0)
-                            act_pace = metrics.get("avg_pace_sec_per_km")
-                            act_hr = metrics.get("avg_hr")
-                            act_max_hr = metrics.get("max_hr")
-                            act_cadence = metrics.get("avg_running_cadence")
-                            act_calories = metrics.get("calories")
-                            act_elevation = metrics.get("elevation_gain")
-                            act_aero_te = metrics.get("training_effect_aerobic")
-                            act_anaero_te = metrics.get("training_effect_anaerobic")
-
-                            card_data = []
-                            if act_dist:
-                                card_data.append(("Distance", f"{act_dist/1000:.1f}", "km"))
-                            if act_dur:
-                                dm, ds = divmod(int(act_dur), 60)
-                                card_data.append(("Duration", f"{dm}:{ds:02d}", ""))
-                            if act_pace:
-                                pm, ps = divmod(int(act_pace), 60)
-                                card_data.append(("Avg Pace", f"{pm}:{ps:02d}/km", ""))
-                            if act_hr:
-                                card_data.append(("Avg HR", f"{int(act_hr)}", "bpm"))
-                            if act_max_hr:
-                                card_data.append(("Max HR", f"{int(act_max_hr)}", "bpm"))
-                            if act_cadence:
-                                card_data.append(("Cadence", f"{int(act_cadence * 2)}", "spm"))
-                            if act_calories:
-                                card_data.append(("Calories", f"{int(act_calories)}", ""))
-                            if act_elevation:
-                                card_data.append(("Elevation", f"{int(act_elevation)}", "m"))
-                            if act_aero_te:
-                                card_data.append(("Aerobic TE", f"{act_aero_te:.1f}", ""))
-                            if act_anaero_te:
-                                card_data.append(("Anaerobic TE", f"{act_anaero_te:.1f}", ""))
-
-                            if card_data:
-                                st.markdown(_metrics_strip(card_data), unsafe_allow_html=True)
-
-                            # ── Planned vs Actual comparison ──
-                            planned_dist = props.get("estimated_distance_meters", 0)
-                            planned_dur = props.get("estimated_duration_seconds", 0)
-                            if planned_dist and act_dist:
-                                dist_diff = ((act_dist - planned_dist) / planned_dist) * 100
-                                dist_color = "#10B981" if abs(dist_diff) < 15 else "#F59E0B"
-                                comp_html = f'<span style="color:{dist_color};">Dist: {dist_diff:+.0f}%</span>'
-                                if planned_dur and act_dur:
-                                    dur_diff = ((act_dur - planned_dur) / planned_dur) * 100
-                                    dur_color = "#10B981" if abs(dur_diff) < 15 else "#F59E0B"
-                                    comp_html += f' · <span style="color:{dur_color};">Duration: {dur_diff:+.0f}%</span>'
-                                st.markdown(
-                                    f'<div style="font-size:0.75rem;color:#8B95AD;margin-bottom:0.5rem;">vs Planned: {comp_html}</div>',
-                                    unsafe_allow_html=True,
-                                )
-
-                            # ── Splits table (from detail data merged above) ──
-                            splits_data = detail_data.get("splits") or {}
-                            hr_zones_data = detail_data.get("hr_zones") or {}
-                            laps = splits_data.get("lapDTOs") or []
-                            if laps:
-                                st.markdown(
-                                    f'<div style="margin:0.5rem 0;">{_splits_table_html(laps)}</div>',
-                                    unsafe_allow_html=True,
-                                )
-
-                            # ── HR Zones ──
-                            hr_list = hr_zones_data if isinstance(hr_zones_data, list) else hr_zones_data.get("hrTimeInZones", []) if isinstance(hr_zones_data, dict) else []
-                            if hr_list and any(zd.get("secsInZone", 0) > 0 for zd in hr_list):
-                                st.markdown(
-                                    f'<div style="margin:0.5rem 0;">{_hr_zone_bars_html(hr_list)}</div>',
-                                    unsafe_allow_html=True,
-                                )
-
-                            # ── AI Analysis ──
-                            analysis = props.get("completion_analysis", "")
-                            if analysis:
-                                st.markdown(
-                                    f'<div class="pf-card" style="margin-top:0.5rem;border:1px solid rgba(16,185,129,0.15);">'
-                                    f'<div style="color:#10B981;font-size:0.7rem;font-weight:600;margin-bottom:0.25rem;">AI ANALYSIS</div>'
-                                    f'<div style="color:#E8ECF4;font-size:0.82rem;">{analysis}</div>'
-                                    f'</div>',
-                                    unsafe_allow_html=True,
-                                )
-                            else:
-                                wo_name = props.get("name", "")
-                                p_id = props.get("plan_id", "")
-                                if st.button("Analyze with AI", key=f"analyze_{ev_date}_{wo_name}", use_container_width=True):
-                                    with st.spinner("AI is analyzing your workout..."):
-                                        try:
-                                            r = requests.post(
-                                                f"{API_BASE}/plan/analyze-workout",
-                                                json={"plan_id": p_id, "workout_name": wo_name, "scheduled_date": ev_date},
-                                                headers=_auth_headers(),
-                                                timeout=60,
-                                            )
-                                            if r.status_code == 200:
-                                                result = r.json()
-                                                st.markdown(
-                                                    f'<div class="pf-card" style="border:1px solid rgba(16,185,129,0.15);">'
-                                                    f'<div style="color:#10B981;font-size:0.7rem;font-weight:600;margin-bottom:0.25rem;">AI ANALYSIS</div>'
-                                                    f'<div style="color:#E8ECF4;font-size:0.82rem;">{result.get("analysis", "")}</div>'
-                                                    f'</div>',
-                                                    unsafe_allow_html=True,
-                                                )
-                                                pr = requests.get(f"{API_BASE}/plans", headers=_auth_headers(), timeout=10)
-                                                if pr.status_code == 200:
-                                                    st.session_state.plans = pr.json()
-                                            else:
-                                                st.error(f"Analysis failed: {_error_detail(r)}")
-                                        except requests.ConnectionError:
-                                            st.error("Cannot reach API.")
-
-                            # ── User Feedback Section ──
-                            st.markdown("---")
-                            wo_name = props.get("name", "")
-                            p_id = props.get("plan_id", "")
-                            existing_rpe = props.get("user_rpe")
-                            existing_notes = props.get("user_notes", "")
-
-                            st.markdown('<div style="color:#8B95AD;font-size:0.75rem;margin-bottom:0.25rem;">How did it feel?</div>', unsafe_allow_html=True)
-                            rpe_val = st.slider(
-                                "Rate of Perceived Exertion",
-                                min_value=1, max_value=10,
-                                value=existing_rpe if existing_rpe else 5,
-                                key=f"rpe_{ev_date}_{wo_name}",
-                                help="1 = Very Light, 5 = Moderate, 10 = Maximum",
-                            )
-                            rpe_labels = {1: "Very Light", 2: "Light", 3: "Light-Moderate", 4: "Moderate",
-                                          5: "Moderate-Hard", 6: "Hard", 7: "Very Hard", 8: "Very Hard+",
-                                          9: "Near Maximum", 10: "Maximum"}
-                            st.caption(f"RPE {rpe_val}: {rpe_labels.get(rpe_val, '')}")
-
-                            user_notes_val = st.text_area(
-                                "Notes (optional)",
-                                value=existing_notes or "",
-                                placeholder="How did it feel? Any pain, fatigue, or highlights?",
-                                key=f"notes_{ev_date}_{wo_name}",
-                                height=70,
-                            )
-
-                            if st.button("Save & Re-analyze", key=f"feedback_{ev_date}_{wo_name}", use_container_width=True):
-                                with st.spinner("Saving feedback and re-analyzing..."):
+                        else:
+                            if st.button("Analyze with AI", key=f"garmin_analyze_{_ai_act_id}", use_container_width=True):
+                                with st.spinner("AI is analyzing your activity..."):
                                     try:
                                         r = requests.post(
-                                            f"{API_BASE}/plan/workout-feedback",
-                                            json={
-                                                "plan_id": p_id,
-                                                "workout_name": wo_name,
-                                                "scheduled_date": ev_date,
-                                                "rpe": rpe_val,
-                                                "notes": user_notes_val,
-                                            },
+                                            f"{API_BASE}/activities/{_ai_act_id}/analyze",
                                             headers=_auth_headers(),
                                             timeout=60,
                                         )
                                         if r.status_code == 200:
                                             result = r.json()
-                                            st.success("Feedback saved!")
+                                            st.session_state[f"ai_analysis_{_ai_act_id}"] = result.get("analysis", "")
+                                            st.rerun()
+                                        else:
+                                            st.error(f"Analysis failed: {r.text}")
+                                    except Exception as _ai_err:
+                                        st.error(f"Analysis failed: {_ai_err}")
+                elif props.get("source") == "garmin_scheduled":
+                    # Garmin scheduled workout detail
+                    sw_name = props.get("name", ev_title)
+                    sw_desc = props.get("description", "")
+                    sw_dur = props.get("estimated_duration_seconds", 0)
+                    sw_dist = props.get("estimated_distance_meters", 0)
+                    sw_sport = props.get("sport_type", "")
+                    st.markdown(
+                        f'<div style="font-weight:700;font-size:1rem;margin-bottom:0.25rem;">📅 {sw_name}</div>'
+                        f'<div style="color:#8B95AD;font-size:0.8rem;margin-bottom:0.5rem;">{ev_date} · Garmin Calendar</div>',
+                        unsafe_allow_html=True,
+                    )
+                    _sw_metrics = []
+                    if sw_dist and sw_dist > 0:
+                        _sw_metrics.append(("Distance", f"{sw_dist / 1000:.1f}km", ""))
+                    if sw_dur and sw_dur > 0:
+                        _sw_metrics.append(("Duration", _fmt_duration(sw_dur), ""))
+                    if sw_sport:
+                        _sw_metrics.append(("Sport", sw_sport.replace("_", " ").title(), ""))
+                    if _sw_metrics:
+                        st.markdown(_metrics_strip(_sw_metrics), unsafe_allow_html=True)
+                    if sw_desc:
+                        st.markdown(
+                            f'<div class="pf-card" style="margin-top:0.5rem;">'
+                            f'<div style="color:#8B95AD;font-size:0.7rem;font-weight:600;margin-bottom:0.25rem;">DESCRIPTION</div>'
+                            f'<div style="color:#E8ECF4;font-size:0.85rem;white-space:pre-wrap;">{sw_desc}</div>'
+                            f'</div>',
+                            unsafe_allow_html=True,
+                        )
+                else:
+                    # Planned workout detail
+                    is_completed = props.get("completed", False)
+                    steps_json = props.get("steps", "[]")
+                    try:
+                        steps_list = json.loads(steps_json) if isinstance(steps_json, str) else steps_json
+                    except (json.JSONDecodeError, TypeError):
+                        steps_list = []
+                    workout_dict = {
+                        "name": props.get("name", ev_title),
+                        "workout_type": props.get("workout_type", ""),
+                        "purpose": props.get("purpose", ""),
+                        "notes": props.get("notes", ""),
+                        "steps": steps_list,
+                        "estimated_distance_meters": props.get("estimated_distance_meters", 0),
+                        "estimated_duration_seconds": props.get("estimated_duration_seconds", 0),
+                    }
+                    plan_paces = None
+                    accepted_plans = [p for p in st.session_state.plans if p.get("accepted")]
+                    if accepted_plans:
+                        plan_paces = {
+                            k: accepted_plans[0].get(k)
+                            for k in ("easy_pace", "marathon_pace", "threshold_pace", "interval_pace", "repetition_pace")
+                        }
+
+                    # Show completion status header
+                    if is_completed:
+                        st.markdown(
+                            '<div style="background:#1B3A2A;border:1px solid #10B981;border-radius:8px;padding:0.5rem 0.75rem;margin-bottom:0.5rem;">'
+                            '<span style="color:#10B981;font-weight:700;">✓ Completed</span></div>',
+                            unsafe_allow_html=True,
+                        )
+
+                    st.markdown(
+                        _render_workout_detail(workout_dict, plan_paces),
+                        unsafe_allow_html=True,
+                    )
+                    st.markdown(
+                        f'<div style="color:#8B95AD;font-size:0.75rem;margin-top:0.5rem;">Scheduled: {ev_date}</div>',
+                        unsafe_allow_html=True,
+                    )
+
+                    # Show completion metrics if available
+                    if is_completed:
+                        metrics_json = props.get("completion_metrics", "{}")
+                        try:
+                            metrics = json.loads(metrics_json) if isinstance(metrics_json, str) else (metrics_json or {})
+                        except (json.JSONDecodeError, TypeError):
+                            metrics = {}
+
+                        # Merge in live-fetched detail EARLY so richer data populates cards
+                        detail_data = metrics.get("detail") or {}
+                        live_detail = st.session_state.get("cal_selected_detail")
+                        if live_detail:
+                            live_summary = live_detail.get("summary") or {}
+                            live_dto = live_summary.get("summaryDTO") or live_summary
+                            if not detail_data.get("splits") and live_detail.get("splits"):
+                                detail_data["splits"] = live_detail["splits"]
+                            if not detail_data.get("hr_zones") and live_detail.get("hr_zones"):
+                                detail_data["hr_zones"] = live_detail["hr_zones"]
+                            # Back-fill metrics from live Garmin detail
+                            for src_key, tgt_key in [
+                                ("distance", "distance_meters"),
+                                ("duration", "duration_seconds"),
+                                ("averageHR", "avg_hr"),
+                                ("maxHR", "max_hr"),
+                                ("averageRunningCadenceInStepsPerMinute", "avg_running_cadence"),
+                                ("calories", "calories"),
+                                ("elevationGain", "elevation_gain"),
+                                ("trainingEffect", "training_effect_aerobic"),
+                                ("anaerobicTrainingEffect", "training_effect_anaerobic"),
+                            ]:
+                                if not metrics.get(tgt_key) and live_dto.get(src_key):
+                                    metrics[tgt_key] = live_dto[src_key]
+                            # Avg pace from live speed
+                            if not metrics.get("avg_pace_sec_per_km") and live_dto.get("averageSpeed"):
+                                metrics["avg_pace_sec_per_km"] = 1000 / live_dto["averageSpeed"]
+
+                        # ── Rich metric cards grid ──
+                        act_dist = metrics.get("distance_meters", 0)
+                        act_dur = metrics.get("duration_seconds", 0)
+                        act_pace = metrics.get("avg_pace_sec_per_km")
+                        act_hr = metrics.get("avg_hr")
+                        act_max_hr = metrics.get("max_hr")
+                        act_cadence = metrics.get("avg_running_cadence")
+                        act_calories = metrics.get("calories")
+                        act_elevation = metrics.get("elevation_gain")
+                        act_aero_te = metrics.get("training_effect_aerobic")
+                        act_anaero_te = metrics.get("training_effect_anaerobic")
+
+                        card_data = []
+                        if act_dist:
+                            card_data.append(("Distance", f"{act_dist/1000:.1f}", "km"))
+                        if act_dur:
+                            dm, ds = divmod(int(act_dur), 60)
+                            card_data.append(("Duration", f"{dm}:{ds:02d}", ""))
+                        if act_pace:
+                            pm, ps = divmod(int(act_pace), 60)
+                            card_data.append(("Avg Pace", f"{pm}:{ps:02d}/km", ""))
+                        if act_hr:
+                            card_data.append(("Avg HR", f"{int(act_hr)}", "bpm"))
+                        if act_max_hr:
+                            card_data.append(("Max HR", f"{int(act_max_hr)}", "bpm"))
+                        if act_cadence:
+                            card_data.append(("Cadence", f"{int(act_cadence * 2)}", "spm"))
+                        if act_calories:
+                            card_data.append(("Calories", f"{int(act_calories)}", ""))
+                        if act_elevation:
+                            card_data.append(("Elevation", f"{int(act_elevation)}", "m"))
+                        if act_aero_te:
+                            card_data.append(("Aerobic TE", f"{act_aero_te:.1f}", ""))
+                        if act_anaero_te:
+                            card_data.append(("Anaerobic TE", f"{act_anaero_te:.1f}", ""))
+
+                        if card_data:
+                            st.markdown(_metrics_strip(card_data), unsafe_allow_html=True)
+
+                        # ── Planned vs Actual comparison ──
+                        planned_dist = props.get("estimated_distance_meters", 0)
+                        planned_dur = props.get("estimated_duration_seconds", 0)
+                        if planned_dist and act_dist:
+                            dist_diff = ((act_dist - planned_dist) / planned_dist) * 100
+                            dist_color = "#10B981" if abs(dist_diff) < 15 else "#F59E0B"
+                            comp_html = f'<span style="color:{dist_color};">Dist: {dist_diff:+.0f}%</span>'
+                            if planned_dur and act_dur:
+                                dur_diff = ((act_dur - planned_dur) / planned_dur) * 100
+                                dur_color = "#10B981" if abs(dur_diff) < 15 else "#F59E0B"
+                                comp_html += f' · <span style="color:{dur_color};">Duration: {dur_diff:+.0f}%</span>'
+                            st.markdown(
+                                f'<div style="font-size:0.75rem;color:#8B95AD;margin-bottom:0.5rem;">vs Planned: {comp_html}</div>',
+                                unsafe_allow_html=True,
+                            )
+
+                        # ── Splits table (from detail data merged above) ──
+                        splits_data = detail_data.get("splits") or {}
+                        hr_zones_data = detail_data.get("hr_zones") or {}
+                        laps = splits_data.get("lapDTOs") or []
+                        if laps:
+                            st.markdown(
+                                f'<div style="margin:0.5rem 0;">{_splits_table_html(laps)}</div>',
+                                unsafe_allow_html=True,
+                            )
+
+                        # ── HR Zones ──
+                        hr_list = hr_zones_data if isinstance(hr_zones_data, list) else hr_zones_data.get("hrTimeInZones", []) if isinstance(hr_zones_data, dict) else []
+                        if hr_list and any(zd.get("secsInZone", 0) > 0 for zd in hr_list):
+                            st.markdown(
+                                f'<div style="margin:0.5rem 0;">{_hr_zone_bars_html(hr_list)}</div>',
+                                unsafe_allow_html=True,
+                            )
+
+                        # ── AI Analysis ──
+                        analysis = props.get("completion_analysis", "")
+                        if analysis:
+                            st.markdown(
+                                f'<div class="pf-card" style="margin-top:0.5rem;border:1px solid rgba(16,185,129,0.15);">'
+                                f'<div style="color:#10B981;font-size:0.7rem;font-weight:600;margin-bottom:0.25rem;">AI ANALYSIS</div>'
+                                f'<div style="color:#E8ECF4;font-size:0.82rem;">{analysis}</div>'
+                                f'</div>',
+                                unsafe_allow_html=True,
+                            )
+                        else:
+                            wo_name = props.get("name", "")
+                            p_id = props.get("plan_id", "")
+                            if st.button("Analyze with AI", key=f"analyze_{ev_date}_{wo_name}", use_container_width=True):
+                                with st.spinner("AI is analyzing your workout..."):
+                                    try:
+                                        r = requests.post(
+                                            f"{API_BASE}/plan/analyze-workout",
+                                            json={"plan_id": p_id, "workout_name": wo_name, "scheduled_date": ev_date},
+                                            headers=_auth_headers(),
+                                            timeout=60,
+                                        )
+                                        if r.status_code == 200:
+                                            result = r.json()
                                             st.markdown(
                                                 f'<div class="pf-card" style="border:1px solid rgba(16,185,129,0.15);">'
-                                                f'<div style="color:#10B981;font-size:0.7rem;font-weight:600;margin-bottom:0.25rem;">UPDATED AI ANALYSIS</div>'
+                                                f'<div style="color:#10B981;font-size:0.7rem;font-weight:600;margin-bottom:0.25rem;">AI ANALYSIS</div>'
                                                 f'<div style="color:#E8ECF4;font-size:0.82rem;">{result.get("analysis", "")}</div>'
                                                 f'</div>',
                                                 unsafe_allow_html=True,
@@ -4207,86 +4125,147 @@ with tab_calendar:
                                             if pr.status_code == 200:
                                                 st.session_state.plans = pr.json()
                                         else:
-                                            st.error(f"Failed: {_error_detail(r)}")
+                                            st.error(f"Analysis failed: {_error_detail(r)}")
                                     except requests.ConnectionError:
                                         st.error("Cannot reach API.")
-                        else:
-                            # Not completed — offer to match a Garmin activity
-                            wo_name = props.get("name", "")
-                            p_id = props.get("plan_id", "")
-                            garmin_acts = st.session_state.get("garmin_activities", [])
 
-                            # Filter activities on or near the scheduled date
-                            matching_acts = []
-                            for act in garmin_acts:
-                                act_date = (act.get("start_time", "") or "")[:10]
-                                if act_date == ev_date:
-                                    matching_acts.append(act)
+                        # ── User Feedback Section ──
+                        st.markdown("---")
+                        wo_name = props.get("name", "")
+                        p_id = props.get("plan_id", "")
+                        existing_rpe = props.get("user_rpe")
+                        existing_notes = props.get("user_notes", "")
 
-                            if matching_acts:
-                                st.markdown("---")
-                                st.markdown('<div style="color:#8B95AD;font-size:0.75rem;margin-bottom:0.25rem;">Match Garmin Activity</div>', unsafe_allow_html=True)
-                                act_options = {
-                                    f"{a.get('name', 'Activity')} ({round(a.get('distance_meters', 0)/1000, 1)}km)": a.get("activity_id")
-                                    for a in matching_acts
-                                }
-                                selected_act = st.selectbox(
-                                    "Select activity",
-                                    list(act_options.keys()),
-                                    key=f"match_sel_{ev_date}_{wo_name}",
-                                    label_visibility="collapsed",
-                                )
-                                if st.button("Match & Complete", key=f"match_{ev_date}_{wo_name}", use_container_width=True):
-                                    act_id = act_options[selected_act]
-                                    with st.spinner("Matching..."):
-                                        try:
-                                            r = requests.post(
-                                                f"{API_BASE}/plan/match-workout",
-                                                json={"plan_id": p_id, "workout_name": wo_name, "scheduled_date": ev_date, "activity_id": act_id},
-                                                headers=_auth_headers(),
-                                                timeout=30,
-                                            )
-                                            if r.status_code == 200:
-                                                st.success("Workout matched!")
-                                                pr = requests.get(f"{API_BASE}/plans", headers=_auth_headers(), timeout=10)
-                                                if pr.status_code == 200:
-                                                    st.session_state.plans = pr.json()
-                                                st.session_state.cal_selected_event = None
-                                                st.rerun()
-                                            else:
-                                                st.error(f"Match failed: {_error_detail(r)}")
-                                        except requests.ConnectionError:
-                                            st.error("Cannot reach API.")
+                        st.markdown('<div style="color:#8B95AD;font-size:0.75rem;margin-bottom:0.25rem;">How did it feel?</div>', unsafe_allow_html=True)
+                        rpe_val = st.slider(
+                            "Rate of Perceived Exertion",
+                            min_value=1, max_value=10,
+                            value=existing_rpe if existing_rpe else 5,
+                            key=f"rpe_{ev_date}_{wo_name}",
+                            help="1 = Very Light, 5 = Moderate, 10 = Maximum",
+                        )
+                        rpe_labels = {1: "Very Light", 2: "Light", 3: "Light-Moderate", 4: "Moderate",
+                                      5: "Moderate-Hard", 6: "Hard", 7: "Very Hard", 8: "Very Hard+",
+                                      9: "Near Maximum", 10: "Maximum"}
+                        st.caption(f"RPE {rpe_val}: {rpe_labels.get(rpe_val, '')}")
 
-                        if not is_completed:
-                            if st.button("Delete Workout", key=f"del_{ev_date}_{props.get('name','')}", use_container_width=True):
-                                r = requests.post(
-                                    f"{API_BASE}/plan/delete-workout",
-                                    json={"workout_name": props.get("name", ""), "scheduled_date": ev_date},
-                                    headers=_auth_headers(),
-                                    timeout=10,
-                                )
-                                if r.status_code == 200:
-                                    pr = requests.get(f"{API_BASE}/plans", headers=_auth_headers(), timeout=10)
-                                    if pr.status_code == 200:
-                                        st.session_state.plans = pr.json()
-                                    st.session_state.cal_selected_event = None
-                                    st.success("Workout deleted!")
-                                    st.rerun()
-                                else:
-                                    st.error(f"Error: {_error_detail(r)}")
+                        user_notes_val = st.text_area(
+                            "Notes (optional)",
+                            value=existing_notes or "",
+                            placeholder="How did it feel? Any pain, fatigue, or highlights?",
+                            key=f"notes_{ev_date}_{wo_name}",
+                            height=70,
+                        )
 
-            # ── AI Review Results (below calendar) ──
-            ai_review = st.session_state.get("ai_review_result")
-            if not ai_review and plan and plan.get("adaptation_notes"):
-                ai_review = plan.get("adaptation_notes")
-            if ai_review:
-                st.markdown("---")
-                st.markdown(
-                    '<div style="font-weight:700;font-size:1rem;color:#10B981;margin-bottom:0.5rem;">AI Plan Review</div>',
-                    unsafe_allow_html=True,
-                )
-                st.markdown(ai_review)
+                        if st.button("Save & Re-analyze", key=f"feedback_{ev_date}_{wo_name}", use_container_width=True):
+                            with st.spinner("Saving feedback and re-analyzing..."):
+                                try:
+                                    r = requests.post(
+                                        f"{API_BASE}/plan/workout-feedback",
+                                        json={
+                                            "plan_id": p_id,
+                                            "workout_name": wo_name,
+                                            "scheduled_date": ev_date,
+                                            "rpe": rpe_val,
+                                            "notes": user_notes_val,
+                                        },
+                                        headers=_auth_headers(),
+                                        timeout=60,
+                                    )
+                                    if r.status_code == 200:
+                                        result = r.json()
+                                        st.success("Feedback saved!")
+                                        st.markdown(
+                                            f'<div class="pf-card" style="border:1px solid rgba(16,185,129,0.15);">'
+                                            f'<div style="color:#10B981;font-size:0.7rem;font-weight:600;margin-bottom:0.25rem;">UPDATED AI ANALYSIS</div>'
+                                            f'<div style="color:#E8ECF4;font-size:0.82rem;">{result.get("analysis", "")}</div>'
+                                            f'</div>',
+                                            unsafe_allow_html=True,
+                                        )
+                                        pr = requests.get(f"{API_BASE}/plans", headers=_auth_headers(), timeout=10)
+                                        if pr.status_code == 200:
+                                            st.session_state.plans = pr.json()
+                                    else:
+                                        st.error(f"Failed: {_error_detail(r)}")
+                                except requests.ConnectionError:
+                                    st.error("Cannot reach API.")
+                    else:
+                        # Not completed — offer to match a Garmin activity
+                        wo_name = props.get("name", "")
+                        p_id = props.get("plan_id", "")
+                        garmin_acts = st.session_state.get("garmin_activities", [])
+
+                        # Filter activities on or near the scheduled date
+                        matching_acts = []
+                        for act in garmin_acts:
+                            act_date = (act.get("start_time", "") or "")[:10]
+                            if act_date == ev_date:
+                                matching_acts.append(act)
+
+                        if matching_acts:
+                            st.markdown("---")
+                            st.markdown('<div style="color:#8B95AD;font-size:0.75rem;margin-bottom:0.25rem;">Match Garmin Activity</div>', unsafe_allow_html=True)
+                            act_options = {
+                                f"{a.get('name', 'Activity')} ({round(a.get('distance_meters', 0)/1000, 1)}km)": a.get("activity_id")
+                                for a in matching_acts
+                            }
+                            selected_act = st.selectbox(
+                                "Select activity",
+                                list(act_options.keys()),
+                                key=f"match_sel_{ev_date}_{wo_name}",
+                                label_visibility="collapsed",
+                            )
+                            if st.button("Match & Complete", key=f"match_{ev_date}_{wo_name}", use_container_width=True):
+                                act_id = act_options[selected_act]
+                                with st.spinner("Matching..."):
+                                    try:
+                                        r = requests.post(
+                                            f"{API_BASE}/plan/match-workout",
+                                            json={"plan_id": p_id, "workout_name": wo_name, "scheduled_date": ev_date, "activity_id": act_id},
+                                            headers=_auth_headers(),
+                                            timeout=30,
+                                        )
+                                        if r.status_code == 200:
+                                            st.success("Workout matched!")
+                                            pr = requests.get(f"{API_BASE}/plans", headers=_auth_headers(), timeout=10)
+                                            if pr.status_code == 200:
+                                                st.session_state.plans = pr.json()
+                                            st.session_state.cal_selected_event = None
+                                            st.rerun()
+                                        else:
+                                            st.error(f"Match failed: {_error_detail(r)}")
+                                    except requests.ConnectionError:
+                                        st.error("Cannot reach API.")
+
+                    if not is_completed:
+                        if st.button("Delete Workout", key=f"del_{ev_date}_{props.get('name','')}", use_container_width=True):
+                            r = requests.post(
+                                f"{API_BASE}/plan/delete-workout",
+                                json={"workout_name": props.get("name", ""), "scheduled_date": ev_date},
+                                headers=_auth_headers(),
+                                timeout=10,
+                            )
+                            if r.status_code == 200:
+                                pr = requests.get(f"{API_BASE}/plans", headers=_auth_headers(), timeout=10)
+                                if pr.status_code == 200:
+                                    st.session_state.plans = pr.json()
+                                st.session_state.cal_selected_event = None
+                                st.success("Workout deleted!")
+                                st.rerun()
+                            else:
+                                st.error(f"Error: {_error_detail(r)}")
+
+        # ── AI Review Results (below calendar) ──
+        ai_review = st.session_state.get("ai_review_result")
+        if not ai_review and plan and plan.get("adaptation_notes"):
+            ai_review = plan.get("adaptation_notes")
+        if ai_review:
+            st.markdown("---")
+            st.markdown(
+                '<div style="font-weight:700;font-size:1rem;color:#10B981;margin-bottom:0.5rem;">AI Plan Review</div>',
+                unsafe_allow_html=True,
+            )
+            st.markdown(ai_review)
 
 # ── Tab 4: HYROX Race Results ────────────────────────────────────────
 
