@@ -3766,34 +3766,6 @@ with tab_plan:
 with tab_calendar:
     st.markdown('<div class="pf-section-header">Training Calendar</div>', unsafe_allow_html=True)
 
-    # Debug info for calendar data
-    _n_acts = len(st.session_state.get("garmin_activities", []))
-    _n_plans = len(st.session_state.plans)
-    _n_accepted = sum(1 for p in st.session_state.plans if p.get("accepted", False))
-    _n_sched = len(st.session_state.get("garmin_scheduled", []))
-    _act_types = [a.get("activity_type", "?") for a in st.session_state.get("garmin_activities", [])]
-    _type_counts = {}
-    for _t in _act_types:
-        _type_counts[_t] = _type_counts.get(_t, 0) + 1
-    _type_str = ", ".join(f"{k}: {v}" for k, v in _type_counts.items()) if _type_counts else "none"
-    st.caption(f"📊 {_n_acts} activities ({_type_str}) · {_n_plans} plans ({_n_accepted} accepted) · {_n_sched} Garmin scheduled")
-
-    # Debug: test Garmin activity type queries
-    if st.session_state.garmin_logged_in:
-        if st.button("🔍 Debug Garmin Activity Types", key="debug_garmin_types"):
-            with st.spinner("Querying Garmin for all activity types..."):
-                try:
-                    dr = requests.get(
-                        f"{API_BASE}/garmin/debug-activities",
-                        headers=_auth_headers(), timeout=30,
-                    )
-                    if dr.status_code == 200:
-                        st.json(dr.json())
-                    else:
-                        st.error(f"Debug failed: {dr.status_code} {dr.text[:200]}")
-                except Exception as _de:
-                    st.error(f"Debug failed: {_de}")
-
     if True:
         cal_events = []
 
