@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 from contextlib import asynccontextmanager
@@ -626,6 +627,42 @@ async def get_activities(
     return []
 
 
+@app.get("/garmin/debug-activities")
+async def debug_activities(user: dict = Depends(get_current_user)):
+    """Debug: test what Garmin returns for each activity type."""
+    uid = user["id"]
+    garmin = _ensure_garmin(uid)
+    if not garmin:
+        return {"error": "Garmin not connected"}
+    from datetime import timedelta as _td
+    start = (date.today() - _td(days=60)).isoformat()
+    end = date.today().isoformat()
+    results = {}
+    for atype in ["running", "fitness_equipment", "multi_sport", "other", "cycling", "walking", "hiking"]:
+        try:
+            raw = garmin.client.get_activities_by_date(start, end, atype)
+            acts = []
+            for a in (raw or []):
+                acts.append({
+                    "id": a.get("activityId"),
+                    "name": a.get("activityName"),
+                    "type": a.get("activityType", {}).get("typeKey"),
+                    "date": a.get("startTimeLocal", "")[:10],
+                })
+            results[atype] = {"count": len(acts), "activities": acts[:5]}
+        except Exception as e:
+            results[atype] = {"count": 0, "error": str(e)}
+    # Also check user preferences
+    cached = load_user_data(settings.db_path, uid)
+    prefs = {}
+    if cached and cached.get("preferences_json"):
+        with contextlib.suppress(Exception):
+            prefs = json.loads(cached["preferences_json"])
+    results["_preferences"] = prefs.get("sync_activity_types", "NOT SET")
+    results["_cached_activity_count"] = len(json.loads(cached["activities_json"])) if cached and cached.get("activities_json") else 0
+    return results
+
+
 @app.get("/garmin/scheduled-workouts")
 async def get_scheduled_workouts(user: dict = Depends(get_current_user)):
     """Return workouts scheduled on the Garmin calendar."""
@@ -698,54 +735,35 @@ async def analyze_activity(activity_id: int, user: dict = Depends(get_current_us
     if aid_key in analyses:
         return {"analysis": analyses[aid_key]}
 
-    # Fetch activity detail from Garmin (optional — analysis works without it)
+    # Fetch activity detail from Garmin
     garmin = _ensure_garmin(uid)
-    detail: dict = {}
-    if garmin:
-        try:
-            detail = garmin.get_activity_detail(activity_id)
-        except Exception as e:
-            logger.warning("Failed to fetch activity detail for %s: %s", activity_id, e)
+    if not garmin:
+        raise HTTPException(404, "Garmin not connected")
+
+    detail = garmin.get_activity_detail(activity_id)
 
     # Build activity dict from cached activities list
     act_dict: dict = {}
     if cached and cached.get("activities_json"):
-        try:
-            activities_list = json.loads(cached["activities_json"])
-        except (json.JSONDecodeError, TypeError):
-            activities_list = []
-        for a in activities_list:
+        for a in json.loads(cached["activities_json"]):
             if a.get("activity_id") == activity_id:
                 act_dict = a
                 break
-    if not act_dict:
-        raise HTTPException(404, "Activity not found in cached data")
     act_dict["splits"] = detail.get("splits")
     act_dict["hr_zones"] = detail.get("hr_zones")
 
     # Get profile for context
     profile = _user_profile.get(uid)
     if not profile and cached and cached.get("profile_json"):
-        try:
-            profile = UserFitnessProfile.model_validate_json(cached["profile_json"])
-        except Exception:
-            profile = None
+        profile = UserFitnessProfile.model_validate_json(cached["profile_json"])
 
-    try:
-        coach = _get_or_create_coach(uid)
-        analysis = coach.analyze_activity(act_dict, profile=profile)
-    except Exception as e:
-        logger.error("AI analysis failed for activity %s: %s", activity_id, e, exc_info=True)
-        raise HTTPException(500, f"AI analysis failed: {e}") from e
+    coach = _get_or_create_coach(uid)
+    analysis = coach.analyze_activity(act_dict, profile=profile)
 
-    # Cache the result (skip error responses so retries are possible)
-    if analysis and not analysis.startswith("Could not analyze"):
-        analyses[aid_key] = analysis
-        prefs["activity_analyses"] = analyses
-        try:
-            save_user_data(settings.db_path, uid, preferences_json=json.dumps(prefs))
-        except Exception as e:
-            logger.warning("Failed to cache analysis for activity %s: %s", activity_id, e)
+    # Cache the result
+    analyses[aid_key] = analysis
+    prefs["activity_analyses"] = analyses
+    save_user_data(settings.db_path, uid, preferences_json=json.dumps(prefs))
 
     return {"analysis": analysis}
 
@@ -1625,6 +1643,18 @@ async def user_search(q: str, user: dict = Depends(get_current_user)):
     return search_users(settings.db_path, q, exclude_user_id=user["id"])
 
 
+@app.get("/users/approved")
+async def approved_users(user: dict = Depends(get_current_user)):
+    """Return all approved users (excluding current user) for friend discovery."""
+    rows = list_users(settings.db_path, status="approved")
+    uid = user["id"]
+    return [
+        {"id": r["id"], "name": r["name"], "email": r["email"]}
+        for r in rows
+        if r["id"] != uid
+    ]
+
+
 @app.get("/friends")
 async def get_friends(user: dict = Depends(get_current_user)):
     uid = user["id"]
@@ -1660,6 +1690,77 @@ async def friend_respond(body: dict, user: dict = Depends(get_current_user)):
 async def friend_remove(friendship_id: str, user: dict = Depends(get_current_user)):
     remove_friend(settings.db_path, friendship_id)
     return {"ok": True}
+
+
+@app.get("/users/{user_id}/profile")
+async def get_user_public_profile(user_id: str, user: dict = Depends(get_current_user)):
+    """Return a friend's profile: fitness highlights, activities, HYROX, plan summary."""
+    uid = user["id"]
+    if user_id != uid:
+        friend_ids = get_friend_ids(settings.db_path, uid)
+        if user_id not in friend_ids:
+            raise HTTPException(403, "You can only view profiles of friends")
+
+    cached = load_user_data(settings.db_path, user_id)
+    result: dict = {"user_id": user_id}
+
+    # User name
+    u = get_user_by_id(settings.db_path, user_id)
+    result["name"] = u["name"] if u else "Unknown"
+
+    # Fitness profile highlights
+    if cached and cached.get("profile_json"):
+        profile = UserFitnessProfile.model_validate_json(cached["profile_json"])
+        result["profile"] = {
+            "vo2_max": profile.vo2_max,
+            "resting_hr": profile.resting_hr,
+            "max_hr": profile.max_hr,
+            "training_readiness": profile.training_readiness,
+            "training_status": profile.training_status,
+            "hrv_status": profile.hrv_status,
+            "hrv_last_night": profile.hrv_last_night,
+            "weekly_mileage_km": profile.weekly_mileage_km,
+        }
+    else:
+        result["profile"] = None
+
+    # Recent activities
+    if cached and cached.get("activities_json"):
+        activities = json.loads(cached["activities_json"])
+        result["activities"] = activities[:15]
+    else:
+        result["activities"] = []
+
+    # HYROX results
+    if cached and cached.get("hyrox_json"):
+        result["hyrox"] = json.loads(cached["hyrox_json"])
+    else:
+        result["hyrox"] = None
+
+    # Training plan summary (accepted plans only)
+    plans_data = _user_plans[user_id] if user_id in _user_plans else _load_plans(user_id)
+    accepted = [p for p in plans_data if p.accepted]
+    if accepted:
+        plan = accepted[0]
+        total_workouts = sum(len(w.workouts) for w in plan.weeks)
+        completed_workouts = sum(1 for w in plan.weeks for wo in w.workouts if wo.completed)
+        result["plan"] = {
+            "name": plan.name,
+            "goal_type": plan.goal_type,
+            "target_date": str(plan.target_date),
+            "total_weeks": plan.total_weeks,
+            "total_workouts": total_workouts,
+            "completed_workouts": completed_workouts,
+            "progress_pct": round(completed_workouts / total_workouts * 100) if total_workouts else 0,
+        }
+    else:
+        result["plan"] = None
+
+    # Feed events for this user
+    events = get_feed(settings.db_path, [user_id], limit=20)
+    result["feed"] = events
+
+    return result
 
 
 # ── Feed ──────────────────────────────────────────────────────────────
@@ -1701,13 +1802,27 @@ def _backfill_feed_events(uid: str) -> None:
                 pace_str = f"{int(pace // 60)}:{int(pace % 60):02d}/km" if pace else None
                 parts = [f"{dist_km} km" if dist_km else None, f"{dur_min} min" if dur_min else None, pace_str]
                 body_str = " · ".join(p for p in parts if p) or None
+                meta = {
+                    "workout_type": wo.workout_type.value,
+                    "distance_km": dist_km,
+                    "pace": pace_str,
+                    "distance_meters": metrics.get("distance_meters"),
+                    "duration_seconds": metrics.get("duration_seconds"),
+                    "avg_pace_sec_per_km": pace,
+                    "avg_hr": metrics.get("avg_hr"),
+                    "max_hr": metrics.get("max_hr"),
+                    "calories": metrics.get("calories"),
+                    "elevation_gain": metrics.get("elevation_gain"),
+                    "training_effect_aerobic": metrics.get("training_effect_aerobic"),
+                    "activity_type": metrics.get("activity_type", "running"),
+                }
                 try:
                     create_feed_event(
                         settings.db_path, uid,
                         event_type="activity",
                         title=title,
                         body=body_str,
-                        metadata={"workout_type": wo.workout_type.value, "distance_km": dist_km, "pace": pace_str},
+                        metadata=meta,
                     )
                     created += 1
                 except Exception:
