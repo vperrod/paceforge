@@ -698,12 +698,14 @@ async def analyze_activity(activity_id: int, user: dict = Depends(get_current_us
     if aid_key in analyses:
         return {"analysis": analyses[aid_key]}
 
-    # Fetch activity detail from Garmin
+    # Fetch activity detail from Garmin (optional — analysis works without it)
     garmin = _ensure_garmin(uid)
-    if not garmin:
-        raise HTTPException(404, "Garmin not connected")
-
-    detail = garmin.get_activity_detail(activity_id)
+    detail: dict = {}
+    if garmin:
+        try:
+            detail = garmin.get_activity_detail(activity_id)
+        except Exception as e:
+            logger.warning("Failed to fetch activity detail for %s: %s", activity_id, e)
 
     # Build activity dict from cached activities list
     act_dict: dict = {}
@@ -712,6 +714,8 @@ async def analyze_activity(activity_id: int, user: dict = Depends(get_current_us
             if a.get("activity_id") == activity_id:
                 act_dict = a
                 break
+    if not act_dict:
+        raise HTTPException(404, "Activity not found in cached data")
     act_dict["splits"] = detail.get("splits")
     act_dict["hr_zones"] = detail.get("hr_zones")
 
@@ -720,8 +724,12 @@ async def analyze_activity(activity_id: int, user: dict = Depends(get_current_us
     if not profile and cached and cached.get("profile_json"):
         profile = UserFitnessProfile.model_validate_json(cached["profile_json"])
 
-    coach = _get_or_create_coach(uid)
-    analysis = coach.analyze_activity(act_dict, profile=profile)
+    try:
+        coach = _get_or_create_coach(uid)
+        analysis = coach.analyze_activity(act_dict, profile=profile)
+    except Exception as e:
+        logger.error("AI analysis failed for activity %s: %s", activity_id, e, exc_info=True)
+        raise HTTPException(500, f"AI analysis failed: {e}") from e
 
     # Cache the result
     analyses[aid_key] = analysis
