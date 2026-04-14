@@ -1782,6 +1782,13 @@ else:
                         _sync_err.append("activities")
                 except Exception:
                     _sync_err.append("activities")
+                # Refresh plans (picks up auto-matched completions)
+                try:
+                    r = requests.get(f"{API_BASE}/plans", headers=_auth_headers(), timeout=10)
+                    if r.status_code == 200:
+                        st.session_state.plans = r.json()
+                except Exception:
+                    pass
                 if _sync_ok:
                     st.success(f"Synced: {', '.join(_sync_ok)}")
                 if _sync_err:
