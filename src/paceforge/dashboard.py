@@ -3537,6 +3537,22 @@ with tab_calendar:
     _type_str = ", ".join(f"{k}: {v}" for k, v in _type_counts.items()) if _type_counts else "none"
     st.caption(f"📊 {_n_acts} activities ({_type_str}) · {_n_plans} plans ({_n_accepted} accepted) · {_n_sched} Garmin scheduled")
 
+    # Debug: test Garmin activity type queries
+    if st.session_state.garmin_logged_in:
+        if st.button("🔍 Debug Garmin Activity Types", key="debug_garmin_types"):
+            with st.spinner("Querying Garmin for all activity types..."):
+                try:
+                    dr = requests.get(
+                        f"{API_BASE}/garmin/debug-activities",
+                        headers=_auth_headers(), timeout=30,
+                    )
+                    if dr.status_code == 200:
+                        st.json(dr.json())
+                    else:
+                        st.error(f"Debug failed: {dr.status_code} {dr.text[:200]}")
+                except Exception as _de:
+                    st.error(f"Debug failed: {_de}")
+
     if True:
         cal_events = []
 
