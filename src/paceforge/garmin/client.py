@@ -639,28 +639,85 @@ class GarminClient:
 
         return result
 
-    def get_scheduled_workouts(self) -> list[dict]:
-        """Fetch all workouts from Garmin and return those with a scheduled date."""
+    def get_scheduled_workouts(self, days_ahead: int = 30) -> list[dict]:
+        """Fetch scheduled workouts from Garmin calendar for the next N days."""
+        scheduled = []
+
+        # Method 1: Try the schedule endpoint with date range
+        try:
+            start_date = date.today().isoformat()
+            end_date = (date.today() + timedelta(days=days_ahead)).isoformat()
+            data = self.client.connectapi(
+                f"/workout-service/schedule",
+                params={"startDate": start_date, "endDate": end_date},
+            )
+            if isinstance(data, list):
+                for item in data:
+                    cal_date = (
+                        item.get("date")
+                        or item.get("calendarDate")
+                        or item.get("scheduledDate")
+                    )
+                    if not cal_date:
+                        continue
+                    # Extract workout info (may be nested)
+                    wo = item.get("workout") or item
+                    scheduled.append({
+                        "workout_id": wo.get("workoutId") or item.get("workoutId"),
+                        "name": wo.get("workoutName") or item.get("workoutName", "Workout"),
+                        "description": wo.get("description", ""),
+                        "scheduled_date": str(cal_date)[:10],
+                        "sport_type": (wo.get("sportType") or {}).get("sportTypeKey", ""),
+                        "estimated_duration_seconds": wo.get("estimatedDurationInSecs"),
+                        "estimated_distance_meters": wo.get("estimatedDistanceInMeters"),
+                    })
+                if scheduled:
+                    return scheduled
+        except Exception:
+            logger.debug("Schedule endpoint failed, trying workout library", exc_info=True)
+
+        # Method 2: Fall back to workout library (templates with calendarDate)
         try:
             workouts = self.client.get_workouts(start=0, limit=200)
+            for w in workouts:
+                cal_date = w.get("calendarDate")
+                if not cal_date:
+                    continue
+                scheduled.append({
+                    "workout_id": w.get("workoutId"),
+                    "name": w.get("workoutName", "Workout"),
+                    "description": w.get("description", ""),
+                    "scheduled_date": str(cal_date)[:10],
+                    "sport_type": (w.get("sportType") or {}).get("sportTypeKey", ""),
+                    "estimated_duration_seconds": w.get("estimatedDurationInSecs"),
+                    "estimated_distance_meters": w.get("estimatedDistanceInMeters"),
+                })
         except Exception:
             logger.warning("Could not fetch Garmin workouts", exc_info=True)
-            return []
-        scheduled = []
-        for w in workouts:
-            # Garmin workouts have a 'calendarDate' when scheduled
-            cal_date = w.get("calendarDate")
-            if not cal_date:
-                continue
-            scheduled.append({
-                "workout_id": w.get("workoutId"),
-                "name": w.get("workoutName", "Workout"),
-                "description": w.get("description", ""),
-                "scheduled_date": cal_date,
-                "sport_type": w.get("sportType", {}).get("sportTypeKey", ""),
-                "estimated_duration_seconds": w.get("estimatedDurationInSecs"),
-                "estimated_distance_meters": w.get("estimatedDistanceInMeters"),
-            })
+
+        # Method 3: Try daily events for upcoming days if nothing found
+        if not scheduled:
+            for d in range(days_ahead):
+                try:
+                    day = (date.today() + timedelta(days=d)).isoformat()
+                    events = self.client.get_all_day_events(day)
+                    if isinstance(events, list):
+                        for ev in events:
+                            ev_type = ev.get("eventType", {})
+                            if isinstance(ev_type, dict) and ev_type.get("typeKey") == "workout":
+                                scheduled.append({
+                                    "workout_id": ev.get("workoutId"),
+                                    "name": ev.get("eventName", "Scheduled Workout"),
+                                    "description": ev.get("description", ""),
+                                    "scheduled_date": day,
+                                    "sport_type": "",
+                                    "estimated_duration_seconds": ev.get("durationInSecs"),
+                                    "estimated_distance_meters": None,
+                                })
+                except Exception:
+                    logger.debug("Could not fetch daily events for %s", day)
+                    continue
+
         return scheduled
 
     # ── Write operations ─────────────────────────────────────────────

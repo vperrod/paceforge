@@ -3630,10 +3630,9 @@ with tab_calendar:
                 },
             })
 
-        # ── Planned workouts from all accepted plans ──
+        # ── Planned workouts from all plans (accepted shown solid, pending shown muted) ──
         for plan in st.session_state.plans:
-            if not plan.get("accepted", False):
-                continue
+            _plan_accepted = plan.get("accepted", False)
             plan_id = plan.get("plan_id", "")
             for week in plan.get("weeks", []):
                 for j, w in enumerate(week.get("workouts", [])):
@@ -3642,8 +3641,13 @@ with tab_calendar:
                         continue
                     dist = round(w.get("estimated_distance_meters", 0) / 1000, 1)
                     is_completed = w.get("completed", False)
-                    prefix = "✓" if is_completed else "—"
-                    bg_color = "#10B981" if is_completed else _WORKOUT_COLORS.get(wtype, "#607D8B")
+                    prefix = "✓" if is_completed else ("—" if _plan_accepted else "○")
+                    if is_completed:
+                        bg_color = "#10B981"
+                    elif not _plan_accepted:
+                        bg_color = "#3E4455"  # Muted for pending plans
+                    else:
+                        bg_color = _WORKOUT_COLORS.get(wtype, "#607D8B")
                     cal_events.append({
                         "id": f"plan_w{week['week_number']}_{j}",
                         "title": f"{prefix} {w['name']} ({dist}km)",
@@ -3651,7 +3655,7 @@ with tab_calendar:
                         "allDay": True,
                         "backgroundColor": bg_color,
                         "borderColor": bg_color,
-                        "editable": not is_completed,
+                        "editable": _plan_accepted and not is_completed,
                         "extendedProps": {
                             "source": "plan",
                             "workout_type": wtype,
