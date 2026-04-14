@@ -5111,13 +5111,13 @@ with tab_user_settings:
                     unsafe_allow_html=True,
                 )
                 _sync_running = st.checkbox("Running", value="running" in _cur_types, key="pref_sync_running")
-                _sync_cardio = st.checkbox("Cardio / HIIT", value=any(t in _cur_types for t in ("fitness", "cardio")), key="pref_sync_cardio")
+                _sync_cardio = st.checkbox("Cardio / HIIT", value=any(t in _cur_types for t in ("fitness_equipment", "fitness", "cardio")), key="pref_sync_cardio")
 
                 _new_types = []
                 if _sync_running:
                     _new_types.append("running")
                 if _sync_cardio:
-                    _new_types.extend(["fitness", "cardio"])
+                    _new_types.append("fitness_equipment")
                 if not _new_types:
                     _new_types = ["running"]
 
