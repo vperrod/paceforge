@@ -523,7 +523,16 @@ async def get_fitness_profile(sync: bool = False, user: dict = Depends(get_curre
     # Sync from Garmin if requested or no cached data
     garmin = _ensure_garmin(uid)
     if garmin:
-        _user_profile[uid] = garmin.get_fitness_profile()
+        # Load user preferences for activity types
+        _prefs_p = load_user_data(settings.db_path, uid)
+        _act_types_p = ["running"]
+        if _prefs_p and _prefs_p.get("preferences_json"):
+            try:
+                _pref_data_p = json.loads(_prefs_p["preferences_json"])
+                _act_types_p = _pref_data_p.get("sync_activity_types", ["running"])
+            except (json.JSONDecodeError, TypeError):
+                pass
+        _user_profile[uid] = garmin.get_fitness_profile(activity_types=_act_types_p)
         save_user_data(settings.db_path, uid, profile_json=_user_profile[uid].model_dump_json())
         return _user_profile[uid]
     # Final fallback to cache even on sync if Garmin is unavailable
@@ -574,7 +583,16 @@ async def get_activities(
     # Sync from Garmin if requested or no cached data
     garmin = _ensure_garmin(uid)
     if garmin:
-        profile = garmin.get_fitness_profile(lookback_days=min(days, 365))
+        # Load user preferences for activity types
+        _prefs = load_user_data(settings.db_path, uid)
+        _act_types = ["running"]
+        if _prefs and _prefs.get("preferences_json"):
+            try:
+                _pref_data = json.loads(_prefs["preferences_json"])
+                _act_types = _pref_data.get("sync_activity_types", ["running"])
+            except (json.JSONDecodeError, TypeError):
+                pass
+        profile = garmin.get_fitness_profile(lookback_days=min(days, 365), activity_types=_act_types)
         activities = [a.model_dump(mode="json") for a in profile.recent_activities]
         save_user_data(settings.db_path, uid, activities_json=json.dumps(activities))
         # Auto-match activities to planned workouts
@@ -585,6 +603,22 @@ async def get_activities(
     if cached and cached.get("activities_json"):
         return [RecentActivity(**a) for a in json.loads(cached["activities_json"])]
     return []
+
+
+@app.get("/preferences")
+async def get_preferences(user: dict = Depends(get_current_user)):
+    """Return user preferences (activity types to sync, etc.)."""
+    cached = load_user_data(settings.db_path, user["id"])
+    if cached and cached.get("preferences_json"):
+        return json.loads(cached["preferences_json"])
+    return {"sync_activity_types": ["running"]}
+
+
+@app.put("/preferences")
+async def save_preferences(body: dict, user: dict = Depends(get_current_user)):
+    """Save user preferences."""
+    save_user_data(settings.db_path, user["id"], preferences_json=json.dumps(body))
+    return body
 
 
 @app.get("/activities/{activity_id}")

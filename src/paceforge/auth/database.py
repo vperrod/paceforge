@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS user_data (
     activities_json TEXT,
     profile_json    TEXT,
     hyrox_json      TEXT,
+    preferences_json TEXT,
     updated_at      TEXT NOT NULL
 );
 
@@ -267,8 +268,9 @@ def save_user_data(
     activities_json: str | None = None,
     profile_json: str | None = None,
     hyrox_json: str | None = None,
+    preferences_json: str | None = None,
 ) -> None:
-    """Upsert cached user data (plan, activities, profile, hyrox)."""
+    """Upsert cached user data (plan, activities, profile, hyrox, preferences)."""
     now = datetime.now(UTC).isoformat()
     with _lock:
         conn = _get_conn(db_path)
@@ -290,6 +292,9 @@ def save_user_data(
             if hyrox_json is not None:
                 sets.append("hyrox_json = ?")
                 vals.append(hyrox_json)
+            if preferences_json is not None:
+                sets.append("preferences_json = ?")
+                vals.append(preferences_json)
             vals.append(user_id)
             conn.execute(
                 f"UPDATE user_data SET {', '.join(sets)} WHERE user_id = ?",
@@ -297,9 +302,9 @@ def save_user_data(
             )
         else:
             conn.execute(
-                "INSERT INTO user_data (user_id, plan_json, activities_json, profile_json, hyrox_json, updated_at) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
-                (user_id, plan_json, activities_json, profile_json, hyrox_json, now),
+                "INSERT INTO user_data (user_id, plan_json, activities_json, profile_json, hyrox_json, preferences_json, updated_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (user_id, plan_json, activities_json, profile_json, hyrox_json, preferences_json, now),
             )
         conn.commit()
 

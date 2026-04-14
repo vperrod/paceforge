@@ -157,7 +157,7 @@ class GarminClient:
 
     # ── Read operations ──────────────────────────────────────────────
 
-    def get_fitness_profile(self, lookback_days: int = 90) -> UserFitnessProfile:
+    def get_fitness_profile(self, lookback_days: int = 90, activity_types: list[str] | None = None) -> UserFitnessProfile:
         """Build an aggregated fitness profile from Garmin data."""
         today = date.today().isoformat()
         # Garmin populates daily metrics after sleep/wakeup — use yesterday
@@ -485,12 +485,28 @@ class GarminClient:
         except Exception:
             logger.warning("Could not fetch personal records", exc_info=True)
 
-        # Recent running activities (no cap — library auto-paginates up to 1000)
+        # Recent activities (multiple types supported)
         activities: list[RecentActivity] = []
+        _act_types = activity_types or ["running"]
         try:
             start = (date.today() - timedelta(days=lookback_days)).isoformat()
-            raw = self.client.get_activities_by_date(start, today, "running")
-            for act in (raw or []):
+            raw: list = []
+            for _atype in _act_types:
+                try:
+                    _type_raw = self.client.get_activities_by_date(start, today, _atype)
+                    raw.extend(_type_raw or [])
+                except Exception:
+                    logger.warning("Could not fetch %s activities", _atype, exc_info=True)
+            # Deduplicate by activityId
+            _seen_ids: set[int] = set()
+            _deduped: list[dict] = []
+            for _a in raw:
+                _aid = _a.get("activityId", 0)
+                if _aid not in _seen_ids:
+                    _seen_ids.add(_aid)
+                    _deduped.append(_a)
+            raw = _deduped
+            for act in raw:
                 activities.append(
                     RecentActivity(
                         activity_id=act.get("activityId", 0),

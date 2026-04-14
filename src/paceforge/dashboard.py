@@ -1340,7 +1340,7 @@ def _render_workout_detail(workout: dict, plan_paces: dict | None = None) -> str
     return f'<div class="pf-card" style="margin-top:1rem;">{"".join(lines)}</div>'
 
 
-def _render_garmin_activity_detail(detail: dict) -> None:
+def _render_garmin_activity_detail(detail: dict, activity_type: str = "running") -> None:
     """Render Garmin activity detail with splits, charts, and HR zones."""
     import plotly.graph_objects as go
     from plotly.subplots import make_subplots
@@ -1365,11 +1365,19 @@ def _render_garmin_activity_detail(detail: dict) -> None:
     aero_te = summary.get("aerobicTrainingEffect")
     anaero_te = summary.get("anaerobicTrainingEffect")
 
-    metric_data = [
-        ("Distance", _fmt_dist(total_dist), ""),
-        ("Duration", _fmt_duration(total_dur / 1000 if total_dur > 10000 else total_dur), ""),
-        ("Avg Pace", _fmt_pace(avg_pace) if avg_pace else "—", ""),
-    ]
+    _is_run = activity_type in ("running", "trail_running", "treadmill_running")
+    if _is_run:
+        metric_data = [
+            ("Distance", _fmt_dist(total_dist), ""),
+            ("Duration", _fmt_duration(total_dur / 1000 if total_dur > 10000 else total_dur), ""),
+            ("Avg Pace", _fmt_pace(avg_pace) if avg_pace else "—", ""),
+        ]
+    else:
+        metric_data = [
+            ("Duration", _fmt_duration(total_dur / 1000 if total_dur > 10000 else total_dur), ""),
+        ]
+        if total_dist and total_dist > 100:
+            metric_data.append(("Distance", _fmt_dist(total_dist), ""))
     if avg_hr:
         metric_data.append(("Avg HR", f"{int(avg_hr)}", "bpm"))
     if max_hr:
@@ -1409,7 +1417,7 @@ def _render_garmin_activity_detail(detail: dict) -> None:
             )
 
     # ── Splits ──
-    laps = splits_data.get("lapDTOs") or []
+    laps = (splits_data.get("lapDTOs") or []) if _is_run else []
     if laps:
         st.markdown(
             f'<div class="pf-card" style="margin-bottom:0.5rem;padding:0.75rem;">'
@@ -3516,17 +3524,29 @@ with tab_calendar:
             start_raw = act.get("start_time", "")
             start_date = start_raw[:10] if start_raw else ""
 
+            _act_type = act.get("activity_type", "running")
+            _is_cardio = _act_type not in ("running", "trail_running", "treadmill_running")
+            if _is_cardio:
+                _dur_s = act.get("duration_seconds", 0)
+                _dur_m, _dur_sec = divmod(int(_dur_s), 60)
+                _cal_title = f"✓ {act.get('name', 'Activity')} ({_dur_m}:{_dur_sec:02d})"
+                _cal_bg = "#A78BFA"
+            else:
+                _cal_title = f"✓ {act.get('name', 'Activity')} ({dist}km{pace_str})"
+                _cal_bg = "#10B981"
+
             cal_events.append({
                 "id": f"act_{i}",
-                "title": f"✓ {act.get('name', 'Activity')} ({dist}km{pace_str})",
+                "title": _cal_title,
                 "start": start_date,
                 "allDay": True,
-                "backgroundColor": "#10B981",
-                "borderColor": "#10B981",
+                "backgroundColor": _cal_bg,
+                "borderColor": _cal_bg,
                 "editable": False,
                 "extendedProps": {
                     "source": "garmin",
                     "activity_id": act.get("activity_id"),
+                    "activity_type": act.get("activity_type", "running"),
                     "distance_km": dist,
                     "pace": pace_str,
                     "duration_seconds": act.get("duration_seconds", 0),
@@ -3763,7 +3783,7 @@ with tab_calendar:
                         )
                         detail_data = st.session_state.get("cal_selected_detail")
                         if detail_data:
-                            _render_garmin_activity_detail(detail_data)
+                            _render_garmin_activity_detail(detail_data, activity_type=props.get("activity_type", "running"))
                         else:
                             # Fallback: show basic info from event props
                             dur = props.get("duration_seconds", 0)
@@ -3771,9 +3791,15 @@ with tab_calendar:
                             dist_km = props.get("distance_km", 0)
                             pace_str = props.get("pace", "")
                             hr_text = f" · Avg HR: {props['avg_hr']} bpm" if props.get("avg_hr") else ""
+                            _fb_type = props.get("activity_type", "running")
+                            _fb_is_run = _fb_type in ("running", "trail_running", "treadmill_running")
+                            if _fb_is_run:
+                                _fb_info = f"{dist_km}km · {dur_m}:{dur_s:02d}{pace_str}{hr_text}"
+                            else:
+                                _fb_info = f"{dur_m}:{dur_s:02d}{hr_text}"
                             st.markdown(
                                 f'<div class="pf-card">'
-                                f'<div style="color:#E8ECF4;">{dist_km}km · {dur_m}:{dur_s:02d}{pace_str}{hr_text}</div>'
+                                f'<div style="color:#E8ECF4;">{_fb_info}</div>'
                                 f'</div>',
                                 unsafe_allow_html=True,
                             )
@@ -5035,6 +5061,50 @@ with tab_user_settings:
         _, col_conn, _ = st.columns([1, 2, 1])
         with col_conn:
             st.markdown('<div class="pf-section-header">Garmin Connect</div>', unsafe_allow_html=True)
+
+            # ── Activity type sync preferences ──
+            if st.session_state.garmin_logged_in:
+                if "sync_prefs" not in st.session_state:
+                    try:
+                        _pr = requests.get(f"{API_BASE}/preferences", headers=_auth_headers(), timeout=10)
+                        st.session_state.sync_prefs = _pr.json() if _pr.status_code == 200 else {"sync_activity_types": ["running"]}
+                    except Exception:
+                        st.session_state.sync_prefs = {"sync_activity_types": ["running"]}
+                _cur_types = st.session_state.sync_prefs.get("sync_activity_types", ["running"])
+
+                st.markdown(
+                    '<div style="margin-bottom:0.25rem;color:#8B95AD;font-size:0.8rem;font-weight:600;">Sync Activity Types</div>',
+                    unsafe_allow_html=True,
+                )
+                _sync_running = st.checkbox("Running", value="running" in _cur_types, key="pref_sync_running")
+                _sync_cardio = st.checkbox("Cardio / HIIT", value=any(t in _cur_types for t in ("fitness", "cardio")), key="pref_sync_cardio")
+
+                _new_types = []
+                if _sync_running:
+                    _new_types.append("running")
+                if _sync_cardio:
+                    _new_types.extend(["fitness", "cardio"])
+                if not _new_types:
+                    _new_types = ["running"]
+
+                if set(_new_types) != set(_cur_types):
+                    try:
+                        _new_prefs = {"sync_activity_types": _new_types}
+                        requests.put(
+                            f"{API_BASE}/preferences",
+                            json=_new_prefs,
+                            headers=_auth_headers(), timeout=10,
+                        )
+                        st.session_state.sync_prefs = _new_prefs
+                        st.success("Sync preferences updated! Click **Sync Garmin** to re-sync.")
+                    except Exception:
+                        st.error("Failed to save preferences")
+
+                st.markdown(
+                    '<div style="color:#8B95AD;font-size:0.7rem;margin-bottom:1rem;">'
+                    "Cardio/HIIT includes elliptical, rowing, gym sessions, and similar activities.</div>",
+                    unsafe_allow_html=True,
+                )
 
             if not st.session_state.garmin_logged_in:
                 if not st.session_state.mfa_required:
