@@ -94,6 +94,25 @@ def _meters_per_sec_to_sec_per_km(speed: float | None) -> float | None:
     return round(1000.0 / speed, 1)
 
 
+# Map of old/invalid activity type keys to the correct Garmin API values
+_ACTIVITY_TYPE_ALIASES = {
+    "fitness": "fitness_equipment",
+    "cardio": "fitness_equipment",
+}
+
+
+def _normalize_activity_types(types: list[str]) -> list[str]:
+    """Convert legacy activity type names to valid Garmin API values."""
+    normalized = []
+    seen: set[str] = set()
+    for t in types:
+        mapped = _ACTIVITY_TYPE_ALIASES.get(t, t)
+        if mapped not in seen:
+            seen.add(mapped)
+            normalized.append(mapped)
+    return normalized or ["running"]
+
+
 def _save_plans(uid: str) -> None:
     """Persist all plans for a user."""
     import json as _json
@@ -530,7 +549,7 @@ async def get_fitness_profile(sync: bool = False, user: dict = Depends(get_curre
         if _prefs_p and _prefs_p.get("preferences_json"):
             try:
                 _pref_data_p = json.loads(_prefs_p["preferences_json"])
-                _act_types_p = _pref_data_p.get("sync_activity_types", ["running"])
+                _act_types_p = _normalize_activity_types(_pref_data_p.get("sync_activity_types", ["running"]))
             except (json.JSONDecodeError, TypeError):
                 pass
         _user_profile[uid] = garmin.get_fitness_profile(activity_types=_act_types_p)
@@ -590,7 +609,7 @@ async def get_activities(
         if _prefs and _prefs.get("preferences_json"):
             try:
                 _pref_data = json.loads(_prefs["preferences_json"])
-                _act_types = _pref_data.get("sync_activity_types", ["running"])
+                _act_types = _normalize_activity_types(_pref_data.get("sync_activity_types", ["running"]))
             except (json.JSONDecodeError, TypeError):
                 pass
         profile = garmin.get_fitness_profile(lookback_days=min(days, 365), activity_types=_act_types)
@@ -611,7 +630,11 @@ async def get_preferences(user: dict = Depends(get_current_user)):
     """Return user preferences (activity types to sync, etc.)."""
     cached = load_user_data(settings.db_path, user["id"])
     if cached and cached.get("preferences_json"):
-        return json.loads(cached["preferences_json"])
+        prefs = json.loads(cached["preferences_json"])
+        # Normalize legacy activity type values
+        if "sync_activity_types" in prefs:
+            prefs["sync_activity_types"] = _normalize_activity_types(prefs["sync_activity_types"])
+        return prefs
     return {"sync_activity_types": ["running"]}
 
 
