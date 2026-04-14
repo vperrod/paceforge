@@ -710,7 +710,11 @@ async def analyze_activity(activity_id: int, user: dict = Depends(get_current_us
     # Build activity dict from cached activities list
     act_dict: dict = {}
     if cached and cached.get("activities_json"):
-        for a in json.loads(cached["activities_json"]):
+        try:
+            activities_list = json.loads(cached["activities_json"])
+        except (json.JSONDecodeError, TypeError):
+            activities_list = []
+        for a in activities_list:
             if a.get("activity_id") == activity_id:
                 act_dict = a
                 break
@@ -722,7 +726,10 @@ async def analyze_activity(activity_id: int, user: dict = Depends(get_current_us
     # Get profile for context
     profile = _user_profile.get(uid)
     if not profile and cached and cached.get("profile_json"):
-        profile = UserFitnessProfile.model_validate_json(cached["profile_json"])
+        try:
+            profile = UserFitnessProfile.model_validate_json(cached["profile_json"])
+        except Exception:
+            profile = None
 
     try:
         coach = _get_or_create_coach(uid)
@@ -731,10 +738,14 @@ async def analyze_activity(activity_id: int, user: dict = Depends(get_current_us
         logger.error("AI analysis failed for activity %s: %s", activity_id, e, exc_info=True)
         raise HTTPException(500, f"AI analysis failed: {e}") from e
 
-    # Cache the result
-    analyses[aid_key] = analysis
-    prefs["activity_analyses"] = analyses
-    save_user_data(settings.db_path, uid, preferences_json=json.dumps(prefs))
+    # Cache the result (skip error responses so retries are possible)
+    if analysis and not analysis.startswith("Could not analyze"):
+        analyses[aid_key] = analysis
+        prefs["activity_analyses"] = analyses
+        try:
+            save_user_data(settings.db_path, uid, preferences_json=json.dumps(prefs))
+        except Exception as e:
+            logger.warning("Failed to cache analysis for activity %s: %s", activity_id, e)
 
     return {"analysis": analysis}
 
