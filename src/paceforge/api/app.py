@@ -111,7 +111,7 @@ def _normalize_activity_types(types: list[str]) -> list[str]:
         if mapped not in seen:
             seen.add(mapped)
             normalized.append(mapped)
-    return normalized or ["running"]
+    return normalized or ["running", "fitness_equipment"]
 
 
 def _save_plans(uid: str) -> None:
@@ -546,11 +546,11 @@ async def get_fitness_profile(sync: bool = False, user: dict = Depends(get_curre
     if garmin:
         # Load user preferences for activity types
         _prefs_p = load_user_data(settings.db_path, uid)
-        _act_types_p = ["running"]
+        _act_types_p = ["running", "fitness_equipment"]
         if _prefs_p and _prefs_p.get("preferences_json"):
             try:
                 _pref_data_p = json.loads(_prefs_p["preferences_json"])
-                _act_types_p = _normalize_activity_types(_pref_data_p.get("sync_activity_types", ["running"]))
+                _act_types_p = _normalize_activity_types(_pref_data_p.get("sync_activity_types", ["running", "fitness_equipment"]))
             except (json.JSONDecodeError, TypeError):
                 pass
         _user_profile[uid] = garmin.get_fitness_profile(activity_types=_act_types_p)
@@ -606,11 +606,11 @@ async def get_activities(
     if garmin:
         # Load user preferences for activity types
         _prefs = load_user_data(settings.db_path, uid)
-        _act_types = ["running"]
+        _act_types = ["running", "fitness_equipment"]
         if _prefs and _prefs.get("preferences_json"):
             try:
                 _pref_data = json.loads(_prefs["preferences_json"])
-                _act_types = _normalize_activity_types(_pref_data.get("sync_activity_types", ["running"]))
+                _act_types = _normalize_activity_types(_pref_data.get("sync_activity_types", ["running", "fitness_equipment"]))
             except (json.JSONDecodeError, TypeError):
                 pass
         profile = garmin.get_fitness_profile(lookback_days=min(days, 365), activity_types=_act_types)
@@ -687,7 +687,7 @@ async def get_preferences(user: dict = Depends(get_current_user)):
         if "sync_activity_types" in prefs:
             prefs["sync_activity_types"] = _normalize_activity_types(prefs["sync_activity_types"])
         return prefs
-    return {"sync_activity_types": ["running"]}
+    return {"sync_activity_types": ["running", "fitness_equipment"]}
 
 
 @app.put("/preferences")

@@ -5224,9 +5224,9 @@ with tab_user_settings:
                 if "sync_prefs" not in st.session_state:
                     try:
                         _pr = requests.get(f"{API_BASE}/preferences", headers=_auth_headers(), timeout=10)
-                        st.session_state.sync_prefs = _pr.json() if _pr.status_code == 200 else {"sync_activity_types": ["running"]}
+                        st.session_state.sync_prefs = _pr.json() if _pr.status_code == 200 else {"sync_activity_types": ["running", "fitness_equipment"]}
                     except Exception:
-                        st.session_state.sync_prefs = {"sync_activity_types": ["running"]}
+                        st.session_state.sync_prefs = {"sync_activity_types": ["running", "fitness_equipment"]}
                 _cur_types = st.session_state.sync_prefs.get("sync_activity_types", ["running"])
 
                 st.markdown(
