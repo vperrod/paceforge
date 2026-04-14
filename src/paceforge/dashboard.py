@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
+import logging
 from datetime import date, timedelta
 from datetime import datetime as _dt_now
 from pathlib import Path
@@ -1610,7 +1611,6 @@ if st.session_state.jwt is None:
 
 # ── Auto-restore Garmin connection, plan, and activities on load ─────
 if not st.session_state._restored:
-    st.session_state._restored = True
     with st.spinner("Loading your training data..."):
         # 1) Check Garmin connection (triggers auto-reconnect from cached tokens)
         try:
@@ -1625,7 +1625,7 @@ if not st.session_state._restored:
                     st.session_state.garmin_logged_in = True
                 st.session_state["last_synced"] = status_data.get("last_synced")
         except Exception:
-            pass
+            logging.warning("Failed to check Garmin status on restore", exc_info=True)
 
         # 2) Restore plans from DB cache
         try:
@@ -1638,9 +1638,9 @@ if not st.session_state._restored:
                 if r.status_code == 200:
                     st.session_state.plans = r.json()
         except Exception:
-            pass
+            logging.warning("Failed to restore plans on startup", exc_info=True)
 
-        # 3) Restore activities from DB cache (never auto-sync on startup)
+        # 3) Restore activities from DB cache
         try:
             if not st.session_state.get("garmin_activities"):
                 r = requests.get(
@@ -1651,7 +1651,7 @@ if not st.session_state._restored:
                 if r.status_code == 200:
                     st.session_state["garmin_activities"] = r.json()
         except Exception:
-            pass
+            logging.warning("Failed to restore activities on startup", exc_info=True)
 
         # 4) Restore fitness profile from DB cache
         try:
@@ -1664,7 +1664,7 @@ if not st.session_state._restored:
                 if r.status_code == 200:
                     st.session_state.profile = r.json()
         except Exception:
-            pass
+            logging.warning("Failed to restore profile on startup", exc_info=True)
 
         # 5) Pre-load analytics from cached profile
         try:
@@ -1677,7 +1677,11 @@ if not st.session_state._restored:
                 if r.status_code == 200:
                     st.session_state.analytics = r.json()
         except Exception:
-            pass
+            logging.warning("Failed to restore analytics on startup", exc_info=True)
+
+    # Mark restored AFTER all API calls complete — if a CookieManager rerun
+    # interrupts mid-block, this stays False so restore retries next cycle.
+    st.session_state._restored = True
 
 # ── Sidebar ──────────────────────────────────────────────────────────
 
@@ -5126,7 +5130,15 @@ with tab_user_settings:
                             headers=_auth_headers(), timeout=10,
                         )
                         st.session_state.sync_prefs = _new_prefs
-                        st.success("Sync preferences updated! Click **Sync Garmin** to re-sync.")
+                        # Auto re-sync activities with updated preferences
+                        with st.spinner("Re-syncing activities with new preferences..."):
+                            _ar = requests.get(
+                                f"{API_BASE}/activities?days=240&sync=true",
+                                headers=_auth_headers(), timeout=60,
+                            )
+                            if _ar.status_code == 200:
+                                st.session_state["garmin_activities"] = _ar.json()
+                        st.rerun()
                     except Exception:
                         st.error("Failed to save preferences")
 
