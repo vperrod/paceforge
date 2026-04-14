@@ -617,9 +617,19 @@ async def get_preferences(user: dict = Depends(get_current_user)):
 
 @app.put("/preferences")
 async def save_preferences(body: dict, user: dict = Depends(get_current_user)):
-    """Save user preferences."""
-    save_user_data(settings.db_path, user["id"], preferences_json=json.dumps(body))
-    return body
+    """Save user preferences (merges with existing)."""
+    uid = user["id"]
+    # Merge with existing preferences to avoid clobbering other keys
+    existing: dict = {}
+    cached = load_user_data(settings.db_path, uid)
+    if cached and cached.get("preferences_json"):
+        try:
+            existing = json.loads(cached["preferences_json"])
+        except (json.JSONDecodeError, TypeError):
+            existing = {}
+    existing.update(body)
+    save_user_data(settings.db_path, uid, preferences_json=json.dumps(existing))
+    return existing
 
 
 @app.get("/activities/{activity_id}")
