@@ -2297,9 +2297,8 @@ with tab_feed:
                 if col_strava is not None and _feed_act_id:
                     with col_strava:
                         _feed_sent = st.session_state.get(f"strava_sent_{_feed_act_id}", False)
-                        if _feed_sent:
-                            st.markdown('<span style="color:#FC4C02;font-size:0.8rem;">✓ Strava</span>', unsafe_allow_html=True)
-                        elif st.button("Strava", key=f"feed_strava_{ev['id']}_{idx}", use_container_width=True):
+                        _feed_strava_label = "✓ Strava" if _feed_sent else "Strava"
+                        if st.button(_feed_strava_label, key=f"feed_strava_{ev['id']}_{idx}", use_container_width=True):
                             with st.spinner("Sending..."):
                                 try:
                                     _sr = requests.post(
@@ -4278,13 +4277,8 @@ with tab_calendar:
 
                             if _strava_prefs.get("connected"):
                                 _already_sent = st.session_state.get(f"strava_sent_{_ai_act_id}", False)
-                                if _already_sent:
-                                    st.markdown(
-                                        '<div style="color:#FC4C02;font-size:0.85rem;padding:0.4rem 0;">'
-                                        '✓ Sent to Strava</div>',
-                                        unsafe_allow_html=True,
-                                    )
-                                elif st.button("Send to Strava", key=f"strava_push_{_ai_act_id}", use_container_width=True):
+                                _strava_btn_label = "Update on Strava" if _already_sent else "Send to Strava"
+                                if st.button(_strava_btn_label, key=f"strava_push_{_ai_act_id}", use_container_width=True):
                                     with st.spinner("Sending to Strava..."):
                                         try:
                                             _sr = requests.post(
@@ -4552,13 +4546,8 @@ with tab_calendar:
 
                                 if _strava_prefs.get("connected"):
                                     _already_sent = st.session_state.get(f"strava_sent_{_plan_act_id}", False)
-                                    if _already_sent:
-                                        st.markdown(
-                                            '<div style="color:#FC4C02;font-size:0.85rem;padding:0.4rem 0;">'
-                                            '✓ Sent to Strava</div>',
-                                            unsafe_allow_html=True,
-                                        )
-                                    elif st.button("Send to Strava", key=f"strava_push_plan_{_plan_act_id}", use_container_width=True):
+                                    _strava_btn_label = "Update on Strava" if _already_sent else "Send to Strava"
+                                    if st.button(_strava_btn_label, key=f"strava_push_plan_{_plan_act_id}", use_container_width=True):
                                         with st.spinner("Sending to Strava..."):
                                             try:
                                                 _sr = requests.post(

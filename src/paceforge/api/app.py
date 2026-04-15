@@ -2053,8 +2053,6 @@ async def strava_push(activity_id: int, user: dict = Depends(get_current_user)):
         except (json.JSONDecodeError, TypeError):
             prefs = {}
     sent: list = prefs.get("strava_sent_activities", [])
-    if activity_id in sent:
-        raise HTTPException(409, "Activity already sent to Strava")
 
     # 3. Find activity in cached data
     act_dict: dict | None = None
@@ -2190,22 +2188,42 @@ async def strava_push(activity_id: int, user: dict = Depends(get_current_user)):
             )
             strava_id = result.get("id", "")
         except DuplicateActivityError:
-            sent.append(activity_id)
-            prefs["strava_sent_activities"] = sent
-            save_user_data(settings.db_path, uid, preferences_json=json.dumps(prefs))
-            return {
-                "strava_activity_id": None,
-                "url": None,
-                "duplicate": True,
-                "message": "Activity already exists on Strava (likely auto-synced from Garmin)",
-            }
+            # Strava rejected create (409) — try to find and update instead
+            if start_epoch:
+                try:
+                    existing = client.find_matching_activity(
+                        access_token, start_epoch,
+                        distance_meters=act_dict.get("distance_meters"),
+                    )
+                    if existing:
+                        strava_id = existing["id"]
+                        client.update_activity(
+                            access_token, strava_id,
+                            name=strava_title, description=description,
+                        )
+                        updated = True
+                        logger.info("Updated duplicate Strava activity %s with PaceForge data", strava_id)
+                except Exception as ue:
+                    logger.warning("Failed to update duplicate Strava activity: %s", ue)
+            if not updated:
+                if activity_id not in sent:
+                    sent.append(activity_id)
+                    prefs["strava_sent_activities"] = sent
+                    save_user_data(settings.db_path, uid, preferences_json=json.dumps(prefs))
+                return {
+                    "strava_activity_id": None,
+                    "url": None,
+                    "duplicate": True,
+                    "message": "Activity exists on Strava but could not be updated",
+                }
         except Exception as e:
             logger.error("Strava create activity failed: %s", e)
             raise HTTPException(502, f"Strava API error: {e}")
 
     # 13. Record that we sent this activity
-    sent.append(activity_id)
-    prefs["strava_sent_activities"] = sent
+    if activity_id not in sent:
+        sent.append(activity_id)
+        prefs["strava_sent_activities"] = sent
     save_user_data(settings.db_path, uid, preferences_json=json.dumps(prefs))
 
     return {
