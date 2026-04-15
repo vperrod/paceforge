@@ -892,6 +892,22 @@ details[open] > div {
     font-size: 0.8rem;
     font-family: var(--font-body);
 }
+
+/* ── Calendar iframe scrollbar fix ── */
+iframe[title="streamlit_calendar.calendar"] {
+    overflow: hidden !important;
+    scrollbar-width: none !important;
+}
+iframe[title="streamlit_calendar.calendar"]::-webkit-scrollbar {
+    display: none !important;
+}
+/* Also target the Streamlit component container */
+[data-testid="stCustomComponentV1"] {
+    overflow: hidden !important;
+}
+[data-testid="stCustomComponentV1"] > div {
+    overflow: hidden !important;
+}
 </style>
 """
 
@@ -4128,6 +4144,13 @@ with tab_calendar:
                                         frames[i].style.minHeight = h + 'px';
                                         frames[i].style.overflow = 'hidden';
                                         frames[i].scrolling = 'no';
+                                        // Hide scrollbars inside the iframe
+                                        if (!fd.getElementById('pf-no-scroll')) {
+                                            var s = fd.createElement('style');
+                                            s.id = 'pf-no-scroll';
+                                            s.textContent = 'html, body { overflow: hidden !important; scrollbar-width: none !important; -ms-overflow-style: none !important; } html::-webkit-scrollbar, body::-webkit-scrollbar { display: none !important; }';
+                                            fd.head.appendChild(s);
+                                        }
                                         frames[i].contentWindow.dispatchEvent(new Event('resize'));
                                     }
                                 } catch(e) {}
