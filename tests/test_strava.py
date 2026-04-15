@@ -326,8 +326,9 @@ class TestFindMatchingActivity:
 
     def test_no_match_time_too_far(self):
         client = StravaClient(client_id="cid", client_secret="csec")
+        # 16h gap exceeds the 14h timezone-aware window
         client.list_activities = MagicMock(return_value=[
-            {"id": 333, "start_date": "2026-04-15T10:00:00Z", "distance": 10000},
+            {"id": 333, "start_date": "2026-04-14T15:00:00Z", "distance": 10000},
         ])
         from datetime import datetime
         epoch = datetime(2026, 4, 15, 7, 0, 0, tzinfo=UTC).timestamp()

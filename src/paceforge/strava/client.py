@@ -124,13 +124,20 @@ class StravaClient:
         start_time_epoch: float,
         distance_meters: float | None = None,
     ) -> dict | None:
-        """Find a Strava activity matching by start time (±120s) and distance (±10%)."""
+        """Find a Strava activity matching by start time and distance.
+
+        Uses a wide time window (±14h) to handle timezone mismatches between
+        Garmin local time and Strava UTC, then picks the closest time match.
+        """
+        _WINDOW = 14 * 3600  # 14 hours in seconds
         activities = self.list_activities(
             access_token,
-            after=int(start_time_epoch) - 120,
-            before=int(start_time_epoch) + 86400,
-            per_page=30,
+            after=int(start_time_epoch) - _WINDOW,
+            before=int(start_time_epoch) + _WINDOW,
+            per_page=50,
         )
+        best: dict | None = None
+        best_dt: float = float("inf")
         for act in activities:
             act_start_str = act.get("start_date", "")
             if not act_start_str:
@@ -141,13 +148,18 @@ class StravaClient:
                 ).timestamp()
             except (ValueError, TypeError):
                 continue
-            if abs(act_epoch - start_time_epoch) > 120:
+            dt = abs(act_epoch - start_time_epoch)
+            if dt > _WINDOW:
                 continue
             if distance_meters and distance_meters > 0 and act.get("distance"):
                 if abs(act["distance"] - distance_meters) / max(distance_meters, 1) > 0.15:
                     continue
-            return act
-        return None
+            elif distance_meters and distance_meters > 0 and not act.get("distance"):
+                continue
+            if dt < best_dt:
+                best = act
+                best_dt = dt
+        return best
 
     def update_activity(
         self,
