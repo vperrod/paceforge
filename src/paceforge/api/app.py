@@ -670,6 +670,72 @@ async def save_preferences(body: dict, user: dict = Depends(get_current_user)):
     return existing
 
 
+# ── Health data (Apple Health / Google Health Connect) ────────────────
+
+
+@app.get("/health/data")
+async def get_health_data(user: dict = Depends(get_current_user)):
+    """Return stored health data (body composition, etc.)."""
+    cached = load_user_data(settings.db_path, user["id"])
+    if cached and cached.get("health_json"):
+        try:
+            return json.loads(cached["health_json"])
+        except (json.JSONDecodeError, TypeError):
+            pass
+    return {"sources": [], "last_sync": None, "body_composition": {}}
+
+
+@app.post("/health/data")
+async def post_health_data(body: dict, user: dict = Depends(get_current_user)):
+    """Receive health data from mobile app. Merges with existing, deduplicates, trims to 90 days."""
+    import contextlib
+    from datetime import datetime, timedelta
+
+    uid = user["id"]
+    cutoff = (datetime.now().date() - timedelta(days=90)).isoformat()
+
+    # Load existing
+    existing: dict = {"sources": [], "last_sync": None, "body_composition": {}}
+    cached = load_user_data(settings.db_path, uid)
+    if cached and cached.get("health_json"):
+        with contextlib.suppress(json.JSONDecodeError, TypeError):
+            existing = json.loads(cached["health_json"])
+
+    # Merge sources
+    new_sources = body.get("sources", [])
+    merged_sources = list(set(existing.get("sources", []) + new_sources))
+
+    # Merge body composition fields
+    bc_existing = existing.get("body_composition", {})
+    bc_new = body.get("body_composition", {})
+
+    # Preserve height (latest wins)
+    height = bc_new.get("height_cm") or bc_existing.get("height_cm")
+
+    # Merge time-series fields: deduplicate by date, trim to 90 days
+    merged_bc: dict = {"height_cm": height}
+    for field in ("weight_kg", "bmi", "body_fat_pct", "lean_body_mass_kg"):
+        old_points = bc_existing.get(field, [])
+        new_points = bc_new.get(field, [])
+        # Index by date — new overwrites old
+        by_date: dict = {}
+        for pt in old_points:
+            if isinstance(pt, dict) and pt.get("date", "") >= cutoff:
+                by_date[pt["date"]] = pt
+        for pt in new_points:
+            if isinstance(pt, dict) and pt.get("date", "") >= cutoff:
+                by_date[pt["date"]] = pt
+        merged_bc[field] = sorted(by_date.values(), key=lambda x: x["date"])
+
+    result = {
+        "sources": merged_sources,
+        "last_sync": datetime.now().isoformat(),
+        "body_composition": merged_bc,
+    }
+    save_user_data(settings.db_path, uid, health_json=json.dumps(result))
+    return result
+
+
 @app.get("/activities/{activity_id}")
 async def get_activity_detail(activity_id: int, user: dict = Depends(get_current_user)):
     """Return detailed splits, HR zones, and summary for an activity."""

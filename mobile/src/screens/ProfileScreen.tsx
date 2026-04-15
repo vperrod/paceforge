@@ -1,16 +1,21 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Switch, ActivityIndicator } from 'react-native';
 import { colors, spacing, fontSize } from '../theme';
 import { useAuthStore } from '../store/auth';
 import api from '../api/client';
+import { syncHealthData } from '../services/healthSync';
 
 export default function ProfileScreen() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const [profile, setProfile] = React.useState<any>(null);
+  const [healthEnabled, setHealthEnabled] = React.useState(false);
+  const [healthSyncing, setHealthSyncing] = React.useState(false);
+  const [lastSync, setLastSync] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     loadProfile();
+    loadHealthPrefs();
   }, []);
 
   const loadProfile = async () => {
@@ -18,6 +23,52 @@ export default function ProfileScreen() {
       const { data } = await api.get('/profile');
       setProfile(data);
     } catch {}
+  };
+
+  const loadHealthPrefs = async () => {
+    try {
+      const { data } = await api.get('/preferences');
+      const hc = data?.health_connections ?? {};
+      const enabled = Platform.OS === 'ios' ? !!hc.apple_health : !!hc.google_health_connect;
+      setHealthEnabled(enabled);
+
+      // Load last sync time
+      const hd = await api.get('/health/data');
+      if (hd.data?.last_sync) {
+        setLastSync(hd.data.last_sync.slice(0, 16).replace('T', ' '));
+      }
+    } catch {}
+  };
+
+  const toggleHealth = async (value: boolean) => {
+    setHealthEnabled(value);
+    try {
+      const key = Platform.OS === 'ios' ? 'apple_health' : 'google_health_connect';
+      await api.put('/preferences', {
+        health_connections: { [key]: value },
+      });
+      if (value) {
+        handleHealthSync();
+      }
+    } catch {
+      setHealthEnabled(!value);
+      Alert.alert('Error', 'Failed to update health connection');
+    }
+  };
+
+  const handleHealthSync = async () => {
+    setHealthSyncing(true);
+    try {
+      const result = await syncHealthData(90);
+      if (result?.last_sync) {
+        setLastSync(result.last_sync.slice(0, 16).replace('T', ' '));
+      }
+      Alert.alert('Success', 'Health data synced successfully');
+    } catch {
+      Alert.alert('Error', 'Failed to sync health data');
+    } finally {
+      setHealthSyncing(false);
+    }
   };
 
   const handleLogout = () => {
@@ -79,6 +130,44 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Health Data Source */}
+      <View style={styles.section}>
+        <View style={styles.healthHeader}>
+          <Text style={styles.sectionTitle}>
+            {Platform.OS === 'ios' ? '🍎 Apple Health' : '💚 Health Connect'}
+          </Text>
+        </View>
+        <View style={styles.healthRow}>
+          <Text style={styles.menuText}>Sync body composition</Text>
+          <Switch
+            value={healthEnabled}
+            onValueChange={toggleHealth}
+            trackColor={{ false: colors.border, true: colors.secondary }}
+          />
+        </View>
+        {healthEnabled && (
+          <>
+            <TouchableOpacity
+              style={styles.syncButton}
+              onPress={handleHealthSync}
+              disabled={healthSyncing}
+            >
+              {healthSyncing ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <Text style={styles.syncText}>Sync Now</Text>
+              )}
+            </TouchableOpacity>
+            {lastSync && (
+              <Text style={styles.lastSyncText}>Last sync: {lastSync}</Text>
+            )}
+          </>
+        )}
+        <Text style={styles.healthDesc}>
+          Weight, BMI, body fat %, lean body mass
+        </Text>
+      </View>
+
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.logoutText}>Log Out</Text>
       </TouchableOpacity>
@@ -120,4 +209,17 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderRadius: 12, alignItems: 'center',
   },
   logoutText: { fontSize: fontSize.md, color: colors.danger, fontWeight: '600' },
+  healthHeader: { padding: spacing.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+  sectionTitle: { fontSize: fontSize.md, fontWeight: '600', color: colors.text },
+  healthRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    padding: spacing.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border,
+  },
+  syncButton: {
+    margin: spacing.md, marginTop: spacing.sm, padding: spacing.sm,
+    backgroundColor: colors.primary + '15', borderRadius: 8, alignItems: 'center',
+  },
+  syncText: { color: colors.primary, fontWeight: '600', fontSize: fontSize.sm },
+  lastSyncText: { color: colors.textSecondary, fontSize: fontSize.xs, textAlign: 'center', marginBottom: spacing.sm },
+  healthDesc: { color: colors.textSecondary, fontSize: fontSize.xs, padding: spacing.md, paddingTop: spacing.xs },
 });

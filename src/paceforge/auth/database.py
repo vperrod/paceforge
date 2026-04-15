@@ -102,6 +102,8 @@ _MIGRATIONS = [
         id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id),
         platform TEXT NOT NULL CHECK(platform IN ('ios', 'android', 'web')),
         token TEXT NOT NULL, created_at TEXT NOT NULL, UNIQUE(user_id, token))""",
+    # Add health_json column for Apple Health / Google Health Connect data
+    "ALTER TABLE user_data ADD COLUMN health_json TEXT",
 ]
 
 
@@ -269,8 +271,9 @@ def save_user_data(
     profile_json: str | None = None,
     hyrox_json: str | None = None,
     preferences_json: str | None = None,
+    health_json: str | None = None,
 ) -> None:
-    """Upsert cached user data (plan, activities, profile, hyrox, preferences)."""
+    """Upsert cached user data (plan, activities, profile, hyrox, preferences, health)."""
     now = datetime.now(UTC).isoformat()
     with _lock:
         conn = _get_conn(db_path)
@@ -295,6 +298,9 @@ def save_user_data(
             if preferences_json is not None:
                 sets.append("preferences_json = ?")
                 vals.append(preferences_json)
+            if health_json is not None:
+                sets.append("health_json = ?")
+                vals.append(health_json)
             vals.append(user_id)
             conn.execute(
                 f"UPDATE user_data SET {', '.join(sets)} WHERE user_id = ?",
@@ -302,9 +308,9 @@ def save_user_data(
             )
         else:
             conn.execute(
-                "INSERT INTO user_data (user_id, plan_json, activities_json, profile_json, hyrox_json, preferences_json, updated_at) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (user_id, plan_json, activities_json, profile_json, hyrox_json, preferences_json, now),
+                "INSERT INTO user_data (user_id, plan_json, activities_json, profile_json, hyrox_json, preferences_json, health_json, updated_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (user_id, plan_json, activities_json, profile_json, hyrox_json, preferences_json, health_json, now),
             )
         conn.commit()
 

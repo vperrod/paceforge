@@ -7,6 +7,31 @@ from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
+# ── Health data models (Apple Health / Google Health Connect) ─────────
+
+
+class HealthDataPoint(BaseModel):
+    """Single health measurement."""
+    date: str  # ISO date string YYYY-MM-DD
+    value: float
+    source: str = "unknown"  # "apple_health", "google_health_connect", "garmin"
+
+
+class BodyComposition(BaseModel):
+    """Body composition time-series data."""
+    height_cm: float | None = None
+    weight_kg: list[HealthDataPoint] = Field(default_factory=list)
+    bmi: list[HealthDataPoint] = Field(default_factory=list)
+    body_fat_pct: list[HealthDataPoint] = Field(default_factory=list)
+    lean_body_mass_kg: list[HealthDataPoint] = Field(default_factory=list)
+
+
+class HealthData(BaseModel):
+    """Top-level health data wrapper for a user."""
+    sources: list[str] = Field(default_factory=list)  # e.g. ["apple_health"]
+    last_sync: str | None = None  # ISO datetime
+    body_composition: BodyComposition = Field(default_factory=BodyComposition)
+
 
 class HRZone(BaseModel):
     zone: int
