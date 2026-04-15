@@ -2060,8 +2060,7 @@ with tab_feed:
             _p_acts = _pdata.get("activities", [])
             if _p_acts:
                 st.markdown('<div class="pf-section-header" style="font-size:0.95rem;margin-top:1rem;">Recent Activities</div>', unsafe_allow_html=True)
-                _act_rows_html = ""
-                for _pa in _p_acts[:15]:
+                for _pa_idx, _pa in enumerate(_p_acts[:15]):
                     _pa_name = _pa.get("name", "Activity")
                     _pa_type = _pa.get("activity_type", "running")
                     _pa_date = str(_pa.get("start_time", ""))[:10]
@@ -2082,24 +2081,44 @@ with tab_feed:
                         _pa_parts.append(f"{_ppm}:{_pps:02d}/km")
                     if _pa_hr:
                         _pa_parts.append(f"{_pa_hr}bpm")
-                    _pa_detail = " · ".join(_pa_parts)
+                    _pa_detail = " \u00b7 ".join(_pa_parts)
 
-                    _pa_type_color = "#10B981" if _pa_is_run else "#A78BFA"
-                    _act_rows_html += (
-                        f'<div style="display:flex;justify-content:space-between;align-items:center;'
-                        f'padding:0.45rem 0;border-bottom:1px solid #252A35;">'
-                        f'<div>'
-                        f'<span style="color:#8B95AD;font-size:0.75rem;margin-right:0.5rem;">{_pa_date}</span>'
-                        f'<span style="color:{_pa_type_color};font-size:0.65rem;margin-right:0.4rem;">●</span>'
-                        f'<span style="color:#E8ECF4;font-weight:500;font-size:0.9rem;">{_pa_name}</span>'
-                        f'</div>'
-                        f'<div style="color:#8B95AD;font-size:0.82rem;white-space:nowrap;">{_pa_detail}</div>'
-                        f'</div>'
-                    )
-                st.markdown(
-                    f'<div class="pf-card" style="padding:0.8rem;">{_act_rows_html}</div>',
-                    unsafe_allow_html=True,
-                )
+                    with st.expander(f"{_pa_name} \u2014 {_pa_date}  ({_pa_detail})", expanded=False):
+                        _det_items = []
+                        if _pa_dist:
+                            _det_items.append(("Distance", f"{_pa_dist / 1000:.2f}", "km"))
+                        if _pa_dur:
+                            _dh, _drem = divmod(int(_pa_dur), 3600)
+                            _ddm, _dds = divmod(_drem, 60)
+                            _det_items.append(("Duration", f"{_dh}:{_ddm:02d}:{_dds:02d}" if _dh else f"{_ddm}:{_dds:02d}", ""))
+                        if _pa_is_run and _pa_pace:
+                            _dpm, _dps = divmod(int(_pa_pace), 60)
+                            _det_items.append(("Avg Pace", f"{_dpm}:{_dps:02d}", "/km"))
+                        if _pa_hr:
+                            _det_items.append(("Avg HR", str(int(_pa_hr)), "bpm"))
+                        _pa_maxhr = _pa.get("max_hr")
+                        if _pa_maxhr:
+                            _det_items.append(("Max HR", str(int(_pa_maxhr)), "bpm"))
+                        _pa_cal = _pa.get("calories")
+                        if _pa_cal:
+                            _det_items.append(("Calories", str(int(_pa_cal)), "kcal"))
+                        _pa_cad = _pa.get("avg_running_cadence")
+                        if _pa_cad:
+                            _det_items.append(("Cadence", str(int(_pa_cad)), "spm"))
+                        _pa_elev = _pa.get("elevation_gain")
+                        if _pa_elev and _pa_elev > 0:
+                            _det_items.append(("Elevation", f"{int(_pa_elev)}", "m"))
+                        _pa_te = _pa.get("training_effect_aerobic")
+                        if _pa_te:
+                            _det_items.append(("Aerobic TE", f"{_pa_te:.1f}", ""))
+                        _pa_te2 = _pa.get("training_effect_anaerobic")
+                        if _pa_te2:
+                            _det_items.append(("Anaerobic TE", f"{_pa_te2:.1f}", ""))
+                        _pa_vo2 = _pa.get("vo2_max_value")
+                        if _pa_vo2:
+                            _det_items.append(("VO\u2082 Max", f"{_pa_vo2:.0f}", ""))
+                        if _det_items:
+                            st.markdown(_metrics_strip(_det_items), unsafe_allow_html=True)
 
             # ── HYROX Races ──
             _p_hyrox = _pdata.get("hyrox")
@@ -2138,7 +2157,7 @@ with tab_feed:
             # ── Recent Feed Activity ──
             _p_feed = _pdata.get("feed", [])
             if _p_feed:
-                st.markdown('<div class="pf-section-header" style="font-size:0.95rem;margin-top:1rem;">Recent Activity</div>', unsafe_allow_html=True)
+                st.markdown('<div class="pf-section-header" style="font-size:0.95rem;margin-top:1rem;">Latest Updates</div>', unsafe_allow_html=True)
                 for _pf_ev in _p_feed[:10]:
                     _pf_date = _pf_ev.get("created_at", "")[:10]
                     st.markdown(
@@ -2241,10 +2260,34 @@ with tab_feed:
                     if _m_items:
                         _rich_metrics_html = _metrics_strip(_m_items)
 
-                # User name is clickable to view profile
+                # Build pace/distance visual bar for activity cards
+                _pace_chart_html = ""
+                if ev.get("event_type") == "activity" and _ev_meta and _m_dist:
+                    _bar_pct = min(_m_dist / 30000 * 100, 100)
+                    if _m_pace:
+                        _pace_ratio = max(0, min(1, (_m_pace - 330) / (420 - 330)))
+                        _bar_hue = 140 - _pace_ratio * 140
+                    else:
+                        _bar_hue = 140
+                    _dist_label = f"{_m_dist / 1000:.1f}km"
+                    _pace_label = ""
+                    if _m_pace:
+                        _plm, _pls = divmod(int(_m_pace), 60)
+                        _pace_label = f"{_plm}:{_pls:02d}/km"
+                    _pace_chart_html = (
+                        f'<div style="margin:0.5rem 0 0.3rem;position:relative;">'
+                        f'<div style="background:#1E2130;border-radius:6px;height:24px;overflow:hidden;">'
+                        f'<div style="background:hsl({_bar_hue},65%,45%);height:100%;width:{_bar_pct}%;'
+                        f'border-radius:6px;transition:width 0.3s;"></div></div>'
+                        f'<div style="display:flex;justify-content:space-between;margin-top:0.2rem;'
+                        f'font-size:0.75rem;color:#8B95AD;">'
+                        f'<span>{_dist_label}</span>'
+                        + (f'<span>{_pace_label}</span>' if _pace_label else '')
+                        + f'</div></div>'
+                    )
+
                 _name_click_html = (
-                    f'<span style="color:#E8ECF4;font-weight:600;cursor:pointer;'
-                    f'border-bottom:1px dashed #8B95AD33;">{user_name}</span>'
+                    f'<span style="color:#E8ECF4;font-weight:600;">{user_name}</span>'
                 )
 
                 st.markdown(
@@ -2261,6 +2304,7 @@ with tab_feed:
                     f'{icon} {ev.get("title", "")}</div>'
                     + (f'<div style="color:#B0B7C3;font-size:0.9rem;margin-bottom:0.5rem;">{ev.get("body")}</div>'
                        if ev.get("body") else '')
+                    + _pace_chart_html
                     + _rich_metrics_html
                     + f'<div style="color:#8B95AD;font-size:0.85rem;margin-top:0.4rem;">'
                     f'{heart} {like_count}  ·  {comment_count}</div>'
@@ -2283,15 +2327,16 @@ with tab_feed:
                         st.session_state["_strava_conn"] = _strava_prefs
                     _show_strava_in_feed = _strava_prefs.get("connected", False)
 
+                if st.button(f"\U0001f464 {user_name}", key=f"feed_profile_{ev['id']}_{idx}",
+                             type="tertiary", use_container_width=False):
+                    st.session_state["viewing_profile_id"] = _ev_user_id
+                    st.rerun()
+
                 if _show_strava_in_feed:
-                    col_profile, col_like, col_comment, col_strava = st.columns([1, 1, 1, 1])
+                    col_like, col_comment, col_strava = st.columns([1, 1, 1])
                 else:
-                    col_profile, col_like, col_comment = st.columns([1, 1, 1])
+                    col_like, col_comment = st.columns([1, 1])
                     col_strava = None
-                with col_profile:
-                    if st.button("Profile", key=f"feed_profile_{ev['id']}_{idx}", use_container_width=True):
-                        st.session_state["viewing_profile_id"] = _ev_user_id
-                        st.rerun()
                 with col_like:
                     like_label = "Unlike" if liked_by_me else "Like"
                     if st.button(f"{heart} {like_label}", key=f"feed_like_{ev['id']}_{idx}", use_container_width=True):
