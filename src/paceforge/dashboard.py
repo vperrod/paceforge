@@ -3818,6 +3818,7 @@ with tab_calendar:
     st.markdown('<div class="pf-section-header">Training Calendar</div>', unsafe_allow_html=True)
 
     # Refresh button for calendar tab (reloads data without full page refresh)
+    _cal_refresh_error: str | None = None
     if st.button("Refresh Calendar", key="refresh_calendar_tab"):
         for _rk in ("garmin_activities", "garmin_scheduled", "cal_selected_event", "cal_selected_detail"):
             st.session_state.pop(_rk, None)
@@ -3825,14 +3826,18 @@ with tab_calendar:
             _rc = requests.get(f"{API_BASE}/activities?days=240&sync=false", headers=_auth_headers(), timeout=15)
             if _rc.status_code == 200:
                 st.session_state["garmin_activities"] = _rc.json()
-        except Exception:
-            pass
+            else:
+                _cal_refresh_error = f"Failed to load activities: {_rc.status_code}"
+        except Exception as _re:
+            _cal_refresh_error = f"Failed to load activities: {_re}"
         try:
             _rp = requests.get(f"{API_BASE}/plans", headers=_auth_headers(), timeout=10)
             if _rp.status_code == 200:
                 st.session_state.plans = _rp.json()
-        except Exception:
-            pass
+            else:
+                _cal_refresh_error = f"Failed to load plans: {_rp.status_code}"
+        except Exception as _re:
+            _cal_refresh_error = f"Failed to load plans: {_re}"
         if st.session_state.garmin_logged_in:
             try:
                 _rs = requests.get(f"{API_BASE}/garmin/scheduled-workouts", headers=_auth_headers(), timeout=15)
@@ -3840,7 +3845,17 @@ with tab_calendar:
                     st.session_state["garmin_scheduled"] = _rs.json()
             except Exception:
                 pass
-        st.rerun()
+        if _cal_refresh_error:
+            st.error(_cal_refresh_error)
+        else:
+            st.rerun()
+
+    # Find the first accepted plan for calendar controls
+    _accepted_plan: dict | None = None
+    for _ap in st.session_state.plans:
+        if isinstance(_ap, dict) and _ap.get("accepted", False):
+            _accepted_plan = _ap
+            break
 
     if True:
         cal_events = []
@@ -4004,12 +4019,12 @@ with tab_calendar:
                         '</div>',
                         unsafe_allow_html=True,
                     )
-                    if plan and plan.get("accepted", False):
+                    if _accepted_plan:
                         st.caption("Drag planned workouts to reschedule · Click any event for details")
                 with legend_cols[1]:
-                    if plan and plan.get("accepted", False):
+                    if _accepted_plan:
                         if st.button("AI Review Plan", key="cal_ai_review_btn", use_container_width=True):
-                            plan_id = plan.get("plan_id", "")
+                            plan_id = _accepted_plan.get("plan_id", "")
                             with st.spinner("AI is reviewing your progress..."):
                                 try:
                                     r = requests.post(
@@ -4031,7 +4046,7 @@ with tab_calendar:
                                 except requests.ConnectionError:
                                     st.error("Cannot reach API.")
                 with legend_cols[2]:
-                    if plan and plan.get("accepted", False) and st.session_state.garmin_logged_in:
+                    if _accepted_plan and st.session_state.garmin_logged_in:
                         if st.button("Push Plan to Garmin", type="primary", key="cal_push_btn", use_container_width=True):
                             with st.spinner("Pushing all workouts to Garmin..."):
                                 try:
@@ -4084,7 +4099,7 @@ with tab_calendar:
 
                 from streamlit_calendar import calendar as st_calendar
 
-                _cal_key = f"plan_calendar_{len(cal_events)}"
+                _cal_key = "plan_calendar"
                 result = st_calendar(
                     events=cal_events,
                     options=cal_options,
@@ -4678,8 +4693,8 @@ with tab_calendar:
 
             # ── AI Review Results (below calendar) ──
             ai_review = st.session_state.get("ai_review_result")
-            if not ai_review and plan and plan.get("adaptation_notes"):
-                ai_review = plan.get("adaptation_notes")
+            if not ai_review and _accepted_plan and _accepted_plan.get("adaptation_notes"):
+                ai_review = _accepted_plan.get("adaptation_notes")
             if ai_review:
                 st.markdown("---")
                 st.markdown(
