@@ -93,6 +93,8 @@ CREATE TABLE IF NOT EXISTS device_tokens (
 _MIGRATIONS = [
     # Add hyrox_json column if it doesn't exist (for existing databases)
     "ALTER TABLE user_data ADD COLUMN hyrox_json TEXT",
+    # Add preferences_json column for user preferences (Strava tokens, activity analyses, etc.)
+    "ALTER TABLE user_data ADD COLUMN preferences_json TEXT",
     # Create refresh_tokens and device_tokens for mobile support
     """CREATE TABLE IF NOT EXISTS refresh_tokens (
         id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id),
