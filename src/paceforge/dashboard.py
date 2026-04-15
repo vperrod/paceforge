@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import json
 import logging
+import time
 from datetime import date, timedelta
 from datetime import datetime as _dt_now
 from pathlib import Path
@@ -1159,6 +1160,13 @@ for key, default in {
 
 # ── Restore JWT from cookie on fresh page load ──────────────────────
 if st.session_state.jwt is None:
+    # CookieManager needs one Streamlit cycle to initialize its JS iframe.
+    # On the very first run after a page refresh, get() returns None even
+    # when cookies exist.  Rerun once to let the component load.
+    if not st.session_state.get("_cookie_init"):
+        st.session_state["_cookie_init"] = True
+        time.sleep(0.5)
+        st.rerun()
     saved_jwt = _cookie_mgr.get("pf_jwt")
     saved_refresh = _cookie_mgr.get("pf_refresh")
     if saved_jwt:
