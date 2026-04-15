@@ -2253,7 +2253,8 @@ with tab_feed:
                 if _show_strava_in_feed:
                     col_profile, col_like, col_comment, col_strava = st.columns([1, 1, 1, 1])
                 else:
-                    col_profile, col_like, col_comment, col_strava = *st.columns([1, 1, 1, 3]), None
+                    col_profile, col_like, col_comment = st.columns([1, 1, 1])
+                    col_strava = None
                 with col_profile:
                     if st.button("Profile", key=f"feed_profile_{ev['id']}_{idx}", use_container_width=True):
                         st.session_state["viewing_profile_id"] = _ev_user_id
