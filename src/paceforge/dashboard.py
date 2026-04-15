@@ -3766,6 +3766,31 @@ with tab_plan:
 with tab_calendar:
     st.markdown('<div class="pf-section-header">Training Calendar</div>', unsafe_allow_html=True)
 
+    # Refresh button for calendar tab (reloads data without full page refresh)
+    if st.button("Refresh Calendar", key="refresh_calendar_tab"):
+        for _rk in ("garmin_activities", "garmin_scheduled", "cal_selected_event", "cal_selected_detail"):
+            st.session_state.pop(_rk, None)
+        try:
+            _rc = requests.get(f"{API_BASE}/activities?days=240&sync=false", headers=_auth_headers(), timeout=15)
+            if _rc.status_code == 200:
+                st.session_state["garmin_activities"] = _rc.json()
+        except Exception:
+            pass
+        try:
+            _rp = requests.get(f"{API_BASE}/plans", headers=_auth_headers(), timeout=10)
+            if _rp.status_code == 200:
+                st.session_state.plans = _rp.json()
+        except Exception:
+            pass
+        if st.session_state.garmin_logged_in:
+            try:
+                _rs = requests.get(f"{API_BASE}/garmin/scheduled-workouts", headers=_auth_headers(), timeout=15)
+                if _rs.status_code == 200:
+                    st.session_state["garmin_scheduled"] = _rs.json()
+            except Exception:
+                pass
+        st.rerun()
+
     if True:
         cal_events = []
 
@@ -3906,71 +3931,72 @@ with tab_calendar:
 
         if not cal_events:
             st.markdown(
-                '<p style="color:#8B95AD;text-align:center;margin:2rem 0;">'
-                'Click <b>Sync Activities from Garmin</b> to load your workout history, '
-                'or generate a training plan to see future workouts.</p>',
+                '<p style="color:#8B95AD;text-align:center;margin:0 0 0.5rem 0;font-size:0.85rem;">'
+                'Sync activities from Garmin or generate a training plan to populate the calendar.</p>',
                 unsafe_allow_html=True,
             )
-        else:
-            # Legend + push controls row
-            legend_cols = st.columns([3, 1, 1])
-            with legend_cols[0]:
-                st.markdown(
-                    '<div style="display:flex;flex-wrap:wrap;gap:1rem;margin-bottom:0.5rem;font-size:0.8rem;">'
-                    '<span style="color:#10B981;">● Completed</span>'
-                    '<span style="color:#A78BFA;">● Cardio/HIIT</span>'
-                    '<span style="color:#60A5FA;">● Garmin Scheduled</span>'
-                    '<span style="color:#0EA5E9;">● Long Run</span>'
-                    '<span style="color:#34D399;">● Easy</span>'
-                    '<span style="color:#F59E0B;">● Tempo</span>'
-                    '<span style="color:#F43F5E;">● Speed</span>'
-                    '</div>',
-                    unsafe_allow_html=True,
-                )
-                if plan and plan.get("accepted", False):
-                    st.caption("Drag planned workouts to reschedule · Click any event for details")
-            with legend_cols[1]:
-                if plan and plan.get("accepted", False):
-                    if st.button("AI Review Plan", key="cal_ai_review_btn", use_container_width=True):
-                        plan_id = plan.get("plan_id", "")
-                        with st.spinner("AI is reviewing your progress..."):
-                            try:
-                                r = requests.post(
-                                    f"{API_BASE}/plan/ai-review",
-                                    params={"plan_id": plan_id} if plan_id else {},
-                                    headers=_auth_headers(),
-                                    timeout=120,
-                                )
-                                if r.status_code == 200:
-                                    review_data = r.json()
-                                    st.session_state["ai_review_result"] = review_data.get("review", "")
-                                    # Refresh plans
-                                    pr = requests.get(f"{API_BASE}/plans", headers=_auth_headers(), timeout=10)
-                                    if pr.status_code == 200:
-                                        st.session_state.plans = pr.json()
-                                    st.rerun()
-                                else:
-                                    st.error(f"Review failed: {_error_detail(r)}")
-                            except requests.ConnectionError:
-                                st.error("Cannot reach API.")
-            with legend_cols[2]:
-                if plan and plan.get("accepted", False) and st.session_state.garmin_logged_in:
-                    if st.button("Push Plan to Garmin", type="primary", key="cal_push_btn", use_container_width=True):
-                        with st.spinner("Pushing all workouts to Garmin..."):
-                            try:
-                                r = requests.post(
-                                    f"{API_BASE}/plan/push",
-                                    json={},
-                                    headers=_auth_headers(),
-                                    timeout=120,
-                                )
-                                if r.status_code == 200:
-                                    data = r.json()
-                                    st.success(f"✓ Pushed {data.get('workouts_pushed', '?')} workouts to Garmin!")
-                                else:
-                                    st.error(f"Push failed: {_error_detail(r)}")
-                            except requests.ConnectionError:
-                                st.error("Cannot reach API.")
+
+        if True:
+            # Legend + push controls row (only when events exist)
+            if cal_events:
+                legend_cols = st.columns([3, 1, 1])
+                with legend_cols[0]:
+                    st.markdown(
+                        '<div style="display:flex;flex-wrap:wrap;gap:1rem;margin-bottom:0.5rem;font-size:0.8rem;">'
+                        '<span style="color:#10B981;">● Completed</span>'
+                        '<span style="color:#A78BFA;">● Cardio/HIIT</span>'
+                        '<span style="color:#60A5FA;">● Garmin Scheduled</span>'
+                        '<span style="color:#0EA5E9;">● Long Run</span>'
+                        '<span style="color:#34D399;">● Easy</span>'
+                        '<span style="color:#F59E0B;">● Tempo</span>'
+                        '<span style="color:#F43F5E;">● Speed</span>'
+                        '</div>',
+                        unsafe_allow_html=True,
+                    )
+                    if plan and plan.get("accepted", False):
+                        st.caption("Drag planned workouts to reschedule · Click any event for details")
+                with legend_cols[1]:
+                    if plan and plan.get("accepted", False):
+                        if st.button("AI Review Plan", key="cal_ai_review_btn", use_container_width=True):
+                            plan_id = plan.get("plan_id", "")
+                            with st.spinner("AI is reviewing your progress..."):
+                                try:
+                                    r = requests.post(
+                                        f"{API_BASE}/plan/ai-review",
+                                        params={"plan_id": plan_id} if plan_id else {},
+                                        headers=_auth_headers(),
+                                        timeout=120,
+                                    )
+                                    if r.status_code == 200:
+                                        review_data = r.json()
+                                        st.session_state["ai_review_result"] = review_data.get("review", "")
+                                        # Refresh plans
+                                        pr = requests.get(f"{API_BASE}/plans", headers=_auth_headers(), timeout=10)
+                                        if pr.status_code == 200:
+                                            st.session_state.plans = pr.json()
+                                        st.rerun()
+                                    else:
+                                        st.error(f"Review failed: {_error_detail(r)}")
+                                except requests.ConnectionError:
+                                    st.error("Cannot reach API.")
+                with legend_cols[2]:
+                    if plan and plan.get("accepted", False) and st.session_state.garmin_logged_in:
+                        if st.button("Push Plan to Garmin", type="primary", key="cal_push_btn", use_container_width=True):
+                            with st.spinner("Pushing all workouts to Garmin..."):
+                                try:
+                                    r = requests.post(
+                                        f"{API_BASE}/plan/push",
+                                        json={},
+                                        headers=_auth_headers(),
+                                        timeout=120,
+                                    )
+                                    if r.status_code == 200:
+                                        data = r.json()
+                                        st.success(f"Pushed {data.get('workouts_pushed', '?')} workouts to Garmin!")
+                                    else:
+                                        st.error(f"Push failed: {_error_detail(r)}")
+                                except requests.ConnectionError:
+                                    st.error("Cannot reach API.")
 
             # ── Side-by-side: Calendar (left) + Detail panel (right) ──
             cal_col, detail_col = st.columns([2, 3])
