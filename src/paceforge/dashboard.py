@@ -4246,12 +4246,15 @@ with tab_calendar:
                                             if _sr.status_code == 200:
                                                 _sdata = _sr.json()
                                                 st.session_state[f"strava_sent_{_ai_act_id}"] = True
-                                                st.success(f"Activity posted to Strava!")
-                                                st.markdown(
-                                                    f'<a href="{_sdata.get("url", "")}" target="_blank" '
-                                                    f'style="color:#FC4C02;">View on Strava</a>',
-                                                    unsafe_allow_html=True,
-                                                )
+                                                if _sdata.get("duplicate"):
+                                                    st.info("Activity already exists on Strava (auto-synced from Garmin)")
+                                                else:
+                                                    st.success("Activity posted to Strava!")
+                                                    st.markdown(
+                                                        f'<a href="{_sdata.get("url", "")}" target="_blank" '
+                                                        f'style="color:#FC4C02;">View on Strava</a>',
+                                                        unsafe_allow_html=True,
+                                                    )
                                             elif _sr.status_code == 409:
                                                 st.session_state[f"strava_sent_{_ai_act_id}"] = True
                                                 st.info("Already sent to Strava")
@@ -4510,12 +4513,15 @@ with tab_calendar:
                                                 if _sr.status_code == 200:
                                                     _sdata = _sr.json()
                                                     st.session_state[f"strava_sent_{_plan_act_id}"] = True
-                                                    st.success("Activity posted to Strava!")
-                                                    st.markdown(
-                                                        f'<a href="{_sdata.get("url", "")}" target="_blank" '
-                                                        f'style="color:#FC4C02;">View on Strava</a>',
-                                                        unsafe_allow_html=True,
-                                                    )
+                                                    if _sdata.get("duplicate"):
+                                                        st.info("Activity already exists on Strava (auto-synced from Garmin)")
+                                                    else:
+                                                        st.success("Activity posted to Strava!")
+                                                        st.markdown(
+                                                            f'<a href="{_sdata.get("url", "")}" target="_blank" '
+                                                            f'style="color:#FC4C02;">View on Strava</a>',
+                                                            unsafe_allow_html=True,
+                                                        )
                                                 elif _sr.status_code == 409:
                                                     st.session_state[f"strava_sent_{_plan_act_id}"] = True
                                                     st.info("Already sent to Strava")

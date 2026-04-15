@@ -77,7 +77,7 @@ from paceforge.models.profile import (
     UserFitnessProfile,
     default_training_days,
 )
-from paceforge.strava.client import StravaClient
+from paceforge.strava.client import DuplicateActivityError, StravaClient
 
 logging.basicConfig(level=settings.log_level)
 logger = logging.getLogger(__name__)
@@ -2084,6 +2084,18 @@ async def strava_push(activity_id: int, user: dict = Depends(get_current_user)):
             description=description,
             distance=act_dict.get("distance_meters"),
         )
+    except DuplicateActivityError:
+        # Activity already exists on Strava (e.g. auto-synced from Garmin).
+        # Mark as sent so the UI shows "✓ Sent" and won't retry.
+        sent.append(activity_id)
+        prefs["strava_sent_activities"] = sent
+        save_user_data(settings.db_path, uid, preferences_json=json.dumps(prefs))
+        return {
+            "strava_activity_id": None,
+            "url": None,
+            "duplicate": True,
+            "message": "Activity already exists on Strava (likely auto-synced from Garmin)",
+        }
     except Exception as e:
         logger.error("Strava create activity failed: %s", e)
         raise HTTPException(502, f"Strava API error: {e}")

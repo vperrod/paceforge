@@ -13,6 +13,10 @@ logger = logging.getLogger(__name__)
 STRAVA_AUTH_URL = "https://www.strava.com/oauth/authorize"
 STRAVA_TOKEN_URL = "https://www.strava.com/oauth/token"
 STRAVA_DEAUTH_URL = "https://www.strava.com/oauth/deauthorize"
+
+
+class DuplicateActivityError(Exception):
+    """Raised when Strava returns 409 Conflict (activity already exists)."""
 STRAVA_API_BASE = "https://www.strava.com/api/v3"
 
 
@@ -155,6 +159,10 @@ class StravaClient:
                 data=payload,
                 headers={"Authorization": f"Bearer {access_token}"},
             )
+            if resp.status_code == 409:
+                raise DuplicateActivityError(
+                    "Activity already exists on Strava (duplicate detected)"
+                )
             resp.raise_for_status()
         return resp.json()
 
