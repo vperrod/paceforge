@@ -77,6 +77,7 @@ from paceforge.models.profile import (
     UserFitnessProfile,
     default_training_days,
 )
+from paceforge.strava.client import StravaClient
 
 logging.basicConfig(level=settings.log_level)
 logger = logging.getLogger(__name__)
@@ -668,72 +669,6 @@ async def save_preferences(body: dict, user: dict = Depends(get_current_user)):
     existing.update(body)
     save_user_data(settings.db_path, uid, preferences_json=json.dumps(existing))
     return existing
-
-
-# ── Health data (Apple Health / Google Health Connect) ────────────────
-
-
-@app.get("/health/data")
-async def get_health_data(user: dict = Depends(get_current_user)):
-    """Return stored health data (body composition, etc.)."""
-    cached = load_user_data(settings.db_path, user["id"])
-    if cached and cached.get("health_json"):
-        try:
-            return json.loads(cached["health_json"])
-        except (json.JSONDecodeError, TypeError):
-            pass
-    return {"sources": [], "last_sync": None, "body_composition": {}}
-
-
-@app.post("/health/data")
-async def post_health_data(body: dict, user: dict = Depends(get_current_user)):
-    """Receive health data from mobile app. Merges with existing, deduplicates, trims to 90 days."""
-    import contextlib
-    from datetime import datetime, timedelta
-
-    uid = user["id"]
-    cutoff = (datetime.now().date() - timedelta(days=90)).isoformat()
-
-    # Load existing
-    existing: dict = {"sources": [], "last_sync": None, "body_composition": {}}
-    cached = load_user_data(settings.db_path, uid)
-    if cached and cached.get("health_json"):
-        with contextlib.suppress(json.JSONDecodeError, TypeError):
-            existing = json.loads(cached["health_json"])
-
-    # Merge sources
-    new_sources = body.get("sources", [])
-    merged_sources = list(set(existing.get("sources", []) + new_sources))
-
-    # Merge body composition fields
-    bc_existing = existing.get("body_composition", {})
-    bc_new = body.get("body_composition", {})
-
-    # Preserve height (latest wins)
-    height = bc_new.get("height_cm") or bc_existing.get("height_cm")
-
-    # Merge time-series fields: deduplicate by date, trim to 90 days
-    merged_bc: dict = {"height_cm": height}
-    for field in ("weight_kg", "bmi", "body_fat_pct", "lean_body_mass_kg"):
-        old_points = bc_existing.get(field, [])
-        new_points = bc_new.get(field, [])
-        # Index by date — new overwrites old
-        by_date: dict = {}
-        for pt in old_points:
-            if isinstance(pt, dict) and pt.get("date", "") >= cutoff:
-                by_date[pt["date"]] = pt
-        for pt in new_points:
-            if isinstance(pt, dict) and pt.get("date", "") >= cutoff:
-                by_date[pt["date"]] = pt
-        merged_bc[field] = sorted(by_date.values(), key=lambda x: x["date"])
-
-    result = {
-        "sources": merged_sources,
-        "last_sync": datetime.now().isoformat(),
-        "body_composition": merged_bc,
-    }
-    save_user_data(settings.db_path, uid, health_json=json.dumps(result))
-    return result
 
 
 @app.get("/activities/{activity_id}")
@@ -1894,3 +1829,352 @@ async def feed_comment(event_id: str, body: dict, user: dict = Depends(get_curre
 @app.get("/feed/{event_id}/comments")
 async def feed_comments(event_id: str, user: dict = Depends(get_current_user)):
     return get_comments(settings.db_path, event_id)
+
+
+# ── Strava OAuth & Activity Push ─────────────────────────────────────
+
+_STRAVA_SPORT_TYPE_MAP: dict[str, str] = {
+    "running": "Run",
+    "trail_running": "TrailRun",
+    "treadmill_running": "Run",
+    "fitness_equipment": "Workout",
+    "cycling": "Ride",
+    "walking": "Walk",
+}
+
+
+def _get_strava_client() -> StravaClient:
+    if not settings.strava_client_id or not settings.strava_client_secret:
+        raise HTTPException(503, "Strava integration not configured")
+    return StravaClient(settings.strava_client_id, settings.strava_client_secret)
+
+
+def _load_strava_data(uid: str) -> dict | None:
+    """Load Strava connection data from user preferences."""
+    cached = load_user_data(settings.db_path, uid)
+    if not cached or not cached.get("preferences_json"):
+        return None
+    try:
+        prefs = json.loads(cached["preferences_json"])
+    except (json.JSONDecodeError, TypeError):
+        return None
+    return prefs.get("strava")
+
+
+def _save_strava_data(uid: str, strava_data: dict | None) -> None:
+    """Save Strava connection data into user preferences."""
+    cached = load_user_data(settings.db_path, uid)
+    prefs: dict = {}
+    if cached and cached.get("preferences_json"):
+        try:
+            prefs = json.loads(cached["preferences_json"])
+        except (json.JSONDecodeError, TypeError):
+            prefs = {}
+    if strava_data is None:
+        prefs.pop("strava", None)
+    else:
+        prefs["strava"] = strava_data
+    save_user_data(settings.db_path, uid, preferences_json=json.dumps(prefs))
+
+
+@app.get("/strava/auth-url")
+async def strava_auth_url(user: dict = Depends(get_current_user)):
+    """Return the Strava OAuth authorize URL for the current user."""
+    client = _get_strava_client()
+    # Encode user_id into the state param as a signed JWT so the callback
+    # can identify which user authorized without requiring a Bearer token.
+    state_token = create_access_token(user["id"], user["role"], settings.jwt_secret)
+    redirect_uri = f"{settings.cors_origins.split(',')[0].strip()}/strava/callback"
+    url = client.get_auth_url(redirect_uri=redirect_uri, state=state_token)
+    return {"url": url, "redirect_uri": redirect_uri}
+
+
+@app.get("/strava/callback")
+async def strava_callback(code: str = "", state: str = "", error: str = ""):
+    """Handle Strava OAuth callback — exchanges code for tokens."""
+    if error:
+        raise HTTPException(400, f"Strava authorization denied: {error}")
+    if not code or not state:
+        raise HTTPException(400, "Missing code or state parameter")
+
+    # Decode user from state JWT
+    try:
+        payload = decode_access_token(state, settings.jwt_secret)
+    except Exception:
+        raise HTTPException(400, "Invalid or expired state token")
+    uid = payload["sub"]
+
+    client = _get_strava_client()
+    try:
+        tokens = client.exchange_code(code)
+    except Exception as e:
+        logger.error("Strava token exchange failed: %s", e)
+        raise HTTPException(502, "Failed to exchange Strava authorization code")
+
+    _save_strava_data(uid, tokens)
+    logger.info("Strava connected for user %s (athlete: %s)", uid, tokens.get("athlete_name"))
+
+    # Return an HTML page that closes the popup / redirects to dashboard
+    from fastapi.responses import HTMLResponse
+    return HTMLResponse(
+        "<html><body><h2>Strava connected!</h2>"
+        "<p>You can close this window and return to PaceForge.</p>"
+        "<script>window.close();</script></body></html>"
+    )
+
+
+@app.get("/strava/status")
+async def strava_status(user: dict = Depends(get_current_user)):
+    """Return Strava connection status."""
+    data = _load_strava_data(user["id"])
+    if not data:
+        return {"connected": False}
+    return {
+        "connected": True,
+        "athlete_name": data.get("athlete_name", ""),
+        "athlete_id": data.get("athlete_id"),
+    }
+
+
+@app.delete("/strava/disconnect")
+async def strava_disconnect(user: dict = Depends(get_current_user)):
+    """Disconnect Strava — revoke access and remove tokens."""
+    uid = user["id"]
+    data = _load_strava_data(uid)
+    if not data:
+        return {"ok": True}
+    client = _get_strava_client()
+    try:
+        client.deauthorize(data.get("access_token", ""))
+    except Exception:
+        logger.warning("Strava deauthorize call failed (continuing anyway)")
+    _save_strava_data(uid, None)
+    # Also clear sent-activities list
+    cached = load_user_data(settings.db_path, uid)
+    if cached and cached.get("preferences_json"):
+        try:
+            prefs = json.loads(cached["preferences_json"])
+            prefs.pop("strava_sent_activities", None)
+            save_user_data(settings.db_path, uid, preferences_json=json.dumps(prefs))
+        except (json.JSONDecodeError, TypeError):
+            pass
+    return {"ok": True}
+
+
+def _build_strava_description(
+    activity: dict,
+    workout_description: str | None,
+    ai_analysis: str | None,
+) -> str:
+    """Build the rich description for a Strava activity post."""
+    parts: list[str] = []
+    if workout_description:
+        parts.append(workout_description)
+    if ai_analysis:
+        if parts:
+            parts.append("")
+        parts.append("AI Analysis:")
+        parts.append(ai_analysis)
+    # Footer
+    parts.append("")
+    parts.append("---")
+    parts.append("Training plan generated with PaceForge — want to be a BETA tester? Get in touch!")
+    return "\n".join(parts)
+
+
+@app.post("/strava/push/{activity_id}")
+async def strava_push(activity_id: int, user: dict = Depends(get_current_user)):
+    """Push a completed activity to Strava."""
+    uid = user["id"]
+
+    # 1. Check Strava connection
+    strava_data = _load_strava_data(uid)
+    if not strava_data:
+        raise HTTPException(400, "Strava not connected")
+
+    # 2. Check duplicate
+    cached = load_user_data(settings.db_path, uid)
+    prefs: dict = {}
+    if cached and cached.get("preferences_json"):
+        try:
+            prefs = json.loads(cached["preferences_json"])
+        except (json.JSONDecodeError, TypeError):
+            prefs = {}
+    sent: list = prefs.get("strava_sent_activities", [])
+    if activity_id in sent:
+        raise HTTPException(409, "Activity already sent to Strava")
+
+    # 3. Find activity in cached data
+    act_dict: dict | None = None
+    if cached and cached.get("activities_json"):
+        for a in json.loads(cached["activities_json"]):
+            if a.get("activity_id") == activity_id:
+                act_dict = a
+                break
+    if not act_dict:
+        raise HTTPException(404, "Activity not found in cached data")
+
+    # 4. Find matched planned workout (for description)
+    workout_description: str | None = None
+    if uid not in _user_plans:
+        _user_plans[uid] = _load_plans(uid)
+    for plan in _user_plans.get(uid, []):
+        if not plan.accepted:
+            continue
+        for week in plan.weeks:
+            for wo in week.workouts:
+                if wo.matched_activity_id == activity_id and wo.description:
+                    workout_description = wo.description
+                    break
+            if workout_description:
+                break
+        if workout_description:
+            break
+
+    # 5. Load or generate AI analysis
+    analyses: dict = prefs.get("activity_analyses", {})
+    ai_analysis: str | None = analyses.get(str(activity_id))
+    if not ai_analysis:
+        # Trigger analysis on-the-fly
+        try:
+            garmin = _ensure_garmin(uid)
+            if garmin:
+                detail = garmin.get_activity_detail(activity_id)
+                act_for_ai = dict(act_dict)
+                act_for_ai["splits"] = detail.get("splits")
+                act_for_ai["hr_zones"] = detail.get("hr_zones")
+                profile = _user_profile.get(uid)
+                if not profile and cached and cached.get("profile_json"):
+                    profile = UserFitnessProfile.model_validate_json(cached["profile_json"])
+                coach = _get_or_create_coach(uid)
+                ai_analysis = coach.analyze_activity(act_for_ai, profile=profile)
+                analyses[str(activity_id)] = ai_analysis
+                prefs["activity_analyses"] = analyses
+        except Exception as e:
+            logger.warning("On-the-fly AI analysis failed for Strava push: %s", e)
+
+    # 6. Build description
+    description = _build_strava_description(act_dict, workout_description, ai_analysis)
+
+    # 7. Map activity type to Strava sport_type
+    act_type = act_dict.get("activity_type", "running")
+    sport_type = _STRAVA_SPORT_TYPE_MAP.get(act_type, "Workout")
+
+    # 8. Format start time
+    start_time = act_dict.get("start_time", "")
+    if hasattr(start_time, "isoformat"):
+        start_time = start_time.isoformat()
+
+    # 9. Ensure valid token and push
+    client = _get_strava_client()
+    try:
+        access_token, strava_data = client.ensure_valid_token(strava_data)
+        _save_strava_data(uid, strava_data)  # persist refreshed tokens
+    except Exception as e:
+        logger.error("Strava token refresh failed: %s", e)
+        raise HTTPException(502, "Failed to refresh Strava token — please reconnect")
+
+    try:
+        result = client.create_activity(
+            access_token,
+            name=act_dict.get("name", "PaceForge Activity"),
+            sport_type=sport_type,
+            start_date_local=start_time,
+            elapsed_time=int(act_dict.get("duration_seconds", 0)),
+            description=description,
+            distance=act_dict.get("distance_meters"),
+        )
+    except Exception as e:
+        logger.error("Strava create activity failed: %s", e)
+        raise HTTPException(502, f"Strava API error: {e}")
+
+    # 10. Record that we sent this activity
+    sent.append(activity_id)
+    prefs["strava_sent_activities"] = sent
+    save_user_data(settings.db_path, uid, preferences_json=json.dumps(prefs))
+
+    strava_id = result.get("id", "")
+    return {
+        "strava_activity_id": strava_id,
+        "url": f"https://www.strava.com/activities/{strava_id}",
+    }
+
+
+# ── Health Data (Apple Health / Google Health Connect) ───────────────
+
+_HEALTH_METRICS = ("weight_kg", "bmi", "body_fat_pct", "lean_body_mass_kg")
+
+
+@app.get("/health/data")
+async def get_health_data(user: dict = Depends(get_current_user)):
+    """Return stored health data from Apple Health / Google Health Connect."""
+    uid = user["id"]
+    cached = load_user_data(settings.db_path, uid)
+    if cached and cached.get("health_json"):
+        try:
+            return json.loads(cached["health_json"])
+        except (json.JSONDecodeError, TypeError):
+            pass
+    return {"sources": [], "last_sync": None, "body_composition": {
+        "height_cm": None, "weight_kg": [], "bmi": [], "body_fat_pct": [], "lean_body_mass_kg": [],
+    }}
+
+
+@app.post("/health/data")
+async def post_health_data(payload: dict, user: dict = Depends(get_current_user)):
+    """Store health data from mobile app (Apple Health / Google Health Connect)."""
+    from datetime import UTC, datetime, timedelta
+
+    uid = user["id"]
+
+    # Load existing data
+    cached = load_user_data(settings.db_path, uid)
+    existing: dict = {}
+    if cached and cached.get("health_json"):
+        try:
+            existing = json.loads(cached["health_json"])
+        except (json.JSONDecodeError, TypeError):
+            existing = {}
+
+    # Merge sources
+    old_sources = set(existing.get("sources", []))
+    new_sources = set(payload.get("sources", []))
+    merged_sources = sorted(old_sources | new_sources)
+
+    # Merge body composition
+    old_bc = existing.get("body_composition", {})
+    new_bc = payload.get("body_composition", {})
+    merged_bc: dict = {}
+
+    # Scalar fields (height_cm)
+    merged_bc["height_cm"] = new_bc.get("height_cm") or old_bc.get("height_cm")
+
+    # Time-series fields — deduplicate by date (new values win), trim to 90 days
+    cutoff = (datetime.now(UTC) - timedelta(days=90)).strftime("%Y-%m-%d")
+    for metric in _HEALTH_METRICS:
+        old_entries = old_bc.get(metric, [])
+        new_entries = new_bc.get(metric, [])
+        if not isinstance(old_entries, list):
+            old_entries = []
+        if not isinstance(new_entries, list):
+            new_entries = []
+        by_date: dict = {}
+        for entry in old_entries:
+            d = entry.get("date", "")
+            if d >= cutoff:
+                by_date[d] = entry
+        for entry in new_entries:
+            d = entry.get("date", "")
+            if d >= cutoff:
+                by_date[d] = entry  # new wins
+        merged_bc[metric] = sorted(by_date.values(), key=lambda e: e.get("date", ""))
+
+    now = datetime.now(UTC).isoformat(timespec="seconds")
+    result = {
+        "sources": merged_sources,
+        "last_sync": now,
+        "body_composition": merged_bc,
+    }
+
+    save_user_data(settings.db_path, uid, health_json=json.dumps(result))
+    return result

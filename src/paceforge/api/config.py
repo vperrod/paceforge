@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     db_path: str = "paceforge.db"
     cors_origins: str = "http://localhost:8501"
 
+    # Strava OAuth
+    strava_client_id: str = ""
+    strava_client_secret: str = ""
+
     # SMTP notifications
     smtp_host: str = ""
     smtp_port: int = 587

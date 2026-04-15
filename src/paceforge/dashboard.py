@@ -2235,8 +2235,25 @@ with tab_feed:
                     unsafe_allow_html=True,
                 )
 
-                # Actions row — View Profile + Like + Comment
-                col_profile, col_like, col_comment, col_spacer = st.columns([1, 1, 1, 3])
+                # Actions row — View Profile + Like + Comment + Strava
+                _is_own_activity = (_ev_user_id == st.session_state.get("user_id", ""))
+                _feed_act_id = _ev_meta.get("activity_id") if (_is_own_activity and ev.get("event_type") == "activity") else None
+                _show_strava_in_feed = False
+                if _feed_act_id:
+                    _strava_prefs = st.session_state.get("_strava_conn")
+                    if _strava_prefs is None:
+                        try:
+                            _sc = requests.get(f"{API_BASE}/strava/status", headers=_auth_headers(), timeout=5)
+                            _strava_prefs = _sc.json() if _sc.status_code == 200 else {"connected": False}
+                        except Exception:
+                            _strava_prefs = {"connected": False}
+                        st.session_state["_strava_conn"] = _strava_prefs
+                    _show_strava_in_feed = _strava_prefs.get("connected", False)
+
+                if _show_strava_in_feed:
+                    col_profile, col_like, col_comment, col_strava = st.columns([1, 1, 1, 1])
+                else:
+                    col_profile, col_like, col_comment, col_strava = *st.columns([1, 1, 1, 3]), None
                 with col_profile:
                     if st.button("Profile", key=f"feed_profile_{ev['id']}_{idx}", use_container_width=True):
                         st.session_state["viewing_profile_id"] = _ev_user_id
@@ -2260,6 +2277,26 @@ with tab_feed:
                         else:
                             st.session_state[f"show_comments_{ev['id']}"] = True
                         st.rerun()
+
+                if col_strava is not None and _feed_act_id:
+                    with col_strava:
+                        _feed_sent = st.session_state.get(f"strava_sent_{_feed_act_id}", False)
+                        if _feed_sent:
+                            st.markdown('<span style="color:#FC4C02;font-size:0.8rem;">✓ Strava</span>', unsafe_allow_html=True)
+                        elif st.button("Strava", key=f"feed_strava_{ev['id']}_{idx}", use_container_width=True):
+                            with st.spinner("Sending..."):
+                                try:
+                                    _sr = requests.post(
+                                        f"{API_BASE}/strava/push/{_feed_act_id}",
+                                        headers=_auth_headers(), timeout=60,
+                                    )
+                                    if _sr.status_code == 200 or _sr.status_code == 409:
+                                        st.session_state[f"strava_sent_{_feed_act_id}"] = True
+                                        st.rerun()
+                                    else:
+                                        st.error(f"Failed: {_sr.text}")
+                                except Exception as _se:
+                                    st.error(f"Failed: {_se}")
 
                 # Comments section (expandable)
                 if st.session_state.get(f"show_comments_{ev['id']}"):
@@ -2389,7 +2426,7 @@ with tab_profile:
         prof_tabs = st.tabs([
             "Snapshot", "Aerobic Engine", "Running Economy",
             "Load & Recovery", "Race Predictions",
-            "Recommendations", "Trends", "Health",
+            "Recommendations", "Trends",
         ])
 
         # ═════════════════════════════════════════════════════════════
@@ -2444,11 +2481,6 @@ with tab_profile:
                 st.markdown(_metric_card("Endurance Score", str(es if es else "—"), "", "purple"), unsafe_allow_html=True)
             with r2c3:
                 w = p.get("weight_kg")
-                # Prefer health platform weight over Garmin
-                _hd_snap = st.session_state.get("health_data", {}).get("body_composition", {})
-                _hd_w_pts = _hd_snap.get("weight_kg", [])
-                if _hd_w_pts:
-                    w = _hd_w_pts[-1]["value"]
                 fa = p.get("fitness_age")
                 label = f'{w} kg' if w else "—"
                 if fa:
@@ -3162,229 +3194,6 @@ with tab_profile:
                         st.plotly_chart(fig_dist, use_container_width=True, key="trend_distance")
             else:
                 st.info("Need at least 2 activities to show trends. Sync your Garmin data.")
-
-        # ═════════════════════════════════════════════════════════════
-        # SUB-TAB 8: HEALTH (Body Composition)
-        # ═════════════════════════════════════════════════════════════
-        with prof_tabs[7]:
-            # Load health data
-            if "health_data" not in st.session_state:
-                try:
-                    _hd_r = requests.get(f"{API_BASE}/health/data", headers=_auth_headers(), timeout=10)
-                    st.session_state.health_data = _hd_r.json() if _hd_r.status_code == 200 else {}
-                except Exception:
-                    st.session_state.health_data = {}
-            _hd = st.session_state.health_data
-            _bc = _hd.get("body_composition", {})
-            _hd_sources = _hd.get("sources", [])
-            _hd_last_sync = _hd.get("last_sync")
-
-            # Check if health connections are enabled
-            _hc_prefs = st.session_state.get("sync_prefs", {}).get("health_connections", {})
-            _any_connected = _hc_prefs.get("apple_health") or _hc_prefs.get("google_health_connect")
-
-            # Connection status banner
-            if _hd_sources:
-                _src_names = ", ".join(s.replace("_", " ").title() for s in _hd_sources)
-                _sync_ts = _hd_last_sync[:16].replace("T", " ") if _hd_last_sync else "Unknown"
-                st.markdown(
-                    f'<div style="padding:0.6rem 1rem;background:#10B98115;border:1px solid #10B98140;'
-                    f'border-radius:8px;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center;">'
-                    f'<span style="color:#10B981;font-weight:600;font-size:0.85rem;">Connected: {_src_names}</span>'
-                    f'<span style="color:#8B95AD;font-size:0.75rem;">Last sync: {_sync_ts}</span>'
-                    f'</div>',
-                    unsafe_allow_html=True,
-                )
-            elif _any_connected:
-                st.markdown(
-                    '<div style="padding:0.6rem 1rem;background:#F59E0B15;border:1px solid #F59E0B40;'
-                    'border-radius:8px;margin-bottom:1rem;">'
-                    '<span style="color:#F59E0B;font-weight:600;font-size:0.85rem;">'
-                    'Health connection enabled — open the PaceForge mobile app to sync data</span>'
-                    '</div>',
-                    unsafe_allow_html=True,
-                )
-
-            # Get data points
-            _w_pts = _bc.get("weight_kg", [])
-            _bmi_pts = _bc.get("bmi", [])
-            _bf_pts = _bc.get("body_fat_pct", [])
-            _lbm_pts = _bc.get("lean_body_mass_kg", [])
-            _height = _bc.get("height_cm")
-
-            _has_data = bool(_w_pts or _bmi_pts or _bf_pts or _lbm_pts)
-
-            if not _has_data and not _any_connected:
-                st.markdown("")
-                st.info(
-                    "Connect **Apple Health** or **Google Health Connect** in "
-                    "**User Profile → Connections** to start tracking body composition."
-                )
-            elif not _has_data:
-                st.markdown("")
-                st.info(
-                    "No health data synced yet. Open the **PaceForge mobile app** "
-                    "to authorize and sync body composition data."
-                )
-            else:
-                # ── Current values strip ──
-                st.markdown('<div class="pf-section-header">Current Body Composition</div>', unsafe_allow_html=True)
-
-                # Get latest values
-                _latest_w = _w_pts[-1]["value"] if _w_pts else None
-                _latest_bmi = _bmi_pts[-1]["value"] if _bmi_pts else None
-                _latest_bf = _bf_pts[-1]["value"] if _bf_pts else None
-                _latest_lbm = _lbm_pts[-1]["value"] if _lbm_pts else None
-
-                # BMI category
-                _bmi_cat = "—"
-                _bmi_color = "#8B95AD"
-                if _latest_bmi:
-                    if _latest_bmi < 18.5:
-                        _bmi_cat, _bmi_color = "Underweight", "#0EA5E9"
-                    elif _latest_bmi < 25:
-                        _bmi_cat, _bmi_color = "Normal", "#10B981"
-                    elif _latest_bmi < 30:
-                        _bmi_cat, _bmi_color = "Overweight", "#F59E0B"
-                    else:
-                        _bmi_cat, _bmi_color = "Obese", "#F43F5E"
-
-                mc1, mc2, mc3, mc4 = st.columns(4)
-                with mc1:
-                    st.markdown(
-                        _metric_card("Weight", f"{_latest_w:.1f}" if _latest_w else "—", "kg", "cyan"),
-                        unsafe_allow_html=True,
-                    )
-                with mc2:
-                    _bmi_label = f"{_latest_bmi:.1f}" if _latest_bmi else "—"
-                    st.markdown(
-                        f'<div style="background:#1A1D2B;border:1px solid #2A2D3B;border-radius:12px;'
-                        f'padding:1rem;text-align:center;">'
-                        f'<div style="color:#8B95AD;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;">BMI</div>'
-                        f'<div style="font-size:1.5rem;font-weight:700;color:#E8ECF4;margin:0.25rem 0;">{_bmi_label}</div>'
-                        f'<span style="background:{_bmi_color}22;color:{_bmi_color};padding:2px 8px;'
-                        f'border-radius:4px;font-size:0.7rem;font-weight:600;">{_bmi_cat}</span>'
-                        f'</div>',
-                        unsafe_allow_html=True,
-                    )
-                with mc3:
-                    st.markdown(
-                        _metric_card("Body Fat", f"{_latest_bf:.1f}" if _latest_bf else "—", "%", "orange"),
-                        unsafe_allow_html=True,
-                    )
-                with mc4:
-                    st.markdown(
-                        _metric_card("Lean Mass", f"{_latest_lbm:.1f}" if _latest_lbm else "—", "kg", "green"),
-                        unsafe_allow_html=True,
-                    )
-
-                if _height:
-                    st.markdown(
-                        f'<div style="color:#8B95AD;font-size:0.75rem;margin-top:0.25rem;">Height: {_height:.1f} cm</div>',
-                        unsafe_allow_html=True,
-                    )
-
-                # ── 90-Day Weight Trend ──
-                if len(_w_pts) >= 2:
-                    st.markdown("")
-                    st.markdown('<div class="pf-section-header">Weight Trend (90 Days)</div>', unsafe_allow_html=True)
-                    _w_dates = [pt["date"] for pt in _w_pts]
-                    _w_vals = [pt["value"] for pt in _w_pts]
-                    fig_weight = go.Figure()
-                    fig_weight.add_trace(go.Scatter(
-                        x=_w_dates, y=_w_vals,
-                        mode="lines+markers",
-                        line=dict(color="#0EA5E9", width=2),
-                        marker=dict(size=5),
-                        fill="tozeroy",
-                        fillcolor="rgba(14, 165, 233, 0.08)",
-                        hovertemplate="%{x}<br>%{y:.1f} kg<extra></extra>",
-                    ))
-                    fig_weight.update_layout(
-                        yaxis_title="kg",
-                        margin=dict(l=40, r=20, t=30, b=30),
-                        height=280,
-                        plot_bgcolor="rgba(0,0,0,0)",
-                        paper_bgcolor="rgba(0,0,0,0)",
-                        font=dict(color="#8B95AD"),
-                        yaxis=dict(gridcolor="#2A2D3B"),
-                        xaxis=dict(gridcolor="#2A2D3B"),
-                    )
-                    st.plotly_chart(fig_weight, use_container_width=True, key="health_weight_trend")
-
-                # ── 90-Day Body Fat Trend ──
-                if len(_bf_pts) >= 2:
-                    st.markdown("")
-                    st.markdown('<div class="pf-section-header">Body Fat % Trend (90 Days)</div>', unsafe_allow_html=True)
-                    _bf_dates = [pt["date"] for pt in _bf_pts]
-                    _bf_vals = [pt["value"] for pt in _bf_pts]
-                    fig_bf = go.Figure()
-                    fig_bf.add_trace(go.Scatter(
-                        x=_bf_dates, y=_bf_vals,
-                        mode="lines+markers",
-                        line=dict(color="#F59E0B", width=2),
-                        marker=dict(size=5),
-                        fill="tozeroy",
-                        fillcolor="rgba(245, 158, 11, 0.08)",
-                        hovertemplate="%{x}<br>%{y:.1f}%%<extra></extra>",
-                    ))
-                    fig_bf.update_layout(
-                        yaxis_title="%",
-                        margin=dict(l=40, r=20, t=30, b=30),
-                        height=280,
-                        plot_bgcolor="rgba(0,0,0,0)",
-                        paper_bgcolor="rgba(0,0,0,0)",
-                        font=dict(color="#8B95AD"),
-                        yaxis=dict(gridcolor="#2A2D3B"),
-                        xaxis=dict(gridcolor="#2A2D3B"),
-                    )
-                    st.plotly_chart(fig_bf, use_container_width=True, key="health_bf_trend")
-
-                # ── BMI Gauge ──
-                if _latest_bmi:
-                    st.markdown("")
-                    st.markdown('<div class="pf-section-header">BMI Assessment</div>', unsafe_allow_html=True)
-                    fig_bmi = go.Figure(go.Indicator(
-                        mode="gauge+number",
-                        value=_latest_bmi,
-                        number=dict(suffix="", font=dict(size=36, color="#E8ECF4")),
-                        gauge=dict(
-                            axis=dict(range=[15, 40], tickcolor="#8B95AD", tickfont=dict(color="#8B95AD")),
-                            bar=dict(color="#E8ECF4", thickness=0.2),
-                            bgcolor="rgba(0,0,0,0)",
-                            steps=[
-                                dict(range=[15, 18.5], color="#0EA5E920"),
-                                dict(range=[18.5, 25], color="#10B98120"),
-                                dict(range=[25, 30], color="#F59E0B20"),
-                                dict(range=[30, 40], color="#F43F5E20"),
-                            ],
-                            threshold=dict(line=dict(color=_bmi_color, width=3), thickness=0.8, value=_latest_bmi),
-                        ),
-                    ))
-                    fig_bmi.update_layout(
-                        height=250,
-                        margin=dict(l=30, r=30, t=40, b=10),
-                        plot_bgcolor="rgba(0,0,0,0)",
-                        paper_bgcolor="rgba(0,0,0,0)",
-                        font=dict(color="#8B95AD"),
-                        annotations=[
-                            dict(x=0.12, y=0, text="Under", showarrow=False, font=dict(color="#0EA5E9", size=10)),
-                            dict(x=0.38, y=0, text="Normal", showarrow=False, font=dict(color="#10B981", size=10)),
-                            dict(x=0.62, y=0, text="Over", showarrow=False, font=dict(color="#F59E0B", size=10)),
-                            dict(x=0.88, y=0, text="Obese", showarrow=False, font=dict(color="#F43F5E", size=10)),
-                        ],
-                    )
-                    st.plotly_chart(fig_bmi, use_container_width=True, key="health_bmi_gauge")
-
-            # Refresh button
-            if st.button("Refresh Health Data", key="health_refresh_btn"):
-                try:
-                    _hdr = requests.get(f"{API_BASE}/health/data", headers=_auth_headers(), timeout=10)
-                    if _hdr.status_code == 200:
-                        st.session_state.health_data = _hdr.json()
-                        st.rerun()
-                except Exception:
-                    st.error("Failed to refresh health data")
 
 
 # ── Tab 2: Training Plan ─────────────────────────────────────────────
@@ -4398,6 +4207,50 @@ with tab_calendar:
                                                 st.error(f"Analysis failed: {r.text}")
                                         except Exception as _ai_err:
                                             st.error(f"Analysis failed: {_ai_err}")
+
+                            # ── Send to Strava button ──
+                            _strava_prefs = st.session_state.get("_strava_conn")
+                            if _strava_prefs is None:
+                                try:
+                                    _sc = requests.get(f"{API_BASE}/strava/status", headers=_auth_headers(), timeout=5)
+                                    _strava_prefs = _sc.json() if _sc.status_code == 200 else {"connected": False}
+                                except Exception:
+                                    _strava_prefs = {"connected": False}
+                                st.session_state["_strava_conn"] = _strava_prefs
+
+                            if _strava_prefs.get("connected"):
+                                _already_sent = st.session_state.get(f"strava_sent_{_ai_act_id}", False)
+                                if _already_sent:
+                                    st.markdown(
+                                        '<div style="color:#FC4C02;font-size:0.85rem;padding:0.4rem 0;">'
+                                        '✓ Sent to Strava</div>',
+                                        unsafe_allow_html=True,
+                                    )
+                                elif st.button("Send to Strava", key=f"strava_push_{_ai_act_id}", use_container_width=True):
+                                    with st.spinner("Sending to Strava..."):
+                                        try:
+                                            _sr = requests.post(
+                                                f"{API_BASE}/strava/push/{_ai_act_id}",
+                                                headers=_auth_headers(),
+                                                timeout=60,
+                                            )
+                                            if _sr.status_code == 200:
+                                                _sdata = _sr.json()
+                                                st.session_state[f"strava_sent_{_ai_act_id}"] = True
+                                                st.success(f"Activity posted to Strava!")
+                                                st.markdown(
+                                                    f'<a href="{_sdata.get("url", "")}" target="_blank" '
+                                                    f'style="color:#FC4C02;">View on Strava</a>',
+                                                    unsafe_allow_html=True,
+                                                )
+                                            elif _sr.status_code == 409:
+                                                st.session_state[f"strava_sent_{_ai_act_id}"] = True
+                                                st.info("Already sent to Strava")
+                                            else:
+                                                st.error(f"Strava push failed: {_sr.text}")
+                                        except Exception as _se:
+                                            st.error(f"Strava push failed: {_se}")
+
                     elif props.get("source") == "garmin_scheduled":
                         # Garmin scheduled workout detail
                         sw_name = props.get("name", ev_title)
@@ -4616,6 +4469,51 @@ with tab_calendar:
                                                 st.error(f"Analysis failed: {_error_detail(r)}")
                                         except requests.ConnectionError:
                                             st.error("Cannot reach API.")
+
+                            # ── Send to Strava button (completed planned workouts) ──
+                            _plan_act_id = props.get("matched_activity_id")
+                            if _plan_act_id:
+                                _strava_prefs = st.session_state.get("_strava_conn")
+                                if _strava_prefs is None:
+                                    try:
+                                        _sc = requests.get(f"{API_BASE}/strava/status", headers=_auth_headers(), timeout=5)
+                                        _strava_prefs = _sc.json() if _sc.status_code == 200 else {"connected": False}
+                                    except Exception:
+                                        _strava_prefs = {"connected": False}
+                                    st.session_state["_strava_conn"] = _strava_prefs
+
+                                if _strava_prefs.get("connected"):
+                                    _already_sent = st.session_state.get(f"strava_sent_{_plan_act_id}", False)
+                                    if _already_sent:
+                                        st.markdown(
+                                            '<div style="color:#FC4C02;font-size:0.85rem;padding:0.4rem 0;">'
+                                            '✓ Sent to Strava</div>',
+                                            unsafe_allow_html=True,
+                                        )
+                                    elif st.button("Send to Strava", key=f"strava_push_plan_{_plan_act_id}", use_container_width=True):
+                                        with st.spinner("Sending to Strava..."):
+                                            try:
+                                                _sr = requests.post(
+                                                    f"{API_BASE}/strava/push/{_plan_act_id}",
+                                                    headers=_auth_headers(),
+                                                    timeout=60,
+                                                )
+                                                if _sr.status_code == 200:
+                                                    _sdata = _sr.json()
+                                                    st.session_state[f"strava_sent_{_plan_act_id}"] = True
+                                                    st.success("Activity posted to Strava!")
+                                                    st.markdown(
+                                                        f'<a href="{_sdata.get("url", "")}" target="_blank" '
+                                                        f'style="color:#FC4C02;">View on Strava</a>',
+                                                        unsafe_allow_html=True,
+                                                    )
+                                                elif _sr.status_code == 409:
+                                                    st.session_state[f"strava_sent_{_plan_act_id}"] = True
+                                                    st.info("Already sent to Strava")
+                                                else:
+                                                    st.error(f"Strava push failed: {_sr.text}")
+                                            except Exception as _se:
+                                                st.error(f"Strava push failed: {_se}")
 
                             # ── User Feedback Section ──
                             st.markdown("---")
@@ -5831,78 +5729,67 @@ with tab_user_settings:
                         st.session_state.profile = r.json()
                         st.rerun()
 
-            # ── Health Data Sources ──
-            st.markdown("---")
-            st.markdown('<div class="pf-section-header">Health Data Sources</div>', unsafe_allow_html=True)
-            st.markdown(
-                '<div style="color:#8B95AD;font-size:0.8rem;margin-bottom:0.75rem;">'
-                'Connect health platforms to import body composition data (weight, BMI, body fat, lean mass). '
-                'Data syncs through the PaceForge mobile app.</div>',
-                unsafe_allow_html=True,
-            )
-
-            # Load health connection preferences from sync_prefs (already loaded above)
-            _hc = st.session_state.get("sync_prefs", {}).get("health_connections", {})
-
-            # Apple Health
-            _apple_on = _hc.get("apple_health", False)
-            st.markdown(
-                f'<div style="display:flex;align-items:center;justify-content:space-between;'
-                f'padding:0.75rem 1rem;background:#1A1D2B;border:1px solid #2A2D3B;'
-                f'border-radius:10px;margin-bottom:0.5rem;">'
-                f'<div style="display:flex;align-items:center;gap:0.6rem;">'
-                f'<span style="font-size:1.3rem;">\U0001f34e</span>'
-                f'<div><span style="color:#E8ECF4;font-weight:500;">Apple Health</span>'
-                f'<div style="color:#8B95AD;font-size:0.7rem;">Weight, BMI, body fat %, lean body mass (iOS)</div></div>'
-                f'</div>'
-                f'<span style="color:{"#10B981" if _apple_on else "#8B95AD"};font-size:0.82rem;font-weight:600;">'
-                f'{"Connected" if _apple_on else "Not connected"}</span>'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
-            _apple_toggle = st.checkbox("Enable Apple Health sync", value=_apple_on, key="toggle_apple_health")
-
-            # Google Health Connect
-            _google_on = _hc.get("google_health_connect", False)
-            st.markdown(
-                f'<div style="display:flex;align-items:center;justify-content:space-between;'
-                f'padding:0.75rem 1rem;background:#1A1D2B;border:1px solid #2A2D3B;'
-                f'border-radius:10px;margin-bottom:0.5rem;">'
-                f'<div style="display:flex;align-items:center;gap:0.6rem;">'
-                f'<span style="color:#4285F4;font-size:1.3rem;">+</span>'
-                f'<div><span style="color:#E8ECF4;font-weight:500;">Google Health Connect</span>'
-                f'<div style="color:#8B95AD;font-size:0.7rem;">Weight, BMI, body fat %, lean body mass (Android)</div></div>'
-                f'</div>'
-                f'<span style="color:{"#10B981" if _google_on else "#8B95AD"};font-size:0.82rem;font-weight:600;">'
-                f'{"Connected" if _google_on else "Not connected"}</span>'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
-            _google_toggle = st.checkbox("Enable Google Health Connect sync", value=_google_on, key="toggle_google_health")
-
-            # Save if changed
-            _new_hc = {"apple_health": _apple_toggle, "google_health_connect": _google_toggle}
-            if _new_hc != _hc:
-                try:
-                    _cur_prefs = dict(st.session_state.get("sync_prefs", {}))
-                    _cur_prefs["health_connections"] = _new_hc
-                    requests.put(f"{API_BASE}/preferences", json=_cur_prefs, headers=_auth_headers(), timeout=10)
-                    st.session_state.sync_prefs = _cur_prefs
-                    st.rerun()
-                except Exception:
-                    st.error("Failed to save health connection preferences")
-
-            st.markdown(
-                '<div style="color:#8B95AD;font-size:0.7rem;margin-top:0.5rem;">'
-                'Apple Health (iOS) and Google Health Connect (Android) sync through the PaceForge mobile app. '
-                'Enable the connection here, then open the mobile app to authorize data access.</div>',
-                unsafe_allow_html=True,
-            )
-
             # ── Future Connectors ──
             st.markdown("---")
             st.markdown('<div class="pf-section-header">Other Services</div>', unsafe_allow_html=True)
-            for svc in ["Strava", "Polar", "COROS"]:
+
+            # ── Strava Connection ──
+            _strava_status = None
+            try:
+                _sr = requests.get(f"{API_BASE}/strava/status", headers=_auth_headers(), timeout=10)
+                if _sr.status_code == 200:
+                    _strava_status = _sr.json()
+            except Exception:
+                pass
+
+            if _strava_status and _strava_status.get("connected"):
+                _ath_name = _strava_status.get("athlete_name", "Connected")
+                st.markdown(
+                    f'<div style="display:flex;align-items:center;justify-content:space-between;'
+                    f'padding:0.75rem 1rem;background:#1A1D2B;border:1px solid #FC4C02;'
+                    f'border-radius:10px;margin-bottom:0.5rem;">'
+                    f'<div><span style="color:#FC4C02;font-weight:600;">Strava</span>'
+                    f'<span style="color:#8B95AD;font-size:0.8rem;margin-left:0.5rem;">{_ath_name}</span></div>'
+                    f'<span style="color:#10B981;font-size:0.8rem;">Connected</span>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+                if st.button("Disconnect Strava", key="strava_disconnect", use_container_width=True):
+                    try:
+                        requests.delete(f"{API_BASE}/strava/disconnect", headers=_auth_headers(), timeout=10)
+                        st.rerun()
+                    except Exception as _se:
+                        st.error(f"Failed to disconnect: {_se}")
+            else:
+                st.markdown(
+                    '<div style="display:flex;align-items:center;justify-content:space-between;'
+                    'padding:0.75rem 1rem;background:#1A1D2B;border:1px solid #2A2D3B;'
+                    'border-radius:10px;margin-bottom:0.5rem;">'
+                    '<span style="color:#E8ECF4;font-weight:500;">Strava</span>'
+                    '<span style="color:#8B95AD;font-size:0.8rem;">Not connected</span>'
+                    '</div>',
+                    unsafe_allow_html=True,
+                )
+                if st.button("Connect Strava", key="strava_connect", use_container_width=True):
+                    try:
+                        _ar = requests.get(f"{API_BASE}/strava/auth-url", headers=_auth_headers(), timeout=10)
+                        if _ar.status_code == 200:
+                            _auth_url = _ar.json().get("url", "")
+                            if _auth_url:
+                                st.markdown(
+                                    f'<a href="{_auth_url}" target="_blank" style="color:#FC4C02;font-weight:600;">'
+                                    f'Click here to authorize on Strava</a>',
+                                    unsafe_allow_html=True,
+                                )
+                        elif _ar.status_code == 503:
+                            st.warning("Strava integration is not configured on the server.")
+                        else:
+                            st.error(f"Failed to get auth URL: {_ar.text}")
+                    except Exception as _se:
+                        st.error(f"Failed: {_se}")
+
+            # ── Other services (coming soon) ──
+            for svc in ["Polar", "COROS"]:
                 st.markdown(
                     f'<div style="display:flex;align-items:center;justify-content:space-between;'
                     f'padding:0.75rem 1rem;background:#1A1D2B;border:1px solid #2A2D3B;'

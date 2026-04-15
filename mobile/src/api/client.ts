@@ -1,9 +1,7 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
-const API_BASE = __DEV__
-  ? 'http://localhost:8000'
-  : 'https://paceforge-app.azurewebsites.net';
+const API_BASE = 'https://paceforge-app.azurewebsites.net';
 
 const api = axios.create({
   baseURL: API_BASE,
