@@ -4306,8 +4306,10 @@ with tab_calendar:
                                             if _sr.status_code == 200:
                                                 _sdata = _sr.json()
                                                 st.session_state[f"strava_sent_{_ai_act_id}"] = True
-                                                if _sdata.get("duplicate"):
-                                                    st.warning("Activity exists on Strava but could not be updated — check Strava app permissions include activity:write")
+                                                if _sdata.get("needs_reauth"):
+                                                    st.warning("Strava token lacks write permission. Please disconnect and reconnect Strava in **Settings** to grant activity:write access.")
+                                                elif _sdata.get("duplicate"):
+                                                    st.info("Activity already exists on Strava but could not be updated.")
                                                 elif _sdata.get("updated"):
                                                     st.success("Activity enhanced on Strava with PaceForge data!")
                                                     st.markdown(
@@ -4575,8 +4577,10 @@ with tab_calendar:
                                                 if _sr.status_code == 200:
                                                     _sdata = _sr.json()
                                                     st.session_state[f"strava_sent_{_plan_act_id}"] = True
-                                                    if _sdata.get("duplicate"):
-                                                        st.warning("Activity exists on Strava but could not be updated — check Strava app permissions include activity:write")
+                                                    if _sdata.get("needs_reauth"):
+                                                        st.warning("Strava token lacks write permission. Please disconnect and reconnect Strava in **Settings** to grant activity:write access.")
+                                                    elif _sdata.get("duplicate"):
+                                                        st.info("Activity already exists on Strava but could not be updated.")
                                                     elif _sdata.get("updated"):
                                                         st.success("Activity enhanced on Strava with PaceForge data!")
                                                         st.markdown(

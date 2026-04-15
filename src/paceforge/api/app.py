@@ -9,6 +9,7 @@ from contextlib import asynccontextmanager
 from datetime import UTC, date
 from pathlib import Path
 
+import httpx
 import jwt as pyjwt
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -2175,6 +2176,17 @@ async def strava_push(activity_id: int, user: dict = Depends(get_current_user)):
                     "Updated existing Strava activity %s with PaceForge data",
                     strava_id,
                 )
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 403:
+                logger.warning("Strava 403 on update — token lacks activity:write scope")
+                return {
+                    "strava_activity_id": None,
+                    "url": None,
+                    "duplicate": True,
+                    "needs_reauth": True,
+                    "message": "Strava token lacks write permission. Please disconnect and reconnect Strava in Settings to grant activity:write access.",
+                }
+            logger.warning("Strava find/update failed, falling back to create: %s", e)
         except Exception as e:
             logger.warning("Strava find/update failed, falling back to create: %s", e)
 
