@@ -4108,70 +4108,70 @@ with tab_calendar:
                 for _cev in cal_events:
                     _evbd[_cev["start"][:10]].append(_cev)
 
-                # ── Build HTML calendar grid ──
+                # ── Render calendar grid with clickable events ──
                 _cal = _cal_mod.Calendar(firstweekday=0)
                 _weeks = _cal.monthdatescalendar(_cy, _cm)
-                _gh = '<div style="width:100%;user-select:none;">'
-                _gh += '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px;">'
-                for _dn in ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]:
-                    _gh += f'<div style="text-align:center;font-size:0.7rem;font-weight:600;color:#8B95AD;padding:4px 0;">{_dn}</div>'
-                _gh += '</div>'
-                for _wk in _weeks:
-                    _gh += '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;">'
-                    for _day in _wk:
-                        _icm = _day.month == _cm
-                        _itd = _day == _today
-                        _ds = _day.isoformat()
-                        _devs = _evbd.get(_ds, [])
-                        _bg = "rgba(16,185,129,0.08)" if _itd else "transparent"
-                        _op = "1" if _icm else "0.3"
-                        _nc = "#10B981" if _itd else "#8B95AD"
-                        _fw = "700" if _itd else "400"
-                        _gh += (f'<div style="background:{_bg};opacity:{_op};border:1px solid #252A35;'
-                                f'border-radius:4px;padding:2px 4px;min-height:52px;">'
-                                f'<div style="font-size:0.72rem;color:{_nc};font-weight:{_fw};">{_day.day}</div>')
-                        for _dev in _devs[:3]:
-                            _dc = _dev.get("backgroundColor", "#10B981")
-                            _dt = _dev["title"][:14].replace("<", "&lt;")
-                            _gh += (f'<div style="font-size:0.55rem;color:{_dc};white-space:nowrap;'
-                                    f'overflow:hidden;text-overflow:ellipsis;line-height:1.3;">● {_dt}</div>')
-                        if len(_devs) > 3:
-                            _gh += f'<div style="font-size:0.5rem;color:#8B95AD;">+{len(_devs) - 3} more</div>'
-                        _gh += '</div>'
-                    _gh += '</div>'
-                _gh += '</div>'
-                st.markdown(_gh, unsafe_allow_html=True)
 
-                st.markdown("")
-                _sel_date = st.date_input("View events for", value=_today, key="cal_pick_date", label_visibility="collapsed")
-                _sd_str = _sel_date.isoformat() if _sel_date else _today.isoformat()
-                _sd_evs = _evbd.get(_sd_str, [])
+                # Day-of-week header
+                _hdr_cols = st.columns(7)
+                for _di, _dn in enumerate(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]):
+                    with _hdr_cols[_di]:
+                        st.markdown(
+                            f'<div style="text-align:center;font-size:0.7rem;font-weight:600;color:#8B95AD;padding:2px 0;">{_dn}</div>',
+                            unsafe_allow_html=True,
+                        )
 
-                if _sd_evs:
-                    for _sev in _sd_evs:
-                        if st.button(f"● {_sev['title']}", key=f"cev_{_sev['id']}", use_container_width=True):
-                            _sprops = _sev.get("extendedProps", {})
-                            st.session_state["cal_selected_event"] = {
-                                "title": _sev.get("title", ""),
-                                "start": _sev.get("start", ""),
-                                "props": _sprops,
-                            }
-                            _fetch_id = None
-                            if _sprops.get("source") == "garmin" and _sprops.get("activity_id"):
-                                _fetch_id = _sprops["activity_id"]
-                            elif _sprops.get("source") == "plan" and _sprops.get("completed") and _sprops.get("matched_activity_id"):
-                                _fetch_id = _sprops["matched_activity_id"]
-                            if _fetch_id:
-                                try:
-                                    _dr = requests.get(f"{API_BASE}/activities/{_fetch_id}", headers=_auth_headers(), timeout=30)
-                                    st.session_state["cal_selected_detail"] = _dr.json() if _dr.status_code == 200 else None
-                                except Exception:
-                                    st.session_state["cal_selected_detail"] = None
-                            else:
-                                st.session_state["cal_selected_detail"] = None
-                            st.rerun()
-                else:
-                    st.caption("No events on this date")
+                # Week rows with clickable event buttons
+                for _wi, _wk in enumerate(_weeks):
+                    _day_cols = st.columns(7)
+                    for _di, _day in enumerate(_wk):
+                        with _day_cols[_di]:
+                            _icm = _day.month == _cm
+                            _itd = _day == _today
+                            _ds = _day.isoformat()
+                            _devs = _evbd.get(_ds, [])
+
+                            # Day number
+                            _bg = "rgba(16,185,129,0.08)" if _itd else "transparent"
+                            _nc = "#10B981" if _itd else ("#E8ECF4" if _icm else "#3E4455")
+                            _fw = "700" if _itd else "400"
+                            st.markdown(
+                                f'<div style="background:{_bg};border-radius:4px;padding:1px 3px;min-height:10px;">'
+                                f'<div style="font-size:0.72rem;color:{_nc};font-weight:{_fw};">{_day.day}</div>'
+                                f'</div>',
+                                unsafe_allow_html=True,
+                            )
+
+                            # Render each event as a small clickable button
+                            if _icm:
+                                for _evi, _dev in enumerate(_devs[:3]):
+                                    _dc = _dev.get("backgroundColor", "#10B981")
+                                    _dt = _dev["title"][:18]
+                                    _bk = f"cev_{_wi}_{_di}_{_evi}"
+                                    # Use custom styled button via markdown + real button
+                                    if st.button(f"● {_dt}", key=_bk, use_container_width=True):
+                                        _sprops = _dev.get("extendedProps", {})
+                                        st.session_state["cal_selected_event"] = {
+                                            "title": _dev.get("title", ""),
+                                            "start": _dev.get("start", ""),
+                                            "props": _sprops,
+                                        }
+                                        _fetch_id = None
+                                        if _sprops.get("source") == "garmin" and _sprops.get("activity_id"):
+                                            _fetch_id = _sprops["activity_id"]
+                                        elif _sprops.get("source") == "plan" and _sprops.get("completed") and _sprops.get("matched_activity_id"):
+                                            _fetch_id = _sprops["matched_activity_id"]
+                                        if _fetch_id:
+                                            try:
+                                                _dr = requests.get(f"{API_BASE}/activities/{_fetch_id}", headers=_auth_headers(), timeout=30)
+                                                st.session_state["cal_selected_detail"] = _dr.json() if _dr.status_code == 200 else None
+                                            except Exception:
+                                                st.session_state["cal_selected_detail"] = None
+                                        else:
+                                            st.session_state["cal_selected_detail"] = None
+                                        st.rerun()
+                                if len(_devs) > 3:
+                                    st.markdown(f'<div style="font-size:0.55rem;color:#8B95AD;text-align:center;">+{len(_devs) - 3} more</div>', unsafe_allow_html=True)
 
                 # ── Reschedule via date picker ──
                 _sel = st.session_state.get("cal_selected_event")
@@ -4189,6 +4189,35 @@ with tab_calendar:
                                 st.success(f"Moved to {_new_date} — click **Push Plan to Garmin** to sync")
                             else:
                                 st.error("Failed to reschedule")
+
+                # ── Style overrides: make calendar event buttons small and colored ──
+                st.markdown(
+                    """<style>
+                    /* Compact calendar event buttons */
+                    [data-testid="stHorizontalBlock"] [data-testid="column"] button[kind="secondary"] {
+                        font-size: 0.55rem !important;
+                        padding: 1px 4px !important;
+                        min-height: 0 !important;
+                        height: auto !important;
+                        line-height: 1.2 !important;
+                        border: none !important;
+                        background: rgba(30,35,48,0.7) !important;
+                        color: #C8CDD8 !important;
+                        text-align: left !important;
+                        justify-content: flex-start !important;
+                        border-radius: 3px !important;
+                        white-space: nowrap !important;
+                        overflow: hidden !important;
+                        text-overflow: ellipsis !important;
+                        margin: 0 !important;
+                    }
+                    [data-testid="stHorizontalBlock"] [data-testid="column"] button[kind="secondary"]:hover {
+                        background: rgba(16,185,129,0.15) !important;
+                        color: #E8ECF4 !important;
+                    }
+                    </style>""",
+                    unsafe_allow_html=True,
+                )
 
             # ── Detail panel (right column) ──
             with detail_col:
