@@ -19,7 +19,10 @@ API_BASE = "http://localhost:8000"
 st.set_page_config(page_title="PaceForge", page_icon="🏃", layout="wide")
 
 # ── Cookie manager for persistent JWT ────────────────────────────────
-_cookie_mgr = stx.CookieManager(key="pf_cookies")
+try:
+    _cookie_mgr = stx.CookieManager(key="pf_cookies")
+except Exception:
+    _cookie_mgr = None
 
 # ═══════════════════════════════════════════════════════════════════════
 # LOGO — load SVG and encode as base64 data URI
@@ -1183,8 +1186,8 @@ if st.session_state.jwt is None:
         st.session_state["_cookie_init"] = True
         time.sleep(0.5)
         st.rerun()
-    saved_jwt = _cookie_mgr.get("pf_jwt")
-    saved_refresh = _cookie_mgr.get("pf_refresh")
+    saved_jwt = _cookie_mgr.get("pf_jwt") if _cookie_mgr else None
+    saved_refresh = _cookie_mgr.get("pf_refresh") if _cookie_mgr else None
     if saved_jwt:
         # Validate the token is still accepted by the API
         try:
@@ -1214,8 +1217,8 @@ if st.session_state.jwt is None:
                     st.session_state.user_name = data["name"]
                     st.session_state.user_email = data.get("email", "")
                     st.session_state.page = "app"
-                    _cookie_mgr.set("pf_jwt", data["access_token"], key="set_jwt_refresh1", max_age=86400)
-                    _cookie_mgr.set("pf_refresh", data["refresh_token"], key="set_refresh_refresh1", max_age=2592000)
+                    _cookie_mgr.set("pf_jwt", data["access_token"], key="set_jwt_refresh1", max_age=86400) if _cookie_mgr else None
+                    _cookie_mgr.set("pf_refresh", data["refresh_token"], key="set_refresh_refresh1", max_age=2592000) if _cookie_mgr else None
         except Exception:
             pass  # Cookie invalid or API unreachable — show login
     elif saved_refresh:
@@ -1233,8 +1236,8 @@ if st.session_state.jwt is None:
                 st.session_state.user_name = data["name"]
                 st.session_state.user_email = data.get("email", "")
                 st.session_state.page = "app"
-                _cookie_mgr.set("pf_jwt", data["access_token"], key="set_jwt_refresh2", max_age=86400)
-                _cookie_mgr.set("pf_refresh", data["refresh_token"], key="set_refresh_refresh2", max_age=2592000)
+                _cookie_mgr.set("pf_jwt", data["access_token"], key="set_jwt_refresh2", max_age=86400) if _cookie_mgr else None
+                _cookie_mgr.set("pf_refresh", data["refresh_token"], key="set_refresh_refresh2", max_age=2592000) if _cookie_mgr else None
         except Exception:
             pass
 
@@ -1250,8 +1253,9 @@ def _logout():
         st.session_state[key] = None if key not in ("garmin_logged_in", "mfa_required", "plans") else (False if key != "plans" else [])
     st.session_state._restored = False
     st.session_state.page = "login"
-    _cookie_mgr.delete("pf_jwt")
-    _cookie_mgr.delete("pf_refresh")
+    if _cookie_mgr:
+        _cookie_mgr.delete("pf_jwt")
+        _cookie_mgr.delete("pf_refresh")
 
 
 def _error_detail(r: requests.Response) -> str:
@@ -1605,8 +1609,8 @@ if st.session_state.jwt is None:
                         st.session_state.user_name = data["name"]
                         st.session_state.user_email = data.get("email", "")
                         st.session_state.page = "app"
-                        _cookie_mgr.set("pf_jwt", data["access_token"], key="set_jwt_login", max_age=86400)
-                        _cookie_mgr.set("pf_refresh", data["refresh_token"], key="set_refresh_login", max_age=2592000)
+                        _cookie_mgr.set("pf_jwt", data["access_token"], key="set_jwt_login", max_age=86400) if _cookie_mgr else None
+                        _cookie_mgr.set("pf_refresh", data["refresh_token"], key="set_refresh_login", max_age=2592000) if _cookie_mgr else None
                         st.rerun()
                     elif r.status_code == 403:
                         st.warning(_error_detail(r))
@@ -4110,6 +4114,11 @@ with tab_calendar:
                     .fc-button:hover { background: #252A35 !important; }
                     .fc-button-active { background: #10B981 !important; color: #0F1117 !important; border-color: #10B981 !important; }
                     .fc-toolbar-title { font-size: 1rem !important; font-weight: 700; color: #E8ECF4; }
+                    .fc-scroller { overflow: hidden !important; scrollbar-width: none !important; -ms-overflow-style: none !important; }
+                    .fc-scroller::-webkit-scrollbar { display: none !important; }
+                    .fc-scroller-harness { overflow: hidden !important; }
+                    html, body { overflow: hidden !important; scrollbar-width: none !important; }
+                    html::-webkit-scrollbar, body::-webkit-scrollbar { display: none !important; }
                 """
 
                 import streamlit.components.v1 as components
