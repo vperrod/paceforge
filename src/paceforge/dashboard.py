@@ -1369,7 +1369,7 @@ def _render_workout_detail(workout: dict, plan_paces: dict | None = None) -> str
     return f'<div class="pf-card" style="margin-top:1rem;">{"".join(lines)}</div>'
 
 
-def _render_garmin_activity_detail(detail: dict, activity_type: str = "running") -> None:
+def _render_garmin_activity_detail(detail: dict, activity_type: str = "running", key_prefix: str = "") -> None:
     """Render Garmin activity detail with splits, charts, and HR zones."""
     import plotly.graph_objects as go
     from plotly.subplots import make_subplots
@@ -1496,7 +1496,7 @@ def _render_garmin_activity_detail(detail: dict, activity_type: str = "running")
             fig.update_yaxes(autorange="reversed", title_text="Pace (s/km)", gridcolor="rgba(148,163,194,0.08)", secondary_y=False)
             fig.update_yaxes(title_text="HR (bpm)", gridcolor="rgba(148,163,194,0.08)", secondary_y=True)
             fig.update_xaxes(title_text="Split", gridcolor="rgba(148,163,194,0.06)", dtick=1)
-            st.plotly_chart(fig, use_container_width=True, key="splits_hr_chart")
+            st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}splits_hr_chart")
         elif paces:
             avg_p = sum(paces) / len(paces)
             colors = ["#10B981" if p <= avg_p else "#F43F5E" for p in paces]
@@ -1511,7 +1511,7 @@ def _render_garmin_activity_detail(detail: dict, activity_type: str = "running")
                 xaxis=dict(gridcolor="rgba(148,163,194,0.06)", dtick=1, title="Split", zeroline=False),
                 bargap=0.3,
             ))
-            st.plotly_chart(fig, use_container_width=True, key="splits_chart")
+            st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}splits_chart")
 
     # ── HR Zones ──
     hr_list = hr_zones_data if isinstance(hr_zones_data, list) else hr_zones_data.get("hrTimeInZones", [])
@@ -2127,27 +2127,20 @@ with tab_feed:
                         if _det_items:
                             st.markdown(_metrics_strip(_det_items), unsafe_allow_html=True)
 
-                        # ── Pace & distance visual bar ──
-                        if _pa_is_run and _pa_dist and _pa_pace:
-                            _bar_dist_pct = min(_pa_dist / 30000 * 100, 100)
-                            _pace_ratio = max(0.0, min(1.0, (_pa_pace - 330) / (420 - 330)))
-                            _bar_hue = 140 - _pace_ratio * 140
-                            _d_km = f"{_pa_dist / 1000:.1f}km"
-                            _p_min, _p_sec = divmod(int(_pa_pace), 60)
-                            _p_lbl = f"{_p_min}:{_p_sec:02d}/km"
-                            st.markdown(
-                                f'<div style="margin-top:0.6rem;">'
-                                f'<div style="font-size:0.75rem;color:#8B95AD;margin-bottom:0.25rem;">Pace (min/km)</div>'
-                                f'<div style="display:flex;align-items:center;gap:0.6rem;">'
-                                f'<div style="flex:1;background:#1E2130;border-radius:6px;height:28px;overflow:hidden;">'
-                                f'<div style="background:hsl({_bar_hue},65%,45%);height:100%;width:{_bar_dist_pct}%;'
-                                f'border-radius:6px;display:flex;align-items:center;padding-left:0.5rem;'
-                                f'font-size:0.75rem;color:#fff;font-weight:600;min-width:fit-content;">'
-                                f'{_p_lbl}</div></div>'
-                                f'<span style="font-size:0.8rem;color:#8B95AD;white-space:nowrap;">{_d_km}</span>'
-                                f'</div></div>',
-                                unsafe_allow_html=True,
-                            )
+                        # ── Fetch & render splits chart ──
+                        _pa_aid = _pa.get("activity_id")
+                        if _pa_is_run and _pa_aid:
+                            _detail_cache_key = f"_act_detail_{_pa_aid}"
+                            if _detail_cache_key not in st.session_state:
+                                try:
+                                    _det_url = f"{API_BASE}/users/{_viewing_uid}/activities/{_pa_aid}/detail"
+                                    _det_r = requests.get(_det_url, headers=_auth_headers(), timeout=15)
+                                    st.session_state[_detail_cache_key] = _det_r.json() if _det_r.status_code == 200 else None
+                                except Exception:
+                                    st.session_state[_detail_cache_key] = None
+                            _pa_detail = st.session_state.get(_detail_cache_key)
+                            if _pa_detail:
+                                _render_garmin_activity_detail(_pa_detail, _pa_type, key_prefix=f"prof_{_pa_aid}_")
 
             # ── HYROX Races ──
             _p_hyrox = _pdata.get("hyrox")

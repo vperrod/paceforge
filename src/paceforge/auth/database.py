@@ -106,6 +106,8 @@ _MIGRATIONS = [
         token TEXT NOT NULL, created_at TEXT NOT NULL, UNIQUE(user_id, token))""",
     # Add health_json column for Apple Health / Google Health Connect data
     "ALTER TABLE user_data ADD COLUMN health_json TEXT",
+    # Add activity_details_json for cached per-activity splits/HR zones
+    "ALTER TABLE user_data ADD COLUMN activity_details_json TEXT",
 ]
 
 
@@ -274,8 +276,9 @@ def save_user_data(
     hyrox_json: str | None = None,
     preferences_json: str | None = None,
     health_json: str | None = None,
+    activity_details_json: str | None = None,
 ) -> None:
-    """Upsert cached user data (plan, activities, profile, hyrox, preferences, health)."""
+    """Upsert cached user data (plan, activities, profile, hyrox, preferences, health, activity details)."""
     now = datetime.now(UTC).isoformat()
     with _lock:
         conn = _get_conn(db_path)
@@ -303,6 +306,9 @@ def save_user_data(
             if health_json is not None:
                 sets.append("health_json = ?")
                 vals.append(health_json)
+            if activity_details_json is not None:
+                sets.append("activity_details_json = ?")
+                vals.append(activity_details_json)
             vals.append(user_id)
             conn.execute(
                 f"UPDATE user_data SET {', '.join(sets)} WHERE user_id = ?",

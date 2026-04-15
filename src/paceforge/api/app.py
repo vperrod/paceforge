@@ -674,12 +674,77 @@ async def save_preferences(body: dict, user: dict = Depends(get_current_user)):
 
 @app.get("/activities/{activity_id}")
 async def get_activity_detail(activity_id: int, user: dict = Depends(get_current_user)):
-    """Return detailed splits, HR zones, and summary for an activity."""
+    """Return detailed splits, HR zones, and summary for an activity.
+
+    Checks cache first; fetches from Garmin on miss and caches the result.
+    """
     uid = user["id"]
+    act_key = str(activity_id)
+
+    # Check cache
+    cached = load_user_data(settings.db_path, uid)
+    if cached and cached.get("activity_details_json"):
+        try:
+            details_cache = json.loads(cached["activity_details_json"])
+            if act_key in details_cache:
+                return details_cache[act_key]
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    # Fetch from Garmin
     garmin = _ensure_garmin(uid)
     if not garmin:
         raise HTTPException(404, "Garmin not connected \u2014 detailed view unavailable")
-    return garmin.get_activity_detail(activity_id)
+    detail = garmin.get_activity_detail(activity_id)
+
+    # Cache the result
+    try:
+        existing_cache: dict = {}
+        if cached and cached.get("activity_details_json"):
+            existing_cache = json.loads(cached["activity_details_json"])
+        existing_cache[act_key] = detail
+        save_user_data(settings.db_path, uid, activity_details_json=json.dumps(existing_cache))
+    except Exception:
+        logger.warning("Could not cache activity detail for %s", activity_id)
+
+    return detail
+
+
+@app.get("/users/{user_id}/activities/{activity_id}/detail")
+async def get_user_activity_detail(user_id: str, activity_id: int, user: dict = Depends(get_current_user)):
+    """Return cached activity detail for a user (used in profile views)."""
+    uid = user["id"]
+    if user_id != uid:
+        friend_ids = get_friend_ids(settings.db_path, uid)
+        if user_id not in friend_ids:
+            raise HTTPException(403, "You can only view activities of friends")
+
+    cached = load_user_data(settings.db_path, user_id)
+    if cached and cached.get("activity_details_json"):
+        try:
+            details_cache = json.loads(cached["activity_details_json"])
+            detail = details_cache.get(str(activity_id))
+            if detail:
+                return detail
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    # If viewing own activity and not cached, try fetching from Garmin
+    if user_id == uid:
+        garmin = _ensure_garmin(uid)
+        if garmin:
+            detail = garmin.get_activity_detail(activity_id)
+            try:
+                existing_cache: dict = {}
+                if cached and cached.get("activity_details_json"):
+                    existing_cache = json.loads(cached["activity_details_json"])
+                existing_cache[str(activity_id)] = detail
+                save_user_data(settings.db_path, uid, activity_details_json=json.dumps(existing_cache))
+            except Exception:
+                logger.warning("Could not cache activity detail for %s", activity_id)
+            return detail
+
+    raise HTTPException(404, "Activity detail not available")
 
 
 @app.post("/activities/{activity_id}/analyze")
