@@ -4123,8 +4123,11 @@ with tab_calendar:
                                 try {
                                     var fd = frames[i].contentDocument;
                                     if (fd && fd.querySelector('.fc')) {
-                                        frames[i].style.height = '450px';
-                                        frames[i].style.minHeight = '450px';
+                                        var h = fd.body.scrollHeight || 500;
+                                        frames[i].style.height = h + 'px';
+                                        frames[i].style.minHeight = h + 'px';
+                                        frames[i].style.overflow = 'hidden';
+                                        frames[i].scrolling = 'no';
                                         frames[i].contentWindow.dispatchEvent(new Event('resize'));
                                     }
                                 } catch(e) {}
