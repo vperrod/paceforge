@@ -6,7 +6,7 @@ import asyncio
 import json
 import logging
 from contextlib import asynccontextmanager
-from datetime import date
+from datetime import UTC, date
 from pathlib import Path
 
 import jwt as pyjwt
@@ -1839,7 +1839,23 @@ _STRAVA_SPORT_TYPE_MAP: dict[str, str] = {
     "treadmill_running": "Run",
     "fitness_equipment": "Workout",
     "cycling": "Ride",
+    "indoor_cycling": "Ride",
     "walking": "Walk",
+    "hiking": "Hike",
+    "swimming": "Swim",
+    "open_water_swimming": "Swim",
+    "strength_training": "WeightTraining",
+    "yoga": "Yoga",
+    "elliptical": "Elliptical",
+    "stair_climbing": "StairStepper",
+}
+
+_STRAVA_TRAINER_TYPES: set[str] = {
+    "treadmill_running",
+    "indoor_cycling",
+    "fitness_equipment",
+    "elliptical",
+    "stair_climbing",
 }
 
 
@@ -1968,17 +1984,53 @@ def _build_strava_description(
 ) -> str:
     """Build the rich description for a Strava activity post."""
     parts: list[str] = []
+
+    # Metrics summary from Garmin data
+    metrics: list[str] = []
+    dist_m = activity.get("distance_meters")
+    dur_s = activity.get("duration_seconds")
+    if dist_m and dist_m > 0:
+        km = dist_m / 1000
+        metrics.append(f"Distance: {km:.2f} km")
+        if dur_s and dur_s > 0:
+            pace_s = dur_s / km
+            pm, ps = divmod(int(pace_s), 60)
+            metrics.append(f"Avg Pace: {pm}:{ps:02d} /km")
+    if dur_s and dur_s > 0:
+        dm, ds = divmod(int(dur_s), 60)
+        dh, dm = divmod(dm, 60)
+        metrics.append(f"Duration: {dh}:{dm:02d}:{ds:02d}" if dh else f"Duration: {dm}:{ds:02d}")
+    avg_hr = activity.get("avg_hr")
+    max_hr = activity.get("max_hr")
+    if avg_hr:
+        hr_str = f"Heart Rate: {avg_hr} bpm avg"
+        if max_hr:
+            hr_str += f" / {max_hr} bpm max"
+        metrics.append(hr_str)
+    cadence = activity.get("avg_running_cadence")
+    if cadence:
+        metrics.append(f"Cadence: {int(cadence * 2)} spm")
+    elev = activity.get("elevation_gain")
+    if elev and elev > 0:
+        metrics.append(f"Elevation: +{int(elev)}m")
+    cals = activity.get("calories")
+    if cals:
+        metrics.append(f"Calories: {cals} kcal")
+    if metrics:
+        parts.append("\n".join(metrics))
+
     if workout_description:
-        parts.append(workout_description)
+        if parts:
+            parts.append("")
+        parts.append(f"Planned workout:\n{workout_description}")
     if ai_analysis:
         if parts:
             parts.append("")
-        parts.append("AI Analysis:")
-        parts.append(ai_analysis)
+        parts.append(f"AI Coach Analysis:\n{ai_analysis}")
     # Footer
     parts.append("")
     parts.append("---")
-    parts.append("Training plan generated with PaceForge — want to be a BETA tester? Get in touch!")
+    parts.append("Training plan generated with PaceForge \u2014 want to be a BETA tester? Get in touch!")
     return "\n".join(parts)
 
 
@@ -2059,56 +2111,107 @@ async def strava_push(activity_id: int, user: dict = Depends(get_current_user)):
     # 7. Map activity type to Strava sport_type
     act_type = act_dict.get("activity_type", "running")
     sport_type = _STRAVA_SPORT_TYPE_MAP.get(act_type, "Workout")
+    is_trainer = act_type in _STRAVA_TRAINER_TYPES
 
-    # 8. Format start time
+    # 8. Build PaceForge-branded title
+    strava_title = act_dict.get("name", "PaceForge Activity")
+    if workout_description:
+        first_line = workout_description.split("\n")[0].strip()
+        if first_line:
+            strava_title = f"{first_line} / PaceForge AI plan"
+    elif "PaceForge" not in strava_title:
+        strava_title = f"{strava_title} / PaceForge"
+
+    # 9. Parse start_time for matching
     start_time = act_dict.get("start_time", "")
     if hasattr(start_time, "isoformat"):
         start_time = start_time.isoformat()
 
-    # 9. Ensure valid token and push
+    # 10. Ensure valid token
     client = _get_strava_client()
     try:
         access_token, strava_data = client.ensure_valid_token(strava_data)
-        _save_strava_data(uid, strava_data)  # persist refreshed tokens
+        _save_strava_data(uid, strava_data)
     except Exception as e:
         logger.error("Strava token refresh failed: %s", e)
         raise HTTPException(502, "Failed to refresh Strava token — please reconnect")
 
+    # 11. Try update-first: find the Garmin-synced activity on Strava and
+    #     enhance it with PaceForge data (title, description).
+    start_epoch: float | None = None
     try:
-        result = client.create_activity(
-            access_token,
-            name=act_dict.get("name", "PaceForge Activity"),
-            sport_type=sport_type,
-            start_date_local=start_time,
-            elapsed_time=int(act_dict.get("duration_seconds", 0)),
-            description=description,
-            distance=act_dict.get("distance_meters"),
-        )
-    except DuplicateActivityError:
-        # Activity already exists on Strava (e.g. auto-synced from Garmin).
-        # Mark as sent so the UI shows "✓ Sent" and won't retry.
-        sent.append(activity_id)
-        prefs["strava_sent_activities"] = sent
-        save_user_data(settings.db_path, uid, preferences_json=json.dumps(prefs))
-        return {
-            "strava_activity_id": None,
-            "url": None,
-            "duplicate": True,
-            "message": "Activity already exists on Strava (likely auto-synced from Garmin)",
-        }
-    except Exception as e:
-        logger.error("Strava create activity failed: %s", e)
-        raise HTTPException(502, f"Strava API error: {e}")
+        from datetime import datetime as _dt
+        if isinstance(start_time, str) and start_time:
+            parsed = _dt.fromisoformat(start_time.replace("Z", "+00:00"))
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=UTC)
+            start_epoch = parsed.timestamp()
+    except (ValueError, TypeError):
+        pass
 
-    # 10. Record that we sent this activity
+    strava_id: int | str = ""
+    updated = False
+
+    if start_epoch:
+        try:
+            existing = client.find_matching_activity(
+                access_token,
+                start_epoch,
+                distance_meters=act_dict.get("distance_meters"),
+            )
+            if existing:
+                strava_id = existing["id"]
+                client.update_activity(
+                    access_token,
+                    strava_id,
+                    name=strava_title,
+                    description=description,
+                )
+                updated = True
+                logger.info(
+                    "Updated existing Strava activity %s with PaceForge data",
+                    strava_id,
+                )
+        except Exception as e:
+            logger.warning("Strava find/update failed, falling back to create: %s", e)
+
+    # 12. Fallback: create new activity if no match found
+    if not updated:
+        try:
+            result = client.create_activity(
+                access_token,
+                name=strava_title,
+                sport_type=sport_type,
+                start_date_local=start_time,
+                elapsed_time=int(act_dict.get("duration_seconds", 0)),
+                description=description,
+                distance=act_dict.get("distance_meters"),
+                trainer=is_trainer,
+            )
+            strava_id = result.get("id", "")
+        except DuplicateActivityError:
+            sent.append(activity_id)
+            prefs["strava_sent_activities"] = sent
+            save_user_data(settings.db_path, uid, preferences_json=json.dumps(prefs))
+            return {
+                "strava_activity_id": None,
+                "url": None,
+                "duplicate": True,
+                "message": "Activity already exists on Strava (likely auto-synced from Garmin)",
+            }
+        except Exception as e:
+            logger.error("Strava create activity failed: %s", e)
+            raise HTTPException(502, f"Strava API error: {e}")
+
+    # 13. Record that we sent this activity
     sent.append(activity_id)
     prefs["strava_sent_activities"] = sent
     save_user_data(settings.db_path, uid, preferences_json=json.dumps(prefs))
 
-    strava_id = result.get("id", "")
     return {
         "strava_activity_id": strava_id,
         "url": f"https://www.strava.com/activities/{strava_id}",
+        "updated": updated,
     }
 
 

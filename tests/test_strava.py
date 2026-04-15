@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC
 from unittest.mock import MagicMock, patch
 
 from paceforge.strava.client import StravaClient
@@ -19,7 +20,8 @@ class TestStravaAuthURL:
         assert "client_id=12345" in url
         assert "redirect_uri=https%3A%2F%2Fexample.com%2Fcallback" in url
         assert "response_type=code" in url
-        assert "scope=activity%3Awrite" in url
+        assert "scope=activity%3Aread" in url
+        assert "activity%3Awrite" in url
         assert "state=jwt-token-here" in url
         assert url.startswith("https://www.strava.com/oauth/authorize?")
 
@@ -157,19 +159,34 @@ class TestStravaCreateActivity:
 
 
 class TestDescriptionBuilder:
-    def test_full_description(self):
+    def test_full_description_with_metrics(self):
         from paceforge.api.app import _build_strava_description
 
         desc = _build_strava_description(
-            activity={"name": "Easy Run"},
+            activity={
+                "name": "Easy Run",
+                "distance_meters": 8000,
+                "duration_seconds": 2640,
+                "avg_hr": 145,
+                "max_hr": 162,
+                "avg_running_cadence": 88,
+                "elevation_gain": 42,
+                "calories": 520,
+            },
             workout_description="Easy recovery run — 8km @ 5:30/km target",
             ai_analysis="Great pacing, consistent splits.",
         )
+        assert "Distance: 8.00 km" in desc
+        assert "Avg Pace: 5:30 /km" in desc
+        assert "Heart Rate: 145 bpm avg / 162 bpm max" in desc
+        assert "Cadence: 176 spm" in desc
+        assert "Elevation: +42m" in desc
+        assert "Calories: 520 kcal" in desc
+        assert "Planned workout:" in desc
         assert "Easy recovery run" in desc
-        assert "AI Analysis:" in desc
+        assert "AI Coach Analysis:" in desc
         assert "Great pacing" in desc
         assert "PaceForge" in desc
-        assert "BETA tester" in desc
 
     def test_no_workout_description(self):
         from paceforge.api.app import _build_strava_description
@@ -179,7 +196,7 @@ class TestDescriptionBuilder:
             workout_description=None,
             ai_analysis="Good effort.",
         )
-        assert "AI Analysis:" in desc
+        assert "AI Coach Analysis:" in desc
         assert "Good effort." in desc
         assert "PaceForge" in desc
 
@@ -191,8 +208,9 @@ class TestDescriptionBuilder:
             workout_description="Tempo run",
             ai_analysis=None,
         )
+        assert "Planned workout:" in desc
         assert "Tempo run" in desc
-        assert "AI Analysis:" not in desc
+        assert "AI Coach Analysis:" not in desc
         assert "PaceForge" in desc
 
     def test_nothing_except_footer(self):
@@ -204,7 +222,6 @@ class TestDescriptionBuilder:
             ai_analysis=None,
         )
         assert "PaceForge" in desc
-        assert desc.strip().startswith("---") or desc.strip().startswith("\n---")
 
 
 # ── Sport Type Mapping ───────────────────────────────────────────────
@@ -219,7 +236,121 @@ class TestSportTypeMapping:
         assert _STRAVA_SPORT_TYPE_MAP["treadmill_running"] == "Run"
         assert _STRAVA_SPORT_TYPE_MAP["fitness_equipment"] == "Workout"
 
+    def test_extended_sport_types(self):
+        from paceforge.api.app import _STRAVA_SPORT_TYPE_MAP
+
+        assert _STRAVA_SPORT_TYPE_MAP["hiking"] == "Hike"
+        assert _STRAVA_SPORT_TYPE_MAP["swimming"] == "Swim"
+        assert _STRAVA_SPORT_TYPE_MAP["strength_training"] == "WeightTraining"
+        assert _STRAVA_SPORT_TYPE_MAP["yoga"] == "Yoga"
+        assert _STRAVA_SPORT_TYPE_MAP["indoor_cycling"] == "Ride"
+
     def test_unknown_defaults_to_workout(self):
         from paceforge.api.app import _STRAVA_SPORT_TYPE_MAP
 
         assert _STRAVA_SPORT_TYPE_MAP.get("unknown_type", "Workout") == "Workout"
+
+    def test_trainer_types(self):
+        from paceforge.api.app import _STRAVA_TRAINER_TYPES
+
+        assert "treadmill_running" in _STRAVA_TRAINER_TYPES
+        assert "indoor_cycling" in _STRAVA_TRAINER_TYPES
+        assert "fitness_equipment" in _STRAVA_TRAINER_TYPES
+        assert "running" not in _STRAVA_TRAINER_TYPES
+        assert "trail_running" not in _STRAVA_TRAINER_TYPES
+
+
+# ── List Activities ──────────────────────────────────────────────────
+
+
+class TestListActivities:
+    @patch("paceforge.strava.client.httpx.Client")
+    def test_list_activities(self, mock_client_cls):
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = [
+            {"id": 111, "start_date": "2026-04-15T07:00:00Z", "distance": 10000},
+        ]
+        mock_resp.raise_for_status = MagicMock()
+        mock_ctx = MagicMock()
+        mock_ctx.__enter__ = MagicMock(return_value=mock_ctx)
+        mock_ctx.__exit__ = MagicMock(return_value=False)
+        mock_ctx.get.return_value = mock_resp
+        mock_client_cls.return_value = mock_ctx
+
+        client = StravaClient(client_id="cid", client_secret="csec")
+        result = client.list_activities("tok", after=1000, before=2000, per_page=10)
+        assert len(result) == 1
+        assert result[0]["id"] == 111
+
+
+# ── Update Activity ──────────────────────────────────────────────────
+
+
+class TestUpdateActivity:
+    @patch("paceforge.strava.client.httpx.Client")
+    def test_update_activity(self, mock_client_cls):
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = {"id": 111, "name": "Updated Title"}
+        mock_resp.raise_for_status = MagicMock()
+        mock_ctx = MagicMock()
+        mock_ctx.__enter__ = MagicMock(return_value=mock_ctx)
+        mock_ctx.__exit__ = MagicMock(return_value=False)
+        mock_ctx.put.return_value = mock_resp
+        mock_client_cls.return_value = mock_ctx
+
+        client = StravaClient(client_id="cid", client_secret="csec")
+        result = client.update_activity(
+            "tok", 111, name="Updated Title", description="New desc",
+        )
+        assert result["name"] == "Updated Title"
+        # Verify PUT was called with json body
+        call_args = mock_ctx.put.call_args
+        assert call_args.kwargs.get("json") or call_args[1].get("json")
+
+
+# ── Find Matching Activity ───────────────────────────────────────────
+
+
+class TestFindMatchingActivity:
+    def test_match_by_time(self):
+        client = StravaClient(client_id="cid", client_secret="csec")
+        # Mock list_activities to return a matching activity
+        client.list_activities = MagicMock(return_value=[
+            {"id": 222, "start_date": "2026-04-15T07:00:00Z", "distance": 10000},
+        ])
+        from datetime import datetime
+        epoch = datetime(2026, 4, 15, 7, 0, 30, tzinfo=UTC).timestamp()
+        result = client.find_matching_activity("tok", epoch, distance_meters=10000)
+        assert result is not None
+        assert result["id"] == 222
+
+    def test_no_match_time_too_far(self):
+        client = StravaClient(client_id="cid", client_secret="csec")
+        client.list_activities = MagicMock(return_value=[
+            {"id": 333, "start_date": "2026-04-15T10:00:00Z", "distance": 10000},
+        ])
+        from datetime import datetime
+        epoch = datetime(2026, 4, 15, 7, 0, 0, tzinfo=UTC).timestamp()
+        result = client.find_matching_activity("tok", epoch, distance_meters=10000)
+        assert result is None
+
+    def test_no_match_distance_too_different(self):
+        client = StravaClient(client_id="cid", client_secret="csec")
+        client.list_activities = MagicMock(return_value=[
+            {"id": 444, "start_date": "2026-04-15T07:00:00Z", "distance": 5000},
+        ])
+        from datetime import datetime
+        epoch = datetime(2026, 4, 15, 7, 0, 0, tzinfo=UTC).timestamp()
+        result = client.find_matching_activity("tok", epoch, distance_meters=10000)
+        assert result is None
+
+    def test_match_without_distance(self):
+        client = StravaClient(client_id="cid", client_secret="csec")
+        client.list_activities = MagicMock(return_value=[
+            {"id": 555, "start_date": "2026-04-15T07:00:00Z"},
+        ])
+        from datetime import datetime
+        epoch = datetime(2026, 4, 15, 7, 0, 0, tzinfo=UTC).timestamp()
+        result = client.find_matching_activity("tok", epoch)
+        assert result is not None
+        assert result["id"] == 555

@@ -4254,6 +4254,13 @@ with tab_calendar:
                                                 st.session_state[f"strava_sent_{_ai_act_id}"] = True
                                                 if _sdata.get("duplicate"):
                                                     st.info("Activity already exists on Strava (auto-synced from Garmin)")
+                                                elif _sdata.get("updated"):
+                                                    st.success("Activity enhanced on Strava with PaceForge data!")
+                                                    st.markdown(
+                                                        f'<a href="{_sdata.get("url", "")}" target="_blank" '
+                                                        f'style="color:#FC4C02;">View on Strava</a>',
+                                                        unsafe_allow_html=True,
+                                                    )
                                                 else:
                                                     st.success("Activity posted to Strava!")
                                                     st.markdown(
@@ -4521,6 +4528,13 @@ with tab_calendar:
                                                     st.session_state[f"strava_sent_{_plan_act_id}"] = True
                                                     if _sdata.get("duplicate"):
                                                         st.info("Activity already exists on Strava (auto-synced from Garmin)")
+                                                    elif _sdata.get("updated"):
+                                                        st.success("Activity enhanced on Strava with PaceForge data!")
+                                                        st.markdown(
+                                                            f'<a href="{_sdata.get("url", "")}" target="_blank" '
+                                                            f'style="color:#FC4C02;">View on Strava</a>',
+                                                            unsafe_allow_html=True,
+                                                        )
                                                     else:
                                                         st.success("Activity posted to Strava!")
                                                         st.markdown(
