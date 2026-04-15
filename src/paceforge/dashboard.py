@@ -4307,7 +4307,7 @@ with tab_calendar:
                                                 _sdata = _sr.json()
                                                 st.session_state[f"strava_sent_{_ai_act_id}"] = True
                                                 if _sdata.get("duplicate"):
-                                                    st.info("Activity already exists on Strava (auto-synced from Garmin)")
+                                                    st.warning("Activity exists on Strava but could not be updated — check Strava app permissions include activity:write")
                                                 elif _sdata.get("updated"):
                                                     st.success("Activity enhanced on Strava with PaceForge data!")
                                                     st.markdown(
@@ -4576,7 +4576,7 @@ with tab_calendar:
                                                     _sdata = _sr.json()
                                                     st.session_state[f"strava_sent_{_plan_act_id}"] = True
                                                     if _sdata.get("duplicate"):
-                                                        st.info("Activity already exists on Strava (auto-synced from Garmin)")
+                                                        st.warning("Activity exists on Strava but could not be updated — check Strava app permissions include activity:write")
                                                     elif _sdata.get("updated"):
                                                         st.success("Activity enhanced on Strava with PaceForge data!")
                                                         st.markdown(

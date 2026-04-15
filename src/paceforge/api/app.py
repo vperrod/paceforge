@@ -2147,6 +2147,9 @@ async def strava_push(activity_id: int, user: dict = Depends(get_current_user)):
     except (ValueError, TypeError):
         pass
 
+    logger.info("Strava push %s: start_time=%s, start_epoch=%s, distance=%s",
+                activity_id, start_time, start_epoch, act_dict.get("distance_meters"))
+
     strava_id: int | str = ""
     updated = False
 
@@ -2157,6 +2160,8 @@ async def strava_push(activity_id: int, user: dict = Depends(get_current_user)):
                 start_epoch,
                 distance_meters=act_dict.get("distance_meters"),
             )
+            logger.info("Strava find_matching_activity result: %s",
+                        existing.get("id") if existing else None)
             if existing:
                 strava_id = existing["id"]
                 client.update_activity(
