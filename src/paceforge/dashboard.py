@@ -1154,8 +1154,6 @@ for key, default in {
     "_restored": False,
     "cal_selected_event": None,
     "cal_selected_detail": None,
-    "cal_year": None,
-    "cal_month": None,
 }.items():
     if key not in st.session_state:
         st.session_state[key] = default
@@ -4069,155 +4067,100 @@ with tab_calendar:
             cal_col, detail_col = st.columns([2, 3])
 
             with cal_col:
-                import calendar as _cal_mod
-                from collections import defaultdict
+                cal_options = {
+                    "editable": True,
+                    "selectable": False,
+                    "headerToolbar": {
+                        "left": "today prev,next",
+                        "center": "title",
+                        "right": "dayGridMonth,dayGridWeek",
+                    },
+                    "initialView": "dayGridMonth",
+                    "initialDate": str(date.today()),
+                    "contentHeight": 420,
+                }
 
-                _today = date.today()
-                if st.session_state.cal_year is None:
-                    st.session_state.cal_year = _today.year
-                    st.session_state.cal_month = _today.month
+                cal_css = """
+                    .fc { background: #0F1117; color: #E8ECF4; border: none; }
+                    .fc-theme-standard td, .fc-theme-standard th { border-color: #252A35; }
+                    .fc-theme-standard .fc-scrollgrid { border-color: #252A35; }
+                    .fc-col-header-cell { background: #1A1D2B; }
+                    .fc-col-header-cell-cushion { color: #8B95AD; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; }
+                    .fc-daygrid-day-number { color: #8B95AD; font-size: 0.8rem; }
+                    .fc-day-today { background: rgba(0,210,106,0.06) !important; }
+                    .fc-event { cursor: pointer; font-size: 0.72em; border-radius: 5px; padding: 1px 4px; border: none !important; }
+                    .fc-event-title { font-weight: 600; }
+                    .fc-button { background: #1A1D2B !important; border: 1px solid #2E3448 !important; color: #E8ECF4 !important; font-size: 0.8rem !important; }
+                    .fc-button:hover { background: #252A35 !important; }
+                    .fc-button-active { background: #10B981 !important; color: #0F1117 !important; border-color: #10B981 !important; }
+                    .fc-toolbar-title { font-size: 1rem !important; font-weight: 700; color: #E8ECF4; }
+                """
 
-                _cy, _cm = st.session_state.cal_year, st.session_state.cal_month
+                from streamlit_calendar import calendar as st_calendar
 
-                # ── Month navigation ──
-                _nav = st.columns([1, 3, 1])
-                with _nav[0]:
-                    if st.button("◀", key="cal_prev"):
-                        _cm -= 1
-                        if _cm < 1:
-                            _cm, _cy = 12, _cy - 1
-                        st.session_state.cal_year, st.session_state.cal_month = _cy, _cm
-                        st.rerun()
-                with _nav[1]:
-                    _mnames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-                    st.markdown(
-                        f'<div style="text-align:center;font-size:1.05rem;font-weight:700;color:#E8ECF4;padding:0.3rem 0;">'
-                        f'{_mnames[_cm - 1]} {_cy}</div>',
-                        unsafe_allow_html=True,
-                    )
-                with _nav[2]:
-                    if st.button("▶", key="cal_next"):
-                        _cm += 1
-                        if _cm > 12:
-                            _cm, _cy = 1, _cy + 1
-                        st.session_state.cal_year, st.session_state.cal_month = _cy, _cm
-                        st.rerun()
-
-                # ── Group events by date ──
-                _evbd: dict[str, list] = defaultdict(list)
-                for _cev in cal_events:
-                    _evbd[_cev["start"][:10]].append(_cev)
-
-                # ── Render calendar grid with clickable events ──
-                _cal = _cal_mod.Calendar(firstweekday=0)
-                _weeks = _cal.monthdatescalendar(_cy, _cm)
-
-                # Day-of-week header
-                _hdr_cols = st.columns(7)
-                for _di, _dn in enumerate(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]):
-                    with _hdr_cols[_di]:
-                        st.markdown(
-                            f'<div style="text-align:center;font-size:0.7rem;font-weight:600;color:#8B95AD;padding:2px 0;">{_dn}</div>',
-                            unsafe_allow_html=True,
-                        )
-
-                # Week rows with clickable event buttons
-                for _wi, _wk in enumerate(_weeks):
-                    _day_cols = st.columns(7)
-                    for _di, _day in enumerate(_wk):
-                        with _day_cols[_di]:
-                            _icm = _day.month == _cm
-                            _itd = _day == _today
-                            _ds = _day.isoformat()
-                            _devs = _evbd.get(_ds, [])
-
-                            # Day number
-                            _bg = "rgba(16,185,129,0.08)" if _itd else "transparent"
-                            _nc = "#10B981" if _itd else ("#E8ECF4" if _icm else "#3E4455")
-                            _fw = "700" if _itd else "400"
-                            st.markdown(
-                                f'<div style="background:{_bg};border-radius:4px;padding:1px 3px;min-height:10px;">'
-                                f'<div style="font-size:0.72rem;color:{_nc};font-weight:{_fw};">{_day.day}</div>'
-                                f'</div>',
-                                unsafe_allow_html=True,
-                            )
-
-                            # Render each event as a small clickable button
-                            if _icm:
-                                for _evi, _dev in enumerate(_devs[:3]):
-                                    _dc = _dev.get("backgroundColor", "#10B981")
-                                    _dt = _dev["title"][:18]
-                                    _bk = f"cev_{_wi}_{_di}_{_evi}"
-                                    # Use custom styled button via markdown + real button
-                                    if st.button(f"● {_dt}", key=_bk, use_container_width=True):
-                                        _sprops = _dev.get("extendedProps", {})
-                                        st.session_state["cal_selected_event"] = {
-                                            "title": _dev.get("title", ""),
-                                            "start": _dev.get("start", ""),
-                                            "props": _sprops,
-                                        }
-                                        _fetch_id = None
-                                        if _sprops.get("source") == "garmin" and _sprops.get("activity_id"):
-                                            _fetch_id = _sprops["activity_id"]
-                                        elif _sprops.get("source") == "plan" and _sprops.get("completed") and _sprops.get("matched_activity_id"):
-                                            _fetch_id = _sprops["matched_activity_id"]
-                                        if _fetch_id:
-                                            try:
-                                                _dr = requests.get(f"{API_BASE}/activities/{_fetch_id}", headers=_auth_headers(), timeout=30)
-                                                st.session_state["cal_selected_detail"] = _dr.json() if _dr.status_code == 200 else None
-                                            except Exception:
-                                                st.session_state["cal_selected_detail"] = None
-                                        else:
-                                            st.session_state["cal_selected_detail"] = None
-                                        st.rerun()
-                                if len(_devs) > 3:
-                                    st.markdown(f'<div style="font-size:0.55rem;color:#8B95AD;text-align:center;">+{len(_devs) - 3} more</div>', unsafe_allow_html=True)
-
-                # ── Reschedule via date picker ──
-                _sel = st.session_state.get("cal_selected_event")
-                if _sel and _sel.get("props", {}).get("source") == "plan" and not _sel.get("props", {}).get("completed"):
-                    with st.expander("Reschedule selected workout"):
-                        _new_date = st.date_input("Move to", key="cal_resched_date")
-                        if st.button("Confirm reschedule", key="cal_resched_btn"):
-                            _wn = _sel["props"].get("name", _sel["title"])
-                            _r = requests.post(
-                                f"{API_BASE}/plan/reschedule",
-                                json={"workout_name": _wn, "old_date": _sel["start"][:10], "new_date": _new_date.isoformat()},
-                                headers=_auth_headers(), timeout=10,
-                            )
-                            if _r.status_code == 200:
-                                st.success(f"Moved to {_new_date} — click **Push Plan to Garmin** to sync")
-                            else:
-                                st.error("Failed to reschedule")
-
-                # ── Style overrides: make calendar event buttons small and colored ──
-                st.markdown(
-                    """<style>
-                    /* Compact calendar event buttons */
-                    [data-testid="stHorizontalBlock"] [data-testid="column"] button[kind="secondary"] {
-                        font-size: 0.55rem !important;
-                        padding: 1px 4px !important;
-                        min-height: 0 !important;
-                        height: auto !important;
-                        line-height: 1.2 !important;
-                        border: none !important;
-                        background: rgba(30,35,48,0.7) !important;
-                        color: #C8CDD8 !important;
-                        text-align: left !important;
-                        justify-content: flex-start !important;
-                        border-radius: 3px !important;
-                        white-space: nowrap !important;
-                        overflow: hidden !important;
-                        text-overflow: ellipsis !important;
-                        margin: 0 !important;
-                    }
-                    [data-testid="stHorizontalBlock"] [data-testid="column"] button[kind="secondary"]:hover {
-                        background: rgba(16,185,129,0.15) !important;
-                        color: #E8ECF4 !important;
-                    }
-                    </style>""",
-                    unsafe_allow_html=True,
+                _cal_key = f"plan_calendar_{len(cal_events)}"
+                result = st_calendar(
+                    events=cal_events,
+                    options=cal_options,
+                    custom_css=cal_css,
+                    key=_cal_key,
                 )
+
+                # Handle drag-to-reschedule
+                if result and result.get("callback") == "eventChange":
+                    ev = result["eventChange"]
+                    ev_props = ev["event"].get("extendedProps", {})
+                    if ev_props.get("source") == "plan":
+                        old_start = ev["oldEvent"]["start"]
+                        new_start = ev["event"]["start"]
+                        wk_name = ev_props.get("name", ev["event"]["title"])
+                        r = requests.post(
+                            f"{API_BASE}/plan/reschedule",
+                            json={
+                                "workout_name": wk_name,
+                                "old_date": old_start[:10],
+                                "new_date": new_start[:10],
+                            },
+                            headers=_auth_headers(),
+                            timeout=10,
+                        )
+                        if r.status_code == 200:
+                            st.success(f"Moved to {new_start[:10]} — click **Push Plan to Garmin** to sync")
+                        else:
+                            st.error("Failed to reschedule")
+
+                # Handle event click — store in session_state for the detail panel
+                if result and result.get("callback") == "eventClick":
+                    ev_data = result["eventClick"]["event"]
+                    props = ev_data.get("extendedProps", {})
+                    st.session_state["cal_selected_event"] = {
+                        "title": ev_data.get("title", ""),
+                        "start": ev_data.get("start", ""),
+                        "props": props,
+                    }
+                    # Pre-fetch Garmin activity detail if needed
+                    act_id_to_fetch = None
+                    if props.get("source") == "garmin" and props.get("activity_id"):
+                        act_id_to_fetch = props["activity_id"]
+                    elif props.get("source") == "plan" and props.get("completed") and props.get("matched_activity_id"):
+                        act_id_to_fetch = props["matched_activity_id"]
+
+                    if act_id_to_fetch:
+                        with st.spinner("Loading activity details..."):
+                            try:
+                                r = requests.get(
+                                    f"{API_BASE}/activities/{act_id_to_fetch}",
+                                    headers=_auth_headers(),
+                                    timeout=30,
+                                )
+                                if r.status_code == 200:
+                                    st.session_state["cal_selected_detail"] = r.json()
+                                else:
+                                    st.session_state["cal_selected_detail"] = None
+                            except requests.ConnectionError:
+                                st.session_state["cal_selected_detail"] = None
+                    else:
+                        st.session_state["cal_selected_detail"] = None
 
             # ── Detail panel (right column) ──
             with detail_col:
