@@ -1618,8 +1618,10 @@ if st.session_state.jwt is None:
 # ═══════════════════════════════════════════════════════════════════════
 
 # ── Auto-restore Garmin connection, plan, and activities on load ─────
-if not st.session_state._restored:
+if not st.session_state._restored and st.session_state.jwt:
     with st.spinner("Loading your training data..."):
+        _restore_ok = False
+
         # 1) Check Garmin connection (triggers auto-reconnect from cached tokens)
         try:
             r = requests.get(
@@ -1632,6 +1634,7 @@ if not st.session_state._restored:
                 if status_data.get("connected"):
                     st.session_state.garmin_logged_in = True
                 st.session_state["last_synced"] = status_data.get("last_synced")
+                _restore_ok = True
         except Exception:
             logging.warning("Failed to check Garmin status on restore", exc_info=True)
 
@@ -1700,9 +1703,11 @@ if not st.session_state._restored:
         except Exception:
             logging.warning("Failed to fetch scheduled workouts on startup", exc_info=True)
 
-    # Mark restored AFTER all API calls complete — if a CookieManager rerun
-    # interrupts mid-block, this stays False so restore retries next cycle.
-    st.session_state._restored = True
+    # Only mark restored if at least the first API call succeeded — prevents
+    # locking out retries when JWT isn't ready or API is temporarily down.
+    if _restore_ok:
+        st.session_state._restored = True
+        st.rerun()  # Rerun so calendar renders with freshly loaded data
 
 # ── Sidebar ──────────────────────────────────────────────────────────
 
@@ -4079,11 +4084,12 @@ with tab_calendar:
 
                 from streamlit_calendar import calendar as st_calendar
 
+                _cal_key = f"plan_calendar_{len(cal_events)}"
                 result = st_calendar(
                     events=cal_events,
                     options=cal_options,
                     custom_css=cal_css,
-                    key="plan_calendar",
+                    key=_cal_key,
                 )
 
                 # Handle drag-to-reschedule
