@@ -1455,25 +1455,41 @@ def _render_garmin_activity_detail(detail: dict, activity_type: str = "running",
         )
 
         # Collect data for chart
-        split_nums = list(range(1, len(laps) + 1))
-        paces = []
+        paces_sec = []  # seconds per km
+        paces_min = []  # minutes per km (for Y axis)
         hrs = []
+        cumulative_time = []  # cumulative elapsed time in minutes
+        elapsed = 0.0
         for lap in laps:
             lap_speed = lap.get("averageSpeed", 0)
-            paces.append((1000 / lap_speed) if lap_speed else 0)
+            p = (1000 / lap_speed) if lap_speed else 0
+            paces_sec.append(p)
+            paces_min.append(p / 60)
+            lap_dur = lap.get("duration", 0)
+            # Garmin sometimes returns ms, sometimes seconds
+            if lap_dur > 100000:
+                lap_dur = lap_dur / 1000
+            elapsed += lap_dur / 60  # elapsed in minutes
+            cumulative_time.append(round(elapsed, 1))
             hrs.append(lap.get("averageHR", 0))
+        # X-axis: cumulative time labels (e.g. "5:12", "10:24")
+        x_labels = []
+        for ct in cumulative_time:
+            _ct_m = int(ct)
+            _ct_s = int((ct - _ct_m) * 60)
+            x_labels.append(f"{_ct_m}:{_ct_s:02d}")
 
-        # Combined pace + HR chart over splits
-        if paces and any(h > 0 for h in hrs):
+        # Combined pace + HR chart over time
+        if paces_min and any(h > 0 for h in hrs):
             fig = make_subplots(specs=[[{"secondary_y": True}]])
-            avg_p = sum(paces) / len(paces)
-            colors = ["#10B981" if p <= avg_p else "#F43F5E" for p in paces]
+            avg_p = sum(paces_min) / len(paces_min)
+            colors = ["#10B981" if p <= avg_p else "#F43F5E" for p in paces_min]
 
             fig.add_trace(
                 go.Bar(
-                    x=split_nums, y=paces, name="Pace",
+                    x=x_labels, y=paces_min, name="Pace",
                     marker_color=colors,
-                    text=[_fmt_pace(p) for p in paces],
+                    text=[_fmt_pace(p) for p in paces_sec],
                     textposition="outside",
                     textfont=dict(color="#E8ECF4", size=9),
                 ),
@@ -1481,7 +1497,7 @@ def _render_garmin_activity_detail(detail: dict, activity_type: str = "running",
             )
             fig.add_trace(
                 go.Scatter(
-                    x=split_nums, y=hrs, name="Heart Rate",
+                    x=x_labels, y=hrs, name="Heart Rate",
                     mode="lines+markers",
                     line=dict(color="#F43F5E", width=2),
                     marker=dict(size=5),
@@ -1493,22 +1509,22 @@ def _render_garmin_activity_detail(detail: dict, activity_type: str = "running",
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(size=10, color="#8B95AD")),
                 bargap=0.3,
             ))
-            fig.update_yaxes(autorange="reversed", title_text="Pace (s/km)", gridcolor="rgba(148,163,194,0.08)", secondary_y=False)
+            fig.update_yaxes(autorange="reversed", title_text="Pace (min/km)", gridcolor="rgba(148,163,194,0.08)", secondary_y=False)
             fig.update_yaxes(title_text="HR (bpm)", gridcolor="rgba(148,163,194,0.08)", secondary_y=True)
-            fig.update_xaxes(title_text="Split", gridcolor="rgba(148,163,194,0.06)", dtick=1)
+            fig.update_xaxes(title_text="Time", gridcolor="rgba(148,163,194,0.06)", type="category")
             st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}splits_hr_chart")
-        elif paces:
-            avg_p = sum(paces) / len(paces)
-            colors = ["#10B981" if p <= avg_p else "#F43F5E" for p in paces]
+        elif paces_min:
+            avg_p = sum(paces_min) / len(paces_min)
+            colors = ["#10B981" if p <= avg_p else "#F43F5E" for p in paces_min]
             fig = go.Figure(go.Bar(
-                x=split_nums, y=paces, marker_color=colors,
-                text=[_fmt_pace(p) for p in paces], textposition="outside",
+                x=x_labels, y=paces_min, marker_color=colors,
+                text=[_fmt_pace(p) for p in paces_sec], textposition="outside",
                 textfont=dict(color="#E8ECF4", size=9),
             ))
             fig.update_layout(**_pf_layout(
                 margin=dict(l=40, r=20, t=25, b=35), height=220,
-                yaxis=dict(autorange="reversed", title="Pace (s/km)", gridcolor="rgba(148,163,194,0.08)", zeroline=False),
-                xaxis=dict(gridcolor="rgba(148,163,194,0.06)", dtick=1, title="Split", zeroline=False),
+                yaxis=dict(autorange="reversed", title="Pace (min/km)", gridcolor="rgba(148,163,194,0.08)", zeroline=False),
+                xaxis=dict(gridcolor="rgba(148,163,194,0.06)", type="category", title="Time", zeroline=False),
                 bargap=0.3,
             ))
             st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}splits_chart")
@@ -4162,6 +4178,7 @@ with tab_calendar:
                     "initialView": "dayGridMonth",
                     "initialDate": str(date.today()),
                     "contentHeight": 420,
+                    "firstDay": 1,
                 }
 
                 cal_css = """
