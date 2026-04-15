@@ -4096,14 +4096,56 @@ with tab_calendar:
                     .fc-toolbar-title { font-size: 1rem !important; font-weight: 700; color: #E8ECF4; }
                 """
 
+                import streamlit.components.v1 as components
                 from streamlit_calendar import calendar as st_calendar
 
-                _cal_key = f"plan_calendar_{len(cal_events)}"
                 result = st_calendar(
                     events=cal_events,
                     options=cal_options,
                     custom_css=cal_css,
-                    key=_cal_key,
+                    key="plan_calendar",
+                )
+
+                # ── Fix: FullCalendar renders 0-height inside hidden st.tabs.
+                # The component calls Streamlit.setFrameHeight() once on mount,
+                # gets scrollHeight=0 because the tab panel is display:none.
+                # This script accesses the parent DOM (same-origin), finds the
+                # calendar iframe (by looking for .fc inside it), and forces
+                # its height + dispatches resize so FullCalendar recalculates.
+                components.html(
+                    """
+                    <script>
+                    (function() {
+                        var pdoc = window.parent.document;
+                        function fixCalendarFrames() {
+                            var frames = pdoc.querySelectorAll('iframe');
+                            for (var i = 0; i < frames.length; i++) {
+                                try {
+                                    var fd = frames[i].contentDocument;
+                                    if (fd && fd.querySelector('.fc')) {
+                                        frames[i].style.height = '450px';
+                                        frames[i].style.minHeight = '450px';
+                                        frames[i].contentWindow.dispatchEvent(new Event('resize'));
+                                    }
+                                } catch(e) {}
+                            }
+                        }
+                        // Staggered initial attempts
+                        [200, 600, 1200, 2500].forEach(function(d) {
+                            setTimeout(fixCalendarFrames, d);
+                        });
+                        // Listen for tab clicks to re-trigger
+                        var tabs = pdoc.querySelectorAll('[role="tab"]');
+                        tabs.forEach(function(t) {
+                            t.addEventListener('click', function() {
+                                setTimeout(fixCalendarFrames, 150);
+                                setTimeout(fixCalendarFrames, 400);
+                            });
+                        });
+                    })();
+                    </script>
+                    """,
+                    height=0,
                 )
 
                 # Handle drag-to-reschedule
