@@ -1972,6 +1972,13 @@ tab_admin = tabs[7] if st.session_state.role == "admin" else None
 # ── Tab 0: Feed ──────────────────────────────────────────────────────
 
 with tab_feed:
+    # ── Handle profile link from feed card ──
+    _qp_profile = st.query_params.get("profile")
+    if _qp_profile:
+        st.session_state["viewing_profile_id"] = _qp_profile
+        st.query_params.clear()
+        st.rerun()
+
     # ── Friend Profile View ──
     _viewing_uid = st.session_state.get("viewing_profile_id")
     if _viewing_uid:
@@ -2119,6 +2126,45 @@ with tab_feed:
                             _det_items.append(("VO\u2082 Max", f"{_pa_vo2:.0f}", ""))
                         if _det_items:
                             st.markdown(_metrics_strip(_det_items), unsafe_allow_html=True)
+
+                # ── Activity trend charts ──
+                _run_acts = [a for a in _p_acts[:15] if a.get("activity_type", "running") in ("running", "trail_running", "treadmill_running")]
+                if len(_run_acts) >= 2:
+                    import plotly.graph_objects as go
+                    from plotly.subplots import make_subplots
+                    _chart_dates = [str(a.get("start_time", ""))[:10] for a in _run_acts]
+                    _chart_dur = [a.get("duration_seconds", 0) / 60 for a in _run_acts]
+                    _chart_dist = [a.get("distance_meters", 0) / 1000 for a in _run_acts]
+                    _chart_pace_raw = [a.get("avg_pace_sec_per_km") for a in _run_acts]
+                    _chart_pace = [p / 60 if p else None for p in _chart_pace_raw]
+                    _chart_hr = [a.get("avg_hr") for a in _run_acts]
+
+                    _pfig = make_subplots(
+                        rows=2, cols=2, subplot_titles=("Duration", "Distance", "Pace", "Heart Rate"),
+                        vertical_spacing=0.18, horizontal_spacing=0.12,
+                    )
+                    _pfig.add_trace(go.Scatter(x=_chart_dates, y=_chart_dur, mode="lines+markers",
+                                               line=dict(color="#0EA5E9", width=2), marker=dict(size=5),
+                                               name="Duration", hovertemplate="%{y:.0f} min"), row=1, col=1)
+                    _pfig.add_trace(go.Scatter(x=_chart_dates, y=_chart_dist, mode="lines+markers",
+                                               line=dict(color="#10B981", width=2), marker=dict(size=5),
+                                               name="Distance", hovertemplate="%{y:.1f} km"), row=1, col=2)
+                    _pfig.add_trace(go.Scatter(x=_chart_dates, y=_chart_pace, mode="lines+markers",
+                                               line=dict(color="#F59E0B", width=2), marker=dict(size=5),
+                                               name="Pace", hovertemplate="%{y:.1f} min/km"), row=2, col=1)
+                    _pfig.add_trace(go.Scatter(x=_chart_dates, y=_chart_hr, mode="lines+markers",
+                                               line=dict(color="#F43F5E", width=2), marker=dict(size=5),
+                                               name="HR", hovertemplate="%{y:.0f} bpm"), row=2, col=2)
+                    _pfig.update_layout(
+                        **_pf_layout(height=360, margin=dict(l=40, r=20, t=40, b=30)),
+                        showlegend=False,
+                    )
+                    _pfig.update_yaxes(title_text="min", row=1, col=1)
+                    _pfig.update_yaxes(title_text="km", row=1, col=2)
+                    _pfig.update_yaxes(title_text="min/km", autorange="reversed", row=2, col=1)
+                    _pfig.update_yaxes(title_text="bpm", row=2, col=2)
+                    _pfig.update_annotations(font=dict(color="#8B95AD", size=11))
+                    st.plotly_chart(_pfig, use_container_width=True, key=f"profile_acts_chart_{_pdata.get('user_id', '')}")
 
             # ── HYROX Races ──
             _p_hyrox = _pdata.get("hyrox")
@@ -2287,7 +2333,9 @@ with tab_feed:
                     )
 
                 _name_click_html = (
-                    f'<span style="color:#E8ECF4;font-weight:600;">{user_name}</span>'
+                    f'<a href="?profile={_ev_user_id}" target="_self" '
+                    f'style="color:#E8ECF4;font-weight:600;text-decoration:none;'
+                    f'border-bottom:1px dashed #8B95AD44;">{user_name}</a>'
                 )
 
                 st.markdown(
@@ -2326,11 +2374,6 @@ with tab_feed:
                             _strava_prefs = {"connected": False}
                         st.session_state["_strava_conn"] = _strava_prefs
                     _show_strava_in_feed = _strava_prefs.get("connected", False)
-
-                if st.button(f"\U0001f464 {user_name}", key=f"feed_profile_{ev['id']}_{idx}",
-                             type="tertiary", use_container_width=False):
-                    st.session_state["viewing_profile_id"] = _ev_user_id
-                    st.rerun()
 
                 if _show_strava_in_feed:
                     col_like, col_comment, col_strava = st.columns([1, 1, 1])
