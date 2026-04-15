@@ -2127,44 +2127,27 @@ with tab_feed:
                         if _det_items:
                             st.markdown(_metrics_strip(_det_items), unsafe_allow_html=True)
 
-                # ── Activity trend charts ──
-                _run_acts = [a for a in _p_acts[:15] if a.get("activity_type", "running") in ("running", "trail_running", "treadmill_running")]
-                if len(_run_acts) >= 2:
-                    import plotly.graph_objects as go
-                    from plotly.subplots import make_subplots
-                    _chart_dates = [str(a.get("start_time", ""))[:10] for a in _run_acts]
-                    _chart_dur = [a.get("duration_seconds", 0) / 60 for a in _run_acts]
-                    _chart_dist = [a.get("distance_meters", 0) / 1000 for a in _run_acts]
-                    _chart_pace_raw = [a.get("avg_pace_sec_per_km") for a in _run_acts]
-                    _chart_pace = [p / 60 if p else None for p in _chart_pace_raw]
-                    _chart_hr = [a.get("avg_hr") for a in _run_acts]
-
-                    _pfig = make_subplots(
-                        rows=2, cols=2, subplot_titles=("Duration", "Distance", "Pace", "Heart Rate"),
-                        vertical_spacing=0.18, horizontal_spacing=0.12,
-                    )
-                    _pfig.add_trace(go.Scatter(x=_chart_dates, y=_chart_dur, mode="lines+markers",
-                                               line=dict(color="#0EA5E9", width=2), marker=dict(size=5),
-                                               name="Duration", hovertemplate="%{y:.0f} min"), row=1, col=1)
-                    _pfig.add_trace(go.Scatter(x=_chart_dates, y=_chart_dist, mode="lines+markers",
-                                               line=dict(color="#10B981", width=2), marker=dict(size=5),
-                                               name="Distance", hovertemplate="%{y:.1f} km"), row=1, col=2)
-                    _pfig.add_trace(go.Scatter(x=_chart_dates, y=_chart_pace, mode="lines+markers",
-                                               line=dict(color="#F59E0B", width=2), marker=dict(size=5),
-                                               name="Pace", hovertemplate="%{y:.1f} min/km"), row=2, col=1)
-                    _pfig.add_trace(go.Scatter(x=_chart_dates, y=_chart_hr, mode="lines+markers",
-                                               line=dict(color="#F43F5E", width=2), marker=dict(size=5),
-                                               name="HR", hovertemplate="%{y:.0f} bpm"), row=2, col=2)
-                    _pfig.update_layout(
-                        **_pf_layout(height=360, margin=dict(l=40, r=20, t=40, b=30)),
-                        showlegend=False,
-                    )
-                    _pfig.update_yaxes(title_text="min", row=1, col=1)
-                    _pfig.update_yaxes(title_text="km", row=1, col=2)
-                    _pfig.update_yaxes(title_text="min/km", autorange="reversed", row=2, col=1)
-                    _pfig.update_yaxes(title_text="bpm", row=2, col=2)
-                    _pfig.update_annotations(font=dict(color="#8B95AD", size=11))
-                    st.plotly_chart(_pfig, use_container_width=True, key=f"profile_acts_chart_{_pdata.get('user_id', '')}")
+                        # ── Pace & distance visual bar ──
+                        if _pa_is_run and _pa_dist and _pa_pace:
+                            _bar_dist_pct = min(_pa_dist / 30000 * 100, 100)
+                            _pace_ratio = max(0.0, min(1.0, (_pa_pace - 330) / (420 - 330)))
+                            _bar_hue = 140 - _pace_ratio * 140
+                            _d_km = f"{_pa_dist / 1000:.1f}km"
+                            _p_min, _p_sec = divmod(int(_pa_pace), 60)
+                            _p_lbl = f"{_p_min}:{_p_sec:02d}/km"
+                            st.markdown(
+                                f'<div style="margin-top:0.6rem;">'
+                                f'<div style="font-size:0.75rem;color:#8B95AD;margin-bottom:0.25rem;">Pace (min/km)</div>'
+                                f'<div style="display:flex;align-items:center;gap:0.6rem;">'
+                                f'<div style="flex:1;background:#1E2130;border-radius:6px;height:28px;overflow:hidden;">'
+                                f'<div style="background:hsl({_bar_hue},65%,45%);height:100%;width:{_bar_dist_pct}%;'
+                                f'border-radius:6px;display:flex;align-items:center;padding-left:0.5rem;'
+                                f'font-size:0.75rem;color:#fff;font-weight:600;min-width:fit-content;">'
+                                f'{_p_lbl}</div></div>'
+                                f'<span style="font-size:0.8rem;color:#8B95AD;white-space:nowrap;">{_d_km}</span>'
+                                f'</div></div>',
+                                unsafe_allow_html=True,
+                            )
 
             # ── HYROX Races ──
             _p_hyrox = _pdata.get("hyrox")
