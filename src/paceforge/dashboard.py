@@ -1198,8 +1198,8 @@ if st.session_state.jwt is None:
                     st.session_state.user_name = data["name"]
                     st.session_state.user_email = data.get("email", "")
                     st.session_state.page = "app"
-                    _cookie_mgr.set("pf_jwt", data["access_token"], max_age=86400)
-                    _cookie_mgr.set("pf_refresh", data["refresh_token"], max_age=2592000)
+                    _cookie_mgr.set("pf_jwt", data["access_token"], key="set_jwt_refresh1", max_age=86400)
+                    _cookie_mgr.set("pf_refresh", data["refresh_token"], key="set_refresh_refresh1", max_age=2592000)
         except Exception:
             pass  # Cookie invalid or API unreachable — show login
     elif saved_refresh:
@@ -1217,8 +1217,8 @@ if st.session_state.jwt is None:
                 st.session_state.user_name = data["name"]
                 st.session_state.user_email = data.get("email", "")
                 st.session_state.page = "app"
-                _cookie_mgr.set("pf_jwt", data["access_token"], max_age=86400)
-                _cookie_mgr.set("pf_refresh", data["refresh_token"], max_age=2592000)
+                _cookie_mgr.set("pf_jwt", data["access_token"], key="set_jwt_refresh2", max_age=86400)
+                _cookie_mgr.set("pf_refresh", data["refresh_token"], key="set_refresh_refresh2", max_age=2592000)
         except Exception:
             pass
 
@@ -1589,8 +1589,8 @@ if st.session_state.jwt is None:
                         st.session_state.user_name = data["name"]
                         st.session_state.user_email = data.get("email", "")
                         st.session_state.page = "app"
-                        _cookie_mgr.set("pf_jwt", data["access_token"], max_age=86400)
-                        _cookie_mgr.set("pf_refresh", data["refresh_token"], max_age=2592000)
+                        _cookie_mgr.set("pf_jwt", data["access_token"], key="set_jwt_login", max_age=86400)
+                        _cookie_mgr.set("pf_refresh", data["refresh_token"], key="set_refresh_login", max_age=2592000)
                         st.rerun()
                     elif r.status_code == 403:
                         st.warning(_error_detail(r))
