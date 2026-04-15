@@ -2107,42 +2107,6 @@ with tab_feed:
                     _pa_detail = " \u00b7 ".join(_pa_parts)
 
                     with st.expander(f"{_pa_name} \u2014 {_pa_date}  ({_pa_detail})", expanded=False):
-                        _det_items = []
-                        if _pa_dist:
-                            _det_items.append(("Distance", f"{_pa_dist / 1000:.2f}", "km"))
-                        if _pa_dur:
-                            _dh, _drem = divmod(int(_pa_dur), 3600)
-                            _ddm, _dds = divmod(_drem, 60)
-                            _det_items.append(("Duration", f"{_dh}:{_ddm:02d}:{_dds:02d}" if _dh else f"{_ddm}:{_dds:02d}", ""))
-                        if _pa_is_run and _pa_pace:
-                            _dpm, _dps = divmod(int(_pa_pace), 60)
-                            _det_items.append(("Avg Pace", f"{_dpm}:{_dps:02d}", "/km"))
-                        if _pa_hr:
-                            _det_items.append(("Avg HR", str(int(_pa_hr)), "bpm"))
-                        _pa_maxhr = _pa.get("max_hr")
-                        if _pa_maxhr:
-                            _det_items.append(("Max HR", str(int(_pa_maxhr)), "bpm"))
-                        _pa_cal = _pa.get("calories")
-                        if _pa_cal:
-                            _det_items.append(("Calories", str(int(_pa_cal)), "kcal"))
-                        _pa_cad = _pa.get("avg_running_cadence")
-                        if _pa_cad:
-                            _det_items.append(("Cadence", str(int(_pa_cad)), "spm"))
-                        _pa_elev = _pa.get("elevation_gain")
-                        if _pa_elev and _pa_elev > 0:
-                            _det_items.append(("Elevation", f"{int(_pa_elev)}", "m"))
-                        _pa_te = _pa.get("training_effect_aerobic")
-                        if _pa_te:
-                            _det_items.append(("Aerobic TE", f"{_pa_te:.1f}", ""))
-                        _pa_te2 = _pa.get("training_effect_anaerobic")
-                        if _pa_te2:
-                            _det_items.append(("Anaerobic TE", f"{_pa_te2:.1f}", ""))
-                        _pa_vo2 = _pa.get("vo2_max_value")
-                        if _pa_vo2:
-                            _det_items.append(("VO\u2082 Max", f"{_pa_vo2:.0f}", ""))
-                        if _det_items:
-                            st.markdown(_metrics_strip(_det_items), unsafe_allow_html=True)
-
                         # ── Fetch & render splits chart ──
                         _pa_aid = _pa.get("activity_id")
                         if _pa_is_run and _pa_aid:
