@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { colors, spacing, fontSize } from '../theme';
 import api from '../api/client';
+import MetricsBanner from '../components/MetricsBanner';
 
 export default function FeedScreen() {
   const [events, setEvents] = React.useState<any[]>([]);
@@ -148,6 +149,7 @@ export default function FeedScreen() {
         data={events}
         keyExtractor={(item) => item.id}
         renderItem={renderEvent}
+        ListHeaderComponent={<MetricsBanner />}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }

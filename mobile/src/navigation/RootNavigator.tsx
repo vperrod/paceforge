@@ -11,7 +11,10 @@ import FeedScreen from '../screens/FeedScreen';
 import PlanScreen from '../screens/PlanScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import FitnessProfileScreen from '../screens/FitnessProfileScreen';
+import HyroxScreen from '../screens/HyroxScreen';
 import WorkoutDetailScreen from '../screens/WorkoutDetailScreen';
+import ActivityDetailScreen from '../screens/ActivityDetailScreen';
 import GarminConnectScreen from '../screens/GarminConnectScreen';
 
 export type AuthStackParamList = {
@@ -22,6 +25,7 @@ export type AuthStackParamList = {
 export type MainStackParamList = {
   Tabs: undefined;
   WorkoutDetail: { workout: any };
+  ActivityDetail: { activityId: number; activity?: any };
   GarminConnect: undefined;
 };
 
@@ -80,6 +84,21 @@ function MainTabs() {
         }}
       />
       <Tab.Screen
+        name="Fitness"
+        component={FitnessProfileScreen}
+        options={{
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>📊</Text>,
+          headerTitle: 'Fitness Profile',
+        }}
+      />
+      <Tab.Screen
+        name="HYROX"
+        component={HyroxScreen}
+        options={{
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>🏋️</Text>,
+        }}
+      />
+      <Tab.Screen
         name="Profile"
         component={ProfileScreen}
         options={{
@@ -99,6 +118,15 @@ function MainNavigator() {
         component={WorkoutDetailScreen}
         options={{
           headerTitle: 'Workout',
+          headerStyle: { backgroundColor: colors.surface },
+          headerTintColor: colors.text,
+        }}
+      />
+      <MainStack.Screen
+        name="ActivityDetail"
+        component={ActivityDetailScreen}
+        options={{
+          headerTitle: 'Activity',
           headerStyle: { backgroundColor: colors.surface },
           headerTintColor: colors.text,
         }}
