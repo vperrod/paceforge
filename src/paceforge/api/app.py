@@ -232,6 +232,38 @@ def _send_registration_email(name: str, email: str, reason: str) -> None:
         logger.warning("Failed to send registration email: %s", e)
 
 
+def _send_approval_email(name: str, email: str) -> None:
+    """Send the user a notification that their account has been approved (best-effort)."""
+    if not settings.smtp_host:
+        return
+    import smtplib
+    from email.mime.text import MIMEText
+
+    body = (
+        f"Hi {name},\n\n"
+        f"Great news — your PaceForge account has been approved!\n\n"
+        f"You can now log in and start setting up your training:\n"
+        f"1. Connect your Garmin watch in Settings → Connections\n"
+        f"2. Create a training plan in the Plan tab\n\n"
+        f"If you have any questions, just reply to this email.\n\n"
+        f"Happy running!\n"
+        f"— Victor"
+    )
+    msg = MIMEText(body)
+    msg["Subject"] = "Your PaceForge account is approved!"
+    msg["From"] = settings.smtp_from or settings.smtp_user
+    msg["To"] = email
+
+    try:
+        with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10) as srv:
+            srv.starttls()
+            srv.login(settings.smtp_user, settings.smtp_password)
+            srv.send_message(msg)
+        logger.info("Approval email sent to %s", email)
+    except Exception as e:
+        logger.warning("Failed to send approval email: %s", e)
+
+
 # ── Public auth endpoints ────────────────────────────────────────────
 
 
@@ -377,6 +409,8 @@ async def admin_update_user(
     updated = update_user_status(settings.db_path, user_id, status=body.status)
     if not updated:
         raise HTTPException(500, "Failed to update user")
+    if body.status == "approved":
+        _send_approval_email(target["name"], target["email"])
     return UserOut(**{k: v for k, v in updated.items() if k != "password_hash"})
 
 
