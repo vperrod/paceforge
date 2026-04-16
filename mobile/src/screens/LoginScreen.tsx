@@ -127,18 +127,11 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   form: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: spacing.lg,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-      },
-      android: { elevation: 3 },
-    }),
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   label: {
     fontSize: fontSize.sm,

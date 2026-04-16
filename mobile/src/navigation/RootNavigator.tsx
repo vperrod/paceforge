@@ -11,13 +11,22 @@ import FeedScreen from '../screens/FeedScreen';
 import PlanScreen from '../screens/PlanScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import WorkoutDetailScreen from '../screens/WorkoutDetailScreen';
+import GarminConnectScreen from '../screens/GarminConnectScreen';
 
 export type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
 };
 
+export type MainStackParamList = {
+  Tabs: undefined;
+  WorkoutDetail: { workout: any };
+  GarminConnect: undefined;
+};
+
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
+const MainStack = createNativeStackNavigator<MainStackParamList>();
 const Tab = createBottomTabNavigator();
 
 function AuthNavigator() {
@@ -81,13 +90,39 @@ function MainTabs() {
   );
 }
 
+function MainNavigator() {
+  return (
+    <MainStack.Navigator>
+      <MainStack.Screen name="Tabs" component={MainTabs} options={{ headerShown: false }} />
+      <MainStack.Screen
+        name="WorkoutDetail"
+        component={WorkoutDetailScreen}
+        options={{
+          headerTitle: 'Workout',
+          headerStyle: { backgroundColor: colors.surface },
+          headerTintColor: colors.text,
+        }}
+      />
+      <MainStack.Screen
+        name="GarminConnect"
+        component={GarminConnectScreen}
+        options={{
+          headerTitle: 'Garmin',
+          headerStyle: { backgroundColor: colors.surface },
+          headerTintColor: colors.text,
+        }}
+      />
+    </MainStack.Navigator>
+  );
+}
+
 export default function RootNavigator() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isLoading = useAuthStore((s) => s.isLoading);
 
   if (isLoading) {
-    return null; // Splash screen would go here
+    return null;
   }
 
-  return isAuthenticated ? <MainTabs /> : <AuthNavigator />;
+  return isAuthenticated ? <MainNavigator /> : <AuthNavigator />;
 }

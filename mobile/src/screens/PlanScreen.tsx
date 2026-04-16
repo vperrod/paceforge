@@ -1,11 +1,13 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, fontSize } from '../theme';
 import api from '../api/client';
 
 export default function PlanScreen() {
   const [plans, setPlans] = React.useState<any[]>([]);
   const [refreshing, setRefreshing] = React.useState(false);
+  const navigation = useNavigation<any>();
 
   const loadPlans = async () => {
     try {
@@ -30,7 +32,9 @@ export default function PlanScreen() {
     <ScrollView
       style={styles.container}
       contentContainerStyle={!activePlan ? styles.empty : undefined}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+      }
     >
       {activePlan ? (
         <View style={styles.content}>
@@ -42,17 +46,25 @@ export default function PlanScreen() {
           </View>
           {activePlan.weeks?.map((week: any, i: number) => (
             <View key={i} style={styles.weekCard}>
-              <Text style={styles.weekTitle}>Week {week.week_number}</Text>
+              <View style={styles.weekHeader}>
+                <Text style={styles.weekTitle}>Week {week.week_number}</Text>
+                {week.phase && <Text style={styles.weekPhase}>{week.phase}</Text>}
+              </View>
               {week.workouts?.map((wo: any, j: number) => (
-                <View key={j} style={styles.workoutRow}>
+                <TouchableOpacity
+                  key={j}
+                  style={styles.workoutRow}
+                  onPress={() => navigation.navigate('WorkoutDetail', { workout: wo })}
+                >
                   <View style={[styles.dot, wo.completed ? styles.dotDone : styles.dotPending]} />
                   <View style={styles.workoutInfo}>
                     <Text style={styles.workoutName}>{wo.name}</Text>
                     <Text style={styles.workoutMeta}>
-                      {wo.scheduled_date} · {wo.workout_type}
+                      {wo.scheduled_date} · {wo.workout_type?.replace(/_/g, ' ')}
                     </Text>
                   </View>
-                </View>
+                  <Text style={styles.chevron}>›</Text>
+                </TouchableOpacity>
               ))}
             </View>
           ))}
@@ -75,20 +87,36 @@ const styles = StyleSheet.create({
   emptyView: { alignItems: 'center', padding: spacing.xl },
   emptyIcon: { fontSize: 48, marginBottom: spacing.md },
   emptyText: { fontSize: fontSize.lg, fontWeight: '600', color: colors.text },
-  emptyHint: { fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', marginTop: spacing.sm },
+  emptyHint: {
+    fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', marginTop: spacing.sm,
+  },
   planHeader: { padding: spacing.md, marginBottom: spacing.sm },
-  planGoal: { fontSize: fontSize.xl, fontWeight: '700', color: colors.text, textTransform: 'capitalize' },
+  planGoal: {
+    fontSize: fontSize.xl, fontWeight: '700', color: colors.text, textTransform: 'capitalize',
+  },
   planDate: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: spacing.xs },
   weekCard: {
-    backgroundColor: colors.surface, borderRadius: 12, padding: spacing.md, marginBottom: spacing.md,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1,
+    backgroundColor: colors.card, borderRadius: 12, padding: spacing.md, marginBottom: spacing.md,
+    borderWidth: 1, borderColor: colors.borderSubtle,
   },
-  weekTitle: { fontSize: fontSize.md, fontWeight: '600', color: colors.text, marginBottom: spacing.sm },
-  workoutRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.sm },
+  weekHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  weekTitle: { fontSize: fontSize.md, fontWeight: '600', color: colors.text },
+  weekPhase: {
+    fontSize: fontSize.xs, color: colors.sky, fontWeight: '500',
+    backgroundColor: colors.sky + '15', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6,
+  },
+  workoutRow: {
+    flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.sm,
+    borderTopWidth: 1, borderTopColor: colors.borderSubtle,
+  },
   dot: { width: 10, height: 10, borderRadius: 5, marginRight: spacing.sm },
-  dotDone: { backgroundColor: colors.secondary },
-  dotPending: { backgroundColor: colors.border },
+  dotDone: { backgroundColor: colors.primary },
+  dotPending: { backgroundColor: colors.textTertiary },
   workoutInfo: { flex: 1 },
   workoutName: { fontSize: fontSize.sm, fontWeight: '500', color: colors.text },
   workoutMeta: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2 },
+  chevron: { fontSize: 20, color: colors.textTertiary, marginLeft: spacing.sm },
 });

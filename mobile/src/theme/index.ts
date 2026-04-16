@@ -1,16 +1,29 @@
-import { Platform } from 'react-native';
-
 export const colors = {
-  primary: '#4A90D9',
-  secondary: '#00D26A',
-  danger: '#FF5252',
-  warning: '#FF9800',
-  background: Platform.select({ ios: '#F2F2F7', android: '#FAFAFA' }) ?? '#F2F2F7',
-  surface: '#FFFFFF',
-  text: '#1C1C1E',
-  textSecondary: '#8E8E93',
-  border: '#E5E5EA',
-  inputBg: Platform.select({ ios: '#EFEFF4', android: '#F5F5F5' }) ?? '#EFEFF4',
+  // Accent palette (matches web design system)
+  primary: '#10B981',      // emerald
+  sky: '#0EA5E9',
+  amber: '#F59E0B',
+  danger: '#F43F5E',       // rose
+  violet: '#8B5CF6',
+
+  // Backgrounds
+  background: '#0F1117',
+  surface: '#161821',
+  card: '#1A1D2B',
+  elevated: '#1C1F2B',
+
+  // Text
+  text: '#E8ECF4',
+  textSecondary: '#8B95AD',
+  textTertiary: '#5C6478',
+
+  // Borders
+  border: 'rgba(148,163,194,0.12)',
+  borderSubtle: 'rgba(148,163,194,0.08)',
+  borderStrong: 'rgba(148,163,194,0.18)',
+
+  // Input
+  inputBg: '#1C1F2B',
 };
 
 export const spacing = {
