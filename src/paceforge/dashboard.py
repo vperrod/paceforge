@@ -19,10 +19,7 @@ API_BASE = "http://localhost:8000"
 st.set_page_config(page_title="PaceForge", page_icon="🏃", layout="wide")
 
 # ── Cookie manager for persistent JWT ────────────────────────────────
-try:
-    _cookie_mgr = stx.CookieManager(key="pf_cookies")
-except Exception:
-    _cookie_mgr = None
+_cookie_mgr = stx.CookieManager(key="pf_cookies")
 
 # ═══════════════════════════════════════════════════════════════════════
 # LOGO — load SVG and encode as base64 data URI
@@ -64,11 +61,6 @@ _CUSTOM_CSS = """
     --pf-sky-dim: rgba(14, 165, 233, 0.12);
     --pf-rose: #F43F5E;
     --pf-rose-dim: rgba(244, 63, 94, 0.12);
-    --pf-violet: #8B5CF6;
-    --pf-violet-dim: rgba(139, 92, 246, 0.12);
-    --radius-sm: 8px;
-    --radius-md: 12px;
-    --radius-lg: 16px;
     --space-xs: 4px;
     --space-sm: 8px;
     --space-md: 16px;
@@ -698,7 +690,7 @@ footer { visibility: hidden; }
     content: '';
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(15, 17, 23, 0.45);
+    background: rgba(15, 17, 23, 0.65);
     z-index: 99998;
     pointer-events: all;
     animation: pf-fade-in 150ms ease-out;
@@ -710,16 +702,17 @@ footer { visibility: hidden; }
 [data-testid="stAppViewContainer"][data-stale="true"]::before {
     content: '';
     position: fixed;
-    top: 0; left: 0;
-    width: 30%;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, var(--pf-emerald), transparent);
+    top: 50%; left: 50%;
+    margin-top: -16px; margin-left: -16px;
+    width: 32px; height: 32px;
+    border: 3px solid var(--pf-border-strong);
+    border-top-color: var(--pf-emerald);
+    border-radius: 50%;
     z-index: 99999;
-    animation: pf-progress 1.2s var(--ease-out) infinite;
+    animation: pf-spin 0.7s linear infinite;
 }
-@keyframes pf-progress {
-    0% { left: -30%; }
-    100% { left: 100%; }
+@keyframes pf-spin {
+    to { transform: rotate(360deg); }
 }
 
 /* ── Mobile Responsive ───────────────────────────────── */
@@ -883,8 +876,7 @@ details[open] > div {
 .pf-auth-form {
     background: var(--pf-card);
     border: 1px solid var(--pf-border);
-    border-top: 2px solid var(--pf-emerald);
-    border-radius: var(--radius-lg);
+    border-radius: 14px;
     padding: var(--space-lg) var(--space-xl);
 }
 .pf-auth-form h4 {
@@ -899,63 +891,6 @@ details[open] > div {
     color: var(--pf-text-tertiary);
     font-size: 0.8rem;
     font-family: var(--font-body);
-}
-
-/* ── Calendar iframe scrollbar fix ── */
-iframe[title="streamlit_calendar.calendar"] {
-    overflow: hidden !important;
-    scrollbar-width: none !important;
-}
-iframe[title="streamlit_calendar.calendar"]::-webkit-scrollbar {
-    display: none !important;
-}
-/* Also target the Streamlit component container */
-[data-testid="stCustomComponentV1"] {
-    overflow: hidden !important;
-}
-[data-testid="stCustomComponentV1"] > div {
-    overflow: hidden !important;
-}
-
-/* ── Status dot indicators ───────────────────────────── */
-.pf-status-dot {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
-
-/* ── Empty state ─────────────────────────────────────── */
-.pf-empty-state {
-    text-align: center;
-    padding: 3rem 1.5rem;
-    color: var(--pf-text-secondary);
-}
-.pf-empty-state-icon {
-    font-size: 2rem;
-    color: var(--pf-text-tertiary);
-    margin-bottom: var(--space-md);
-    opacity: 0.5;
-}
-.pf-empty-state-title {
-    font-family: var(--font-display);
-    font-weight: 600;
-    font-size: 1rem;
-    color: var(--pf-text);
-    margin-bottom: var(--space-xs);
-}
-.pf-empty-state-body {
-    font-size: 0.85rem;
-    color: var(--pf-text-secondary);
-    max-width: 320px;
-    margin: 0 auto;
-    line-height: 1.5;
-}
-
-/* ── Tab panel fade ──────────────────────────────────── */
-.stTabs [data-baseweb="tab-panel"] {
-    animation: pf-fade-up 200ms var(--ease-out);
 }
 </style>
 """
@@ -1004,7 +939,7 @@ _PF_CHART_LAYOUT = dict(
     plot_bgcolor="rgba(0,0,0,0)",
     font=dict(family="Figtree, sans-serif", color="#E8ECF4", size=11),
     margin=dict(l=40, r=20, t=30, b=30),
-    height=300,
+    height=250,
     xaxis=dict(gridcolor="rgba(148,163,194,0.06)", zeroline=False),
     yaxis=dict(gridcolor="rgba(148,163,194,0.08)", zeroline=False),
     legend=dict(font=dict(color="#8B95AD", size=10)),
@@ -1035,7 +970,7 @@ def _render_brand(size: str = "normal") -> str:
         <div class="pf-auth-hero">
             {img}
             <h1 class="pf-auth-title">PACE<span>FORGE</span></h1>
-            <p class="pf-auth-subtitle">Train smarter. Race faster.</p>
+            <p class="pf-auth-subtitle">AI-Powered Running Coach</p>
         </div>"""
     img = f'<img src="{_LOGO_URI}" style="width:36px;height:36px;">' if _LOGO_URI else ""
     return f"""
@@ -1232,8 +1167,8 @@ if st.session_state.jwt is None:
         st.session_state["_cookie_init"] = True
         time.sleep(0.5)
         st.rerun()
-    saved_jwt = _cookie_mgr.get("pf_jwt") if _cookie_mgr else None
-    saved_refresh = _cookie_mgr.get("pf_refresh") if _cookie_mgr else None
+    saved_jwt = _cookie_mgr.get("pf_jwt")
+    saved_refresh = _cookie_mgr.get("pf_refresh")
     if saved_jwt:
         # Validate the token is still accepted by the API
         try:
@@ -1263,8 +1198,8 @@ if st.session_state.jwt is None:
                     st.session_state.user_name = data["name"]
                     st.session_state.user_email = data.get("email", "")
                     st.session_state.page = "app"
-                    _cookie_mgr.set("pf_jwt", data["access_token"], key="set_jwt_refresh1", max_age=86400) if _cookie_mgr else None
-                    _cookie_mgr.set("pf_refresh", data["refresh_token"], key="set_refresh_refresh1", max_age=2592000) if _cookie_mgr else None
+                    _cookie_mgr.set("pf_jwt", data["access_token"], key="set_jwt_refresh1", max_age=86400)
+                    _cookie_mgr.set("pf_refresh", data["refresh_token"], key="set_refresh_refresh1", max_age=2592000)
         except Exception:
             pass  # Cookie invalid or API unreachable — show login
     elif saved_refresh:
@@ -1282,8 +1217,8 @@ if st.session_state.jwt is None:
                 st.session_state.user_name = data["name"]
                 st.session_state.user_email = data.get("email", "")
                 st.session_state.page = "app"
-                _cookie_mgr.set("pf_jwt", data["access_token"], key="set_jwt_refresh2", max_age=86400) if _cookie_mgr else None
-                _cookie_mgr.set("pf_refresh", data["refresh_token"], key="set_refresh_refresh2", max_age=2592000) if _cookie_mgr else None
+                _cookie_mgr.set("pf_jwt", data["access_token"], key="set_jwt_refresh2", max_age=86400)
+                _cookie_mgr.set("pf_refresh", data["refresh_token"], key="set_refresh_refresh2", max_age=2592000)
         except Exception:
             pass
 
@@ -1299,9 +1234,8 @@ def _logout():
         st.session_state[key] = None if key not in ("garmin_logged_in", "mfa_required", "plans") else (False if key != "plans" else [])
     st.session_state._restored = False
     st.session_state.page = "login"
-    if _cookie_mgr:
-        _cookie_mgr.delete("pf_jwt")
-        _cookie_mgr.delete("pf_refresh")
+    _cookie_mgr.delete("pf_jwt")
+    _cookie_mgr.delete("pf_refresh")
 
 
 def _error_detail(r: requests.Response) -> str:
@@ -1415,7 +1349,7 @@ def _render_workout_detail(workout: dict, plan_paces: dict | None = None) -> str
     return f'<div class="pf-card" style="margin-top:1rem;">{"".join(lines)}</div>'
 
 
-def _render_garmin_activity_detail(detail: dict, activity_type: str = "running", key_prefix: str = "") -> None:
+def _render_garmin_activity_detail(detail: dict, activity_type: str = "running") -> None:
     """Render Garmin activity detail with splits, charts, and HR zones."""
     import plotly.graph_objects as go
     from plotly.subplots import make_subplots
@@ -1501,41 +1435,25 @@ def _render_garmin_activity_detail(detail: dict, activity_type: str = "running",
         )
 
         # Collect data for chart
-        paces_sec = []  # seconds per km
-        paces_min = []  # minutes per km (for Y axis)
+        split_nums = list(range(1, len(laps) + 1))
+        paces = []
         hrs = []
-        cumulative_time = []  # cumulative elapsed time in minutes
-        elapsed = 0.0
         for lap in laps:
             lap_speed = lap.get("averageSpeed", 0)
-            p = (1000 / lap_speed) if lap_speed else 0
-            paces_sec.append(p)
-            paces_min.append(p / 60)
-            lap_dur = lap.get("duration", 0)
-            # Garmin sometimes returns ms, sometimes seconds
-            if lap_dur > 100000:
-                lap_dur = lap_dur / 1000
-            elapsed += lap_dur / 60  # elapsed in minutes
-            cumulative_time.append(round(elapsed, 1))
+            paces.append((1000 / lap_speed) if lap_speed else 0)
             hrs.append(lap.get("averageHR", 0))
-        # X-axis: cumulative time labels (e.g. "5:12", "10:24")
-        x_labels = []
-        for ct in cumulative_time:
-            _ct_m = int(ct)
-            _ct_s = int((ct - _ct_m) * 60)
-            x_labels.append(f"{_ct_m}:{_ct_s:02d}")
 
-        # Combined pace + HR chart over time
-        if paces_min and any(h > 0 for h in hrs):
+        # Combined pace + HR chart over splits
+        if paces and any(h > 0 for h in hrs):
             fig = make_subplots(specs=[[{"secondary_y": True}]])
-            avg_p = sum(paces_min) / len(paces_min)
-            colors = ["#10B981" if p <= avg_p else "#F43F5E" for p in paces_min]
+            avg_p = sum(paces) / len(paces)
+            colors = ["#10B981" if p <= avg_p else "#F43F5E" for p in paces]
 
             fig.add_trace(
                 go.Bar(
-                    x=x_labels, y=paces_min, name="Pace",
+                    x=split_nums, y=paces, name="Pace",
                     marker_color=colors,
-                    text=[_fmt_pace(p) for p in paces_sec],
+                    text=[_fmt_pace(p) for p in paces],
                     textposition="outside",
                     textfont=dict(color="#E8ECF4", size=9),
                 ),
@@ -1543,7 +1461,7 @@ def _render_garmin_activity_detail(detail: dict, activity_type: str = "running",
             )
             fig.add_trace(
                 go.Scatter(
-                    x=x_labels, y=hrs, name="Heart Rate",
+                    x=split_nums, y=hrs, name="Heart Rate",
                     mode="lines+markers",
                     line=dict(color="#F43F5E", width=2),
                     marker=dict(size=5),
@@ -1555,25 +1473,25 @@ def _render_garmin_activity_detail(detail: dict, activity_type: str = "running",
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(size=10, color="#8B95AD")),
                 bargap=0.3,
             ))
-            fig.update_yaxes(autorange="reversed", title_text="Pace (min/km)", gridcolor="rgba(148,163,194,0.08)", secondary_y=False)
+            fig.update_yaxes(autorange="reversed", title_text="Pace (s/km)", gridcolor="rgba(148,163,194,0.08)", secondary_y=False)
             fig.update_yaxes(title_text="HR (bpm)", gridcolor="rgba(148,163,194,0.08)", secondary_y=True)
-            fig.update_xaxes(title_text="Time", gridcolor="rgba(148,163,194,0.06)", type="category")
-            st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}splits_hr_chart")
-        elif paces_min:
-            avg_p = sum(paces_min) / len(paces_min)
-            colors = ["#10B981" if p <= avg_p else "#F43F5E" for p in paces_min]
+            fig.update_xaxes(title_text="Split", gridcolor="rgba(148,163,194,0.06)", dtick=1)
+            st.plotly_chart(fig, use_container_width=True, key="splits_hr_chart")
+        elif paces:
+            avg_p = sum(paces) / len(paces)
+            colors = ["#10B981" if p <= avg_p else "#F43F5E" for p in paces]
             fig = go.Figure(go.Bar(
-                x=x_labels, y=paces_min, marker_color=colors,
-                text=[_fmt_pace(p) for p in paces_sec], textposition="outside",
+                x=split_nums, y=paces, marker_color=colors,
+                text=[_fmt_pace(p) for p in paces], textposition="outside",
                 textfont=dict(color="#E8ECF4", size=9),
             ))
             fig.update_layout(**_pf_layout(
                 margin=dict(l=40, r=20, t=25, b=35), height=220,
-                yaxis=dict(autorange="reversed", title="Pace (min/km)", gridcolor="rgba(148,163,194,0.08)", zeroline=False),
-                xaxis=dict(gridcolor="rgba(148,163,194,0.06)", type="category", title="Time", zeroline=False),
+                yaxis=dict(autorange="reversed", title="Pace (s/km)", gridcolor="rgba(148,163,194,0.08)", zeroline=False),
+                xaxis=dict(gridcolor="rgba(148,163,194,0.06)", dtick=1, title="Split", zeroline=False),
                 bargap=0.3,
             ))
-            st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}splits_chart")
+            st.plotly_chart(fig, use_container_width=True, key="splits_chart")
 
     # ── HR Zones ──
     hr_list = hr_zones_data if isinstance(hr_zones_data, list) else hr_zones_data.get("hrTimeInZones", [])
@@ -1671,8 +1589,8 @@ if st.session_state.jwt is None:
                         st.session_state.user_name = data["name"]
                         st.session_state.user_email = data.get("email", "")
                         st.session_state.page = "app"
-                        _cookie_mgr.set("pf_jwt", data["access_token"], key="set_jwt_login", max_age=86400) if _cookie_mgr else None
-                        _cookie_mgr.set("pf_refresh", data["refresh_token"], key="set_refresh_login", max_age=2592000) if _cookie_mgr else None
+                        _cookie_mgr.set("pf_jwt", data["access_token"], key="set_jwt_login", max_age=86400)
+                        _cookie_mgr.set("pf_refresh", data["refresh_token"], key="set_refresh_login", max_age=2592000)
                         st.rerun()
                     elif r.status_code == 403:
                         st.warning(_error_detail(r))
@@ -1791,9 +1709,6 @@ if not st.session_state._restored and st.session_state.jwt:
         st.session_state._restored = True
         st.rerun()  # Rerun so calendar renders with freshly loaded data
 
-if not st.session_state._restored and st.session_state.jwt:
-    st.stop()  # Don't render rest of page while still loading
-
 # ── Sidebar ──────────────────────────────────────────────────────────
 
 with st.sidebar:
@@ -1816,18 +1731,16 @@ with st.sidebar:
     # Garmin status indicator in sidebar
     if st.session_state.garmin_logged_in:
         st.markdown(
-            '<div style="background:#10B98122;color:#10B981;padding:6px 12px;border-radius:var(--radius-sm);'
-            'font-size:0.8rem;font-weight:600;display:flex;align-items:center;justify-content:center;'
-            'gap:6px;margin-bottom:0.5rem;">'
-            '<span class="pf-status-dot" style="background:#10B981;"></span> Garmin Connected</div>',
+            '<div style="background:#10B98122;color:#10B981;padding:6px 12px;border-radius:8px;'
+            'font-size:0.8rem;font-weight:600;text-align:center;margin-bottom:0.5rem;">'
+            '⌚ Garmin Connected</div>',
             unsafe_allow_html=True,
         )
     else:
         st.markdown(
-            '<div style="background:#F59E0B22;color:#F59E0B;padding:6px 12px;border-radius:var(--radius-sm);'
-            'font-size:0.8rem;font-weight:600;display:flex;align-items:center;justify-content:center;'
-            'gap:6px;margin-bottom:0.5rem;">'
-            '<span class="pf-status-dot" style="background:#F59E0B;"></span> Garmin Not Connected</div>',
+            '<div style="background:#F59E0B22;color:#F59E0B;padding:6px 12px;border-radius:8px;'
+            'font-size:0.8rem;font-weight:600;text-align:center;margin-bottom:0.5rem;">'
+            '⌚ Garmin Not Connected</div>',
             unsafe_allow_html=True,
         )
 
@@ -1940,18 +1853,18 @@ if _p:
     if _p.get("vo2_max"):
         _header_stats.append(("VO\u2082", str(_p["vo2_max"]), "#10B981"))
     if _p.get("resting_hr"):
-        _header_stats.append(("RHR", f"{_p['resting_hr']} bpm", "#0EA5E9"))
+        _header_stats.append(("RHR", f"{_p['resting_hr']} bpm", "#4DA6FF"))
     if _p.get("weekly_mileage_km"):
         _header_stats.append(("Weekly", f"{_p['weekly_mileage_km']} km", "#8B5CF6"))
     if _p.get("body_battery_current"):
         _bb = _p["body_battery_current"]
-        _bb_color = "#10B981" if _bb >= 50 else "#F59E0B" if _bb >= 25 else "#F43F5E"
+        _bb_color = "#10B981" if _bb >= 50 else "#F59E0B" if _bb >= 25 else "#FF5252"
         _header_stats.append(("Battery", str(_bb), _bb_color))
 
 _stat_pills_html = ""
 for _label, _val, _color in _header_stats:
     _stat_pills_html += (
-        f'<div style="background:{_color}15;border:1px solid {_color}33;border-radius:var(--radius-md);'
+        f'<div style="background:{_color}15;border:1px solid {_color}33;border-radius:10px;'
         f'padding:6px 14px;display:flex;align-items:center;gap:6px;">'
         f'<span style="color:{_color}99;font-size:0.75rem;font-weight:500;">{_label}</span>'
         f'<span style="color:{_color};font-weight:700;font-size:0.95rem;">{_val}</span>'
@@ -1962,32 +1875,32 @@ for _label, _val, _color in _header_stats:
 _workout_html = ""
 if _today_workout:
     _wt = _today_workout.get("workout_type", "")
-    _wt_colors = {"easy": "#34D399", "tempo": "#F59E0B", "interval": "#F43F5E", "long_run": "#0EA5E9",
-                  "recovery": "#6EE7B7", "race": "#F43F5E", "rest": "#6B7280", "speed": "#E11D48", "threshold": "#D97706"}
-    _wt_color = _wt_colors.get(_wt, "#8B95AD")
+    _wt_icons = {"easy": "\U0001f7e2", "tempo": "\U0001f7e0", "interval": "\U0001f534", "long_run": "\U0001f535",
+                 "recovery": "\U0001f49a", "race": "\U0001f3c1", "rest": "\U0001f634", "speed": "\u26a1", "threshold": "\U0001f7e1"}
+    _wt_icon = _wt_icons.get(_wt, "\U0001f3c3")
     _wo_name = _today_workout.get("name", _wt.replace("_", " ").title())
     _completed = _today_workout.get("completed", False)
     if _completed:
         _workout_html = (
-            f'<div style="background:#10B98115;border:1px solid #10B98133;border-radius:var(--radius-md);'
+            f'<div style="background:#10B98115;border:1px solid #10B98133;border-radius:10px;'
             f'padding:6px 14px;display:flex;align-items:center;gap:6px;">'
-            f'<span class="pf-status-dot" style="background:#10B981;"></span>'
+            f'<span style="font-size:0.85rem;">\u2705</span>'
             f'<span style="color:#10B981;font-weight:600;font-size:0.85rem;">{_wo_name}</span>'
             f'</div>'
         )
     else:
         _workout_html = (
-            f'<div style="background:{_wt_color}15;border:1px solid {_wt_color}33;border-radius:var(--radius-md);'
+            f'<div style="background:#FFB80015;border:1px solid #FFB80033;border-radius:10px;'
             f'padding:6px 14px;display:flex;align-items:center;gap:6px;">'
-            f'<span class="pf-status-dot" style="background:{_wt_color};"></span>'
-            f'<span style="color:{_wt_color};font-weight:600;font-size:0.85rem;">Today: {_wo_name}</span>'
+            f'<span style="font-size:0.85rem;">{_wt_icon}</span>'
+            f'<span style="color:#FFB800;font-weight:600;font-size:0.85rem;">Today: {_wo_name}</span>'
             f'</div>'
         )
 elif any(isinstance(pl, dict) and pl.get("accepted") for pl in (st.session_state.plans or [])):
     _workout_html = (
-        '<div style="background:#10B98115;border:1px solid #10B98133;border-radius:var(--radius-md);'
+        '<div style="background:#10B98115;border:1px solid #10B98133;border-radius:10px;'
         'padding:6px 14px;display:flex;align-items:center;gap:6px;">'
-        '<span class="pf-status-dot" style="background:#6B7280;"></span>'
+        '<span style="font-size:0.85rem;">\U0001f634</span>'
         '<span style="color:#69F0AE;font-weight:600;font-size:0.85rem;">Rest day</span>'
         '</div>'
     )
@@ -1998,7 +1911,7 @@ _greeting = "Good morning" if _hour < 12 else "Good afternoon" if _hour < 18 els
 
 st.markdown(
     f'<div style="background:linear-gradient(135deg, #161821 0%, #252830 100%);'
-    f'border:1px solid #252A35;border-radius:var(--radius-lg);padding:1rem 1.5rem;margin-bottom:1rem;'
+    f'border:1px solid #252A35;border-radius:14px;padding:1rem 1.5rem;margin-bottom:1rem;'
     f'display:flex;align-items:center;gap:1.2rem;flex-wrap:wrap;">'
     # Avatar
     f'<div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#10B981,#00A854);'
@@ -2039,13 +1952,6 @@ tab_admin = tabs[7] if st.session_state.role == "admin" else None
 # ── Tab 0: Feed ──────────────────────────────────────────────────────
 
 with tab_feed:
-    # ── Handle profile link from feed card ──
-    _qp_profile = st.query_params.get("profile")
-    if _qp_profile:
-        st.session_state["viewing_profile_id"] = _qp_profile
-        st.query_params.clear()
-        st.rerun()
-
     # ── Friend Profile View ──
     _viewing_uid = st.session_state.get("viewing_profile_id")
     if _viewing_uid:
@@ -2134,7 +2040,8 @@ with tab_feed:
             _p_acts = _pdata.get("activities", [])
             if _p_acts:
                 st.markdown('<div class="pf-section-header" style="font-size:0.95rem;margin-top:1rem;">Recent Activities</div>', unsafe_allow_html=True)
-                for _pa_idx, _pa in enumerate(_p_acts[:15]):
+                _act_rows_html = ""
+                for _pa in _p_acts[:15]:
                     _pa_name = _pa.get("name", "Activity")
                     _pa_type = _pa.get("activity_type", "running")
                     _pa_date = str(_pa.get("start_time", ""))[:10]
@@ -2155,23 +2062,24 @@ with tab_feed:
                         _pa_parts.append(f"{_ppm}:{_pps:02d}/km")
                     if _pa_hr:
                         _pa_parts.append(f"{_pa_hr}bpm")
-                    _pa_detail = " \u00b7 ".join(_pa_parts)
+                    _pa_detail = " · ".join(_pa_parts)
 
-                    with st.expander(f"{_pa_name} \u2014 {_pa_date}  ({_pa_detail})", expanded=False):
-                        # ── Fetch & render splits chart ──
-                        _pa_aid = _pa.get("activity_id")
-                        if _pa_is_run and _pa_aid:
-                            _detail_cache_key = f"_act_detail_{_pa_aid}"
-                            if _detail_cache_key not in st.session_state:
-                                try:
-                                    _det_url = f"{API_BASE}/users/{_viewing_uid}/activities/{_pa_aid}/detail"
-                                    _det_r = requests.get(_det_url, headers=_auth_headers(), timeout=15)
-                                    st.session_state[_detail_cache_key] = _det_r.json() if _det_r.status_code == 200 else None
-                                except Exception:
-                                    st.session_state[_detail_cache_key] = None
-                            _pa_detail = st.session_state.get(_detail_cache_key)
-                            if _pa_detail:
-                                _render_garmin_activity_detail(_pa_detail, _pa_type, key_prefix=f"prof_{_pa_aid}_")
+                    _pa_type_color = "#10B981" if _pa_is_run else "#A78BFA"
+                    _act_rows_html += (
+                        f'<div style="display:flex;justify-content:space-between;align-items:center;'
+                        f'padding:0.45rem 0;border-bottom:1px solid #252A35;">'
+                        f'<div>'
+                        f'<span style="color:#8B95AD;font-size:0.75rem;margin-right:0.5rem;">{_pa_date}</span>'
+                        f'<span style="color:{_pa_type_color};font-size:0.65rem;margin-right:0.4rem;">●</span>'
+                        f'<span style="color:#E8ECF4;font-weight:500;font-size:0.9rem;">{_pa_name}</span>'
+                        f'</div>'
+                        f'<div style="color:#8B95AD;font-size:0.82rem;white-space:nowrap;">{_pa_detail}</div>'
+                        f'</div>'
+                    )
+                st.markdown(
+                    f'<div class="pf-card" style="padding:0.8rem;">{_act_rows_html}</div>',
+                    unsafe_allow_html=True,
+                )
 
             # ── HYROX Races ──
             _p_hyrox = _pdata.get("hyrox")
@@ -2210,7 +2118,7 @@ with tab_feed:
             # ── Recent Feed Activity ──
             _p_feed = _pdata.get("feed", [])
             if _p_feed:
-                st.markdown('<div class="pf-section-header" style="font-size:0.95rem;margin-top:1rem;">Latest Updates</div>', unsafe_allow_html=True)
+                st.markdown('<div class="pf-section-header" style="font-size:0.95rem;margin-top:1rem;">Recent Activity</div>', unsafe_allow_html=True)
                 for _pf_ev in _p_feed[:10]:
                     _pf_date = _pf_ev.get("created_at", "")[:10]
                     st.markdown(
@@ -2253,17 +2161,16 @@ with tab_feed:
 
         if not feed_events:
             st.markdown(
-                '<div class="pf-empty-state">'
-                '<div class="pf-empty-state-icon">—</div>'
-                '<div class="pf-empty-state-title">No activity yet</div>'
-                '<div class="pf-empty-state-body">Complete a workout or add friends to see their activity here.</div>'
+                '<div style="text-align:center;padding:3rem;color:#8B95AD;">'
+                ''
+                "<div>No activity yet! Complete a workout or add friends to see their activity here.</div>"
                 "</div>",
                 unsafe_allow_html=True,
             )
         else:
             for idx, ev in enumerate(feed_events):
                 _event_type_icons = {
-                    "activity": "●", "plan": "●", "pb": "●", "hyrox": "●", "milestone": "●", "welcome": "●",
+                    "activity": "●", "plan": "●", "pb": "●", "hyrox": "●", "milestone": "●",
                 }
                 icon = _event_type_icons.get(ev.get("event_type", ""), "●")
                 user_name = ev.get("user_name", "Unknown")
@@ -2273,6 +2180,7 @@ with tab_feed:
                 like_count = ev.get("like_count", 0)
                 comment_count = ev.get("comment_count", 0)
                 liked_by_me = ev.get("liked_by_me", False)
+                heart = "♥" if liked_by_me else "♡"
 
                 # Parse metadata for rich cards
                 _ev_meta_raw = ev.get("metadata")
@@ -2313,36 +2221,10 @@ with tab_feed:
                     if _m_items:
                         _rich_metrics_html = _metrics_strip(_m_items)
 
-                # Build pace/distance visual bar for activity cards
-                _pace_chart_html = ""
-                if ev.get("event_type") == "activity" and _ev_meta and _m_dist:
-                    _bar_pct = min(_m_dist / 30000 * 100, 100)
-                    if _m_pace:
-                        _pace_ratio = max(0, min(1, (_m_pace - 330) / (420 - 330)))
-                        _bar_hue = 140 - _pace_ratio * 140
-                    else:
-                        _bar_hue = 140
-                    _dist_label = f"{_m_dist / 1000:.1f}km"
-                    _pace_label = ""
-                    if _m_pace:
-                        _plm, _pls = divmod(int(_m_pace), 60)
-                        _pace_label = f"{_plm}:{_pls:02d}/km"
-                    _pace_chart_html = (
-                        f'<div style="margin:0.5rem 0 0.3rem;position:relative;">'
-                        f'<div style="background:#1E2130;border-radius:6px;height:24px;overflow:hidden;">'
-                        f'<div style="background:hsl({_bar_hue},65%,45%);height:100%;width:{_bar_pct}%;'
-                        f'border-radius:6px;transition:width 0.3s;"></div></div>'
-                        f'<div style="display:flex;justify-content:space-between;margin-top:0.2rem;'
-                        f'font-size:0.75rem;color:#8B95AD;">'
-                        f'<span>{_dist_label}</span>'
-                        + (f'<span>{_pace_label}</span>' if _pace_label else '')
-                        + f'</div></div>'
-                    )
-
+                # User name is clickable to view profile
                 _name_click_html = (
-                    f'<a href="?profile={_ev_user_id}" target="_self" '
-                    f'style="color:#E8ECF4;font-weight:600;text-decoration:none;'
-                    f'border-bottom:1px dashed #8B95AD44;">{user_name}</a>'
+                    f'<span style="color:#E8ECF4;font-weight:600;cursor:pointer;'
+                    f'border-bottom:1px dashed #8B95AD33;">{user_name}</span>'
                 )
 
                 st.markdown(
@@ -2359,10 +2241,9 @@ with tab_feed:
                     f'{icon} {ev.get("title", "")}</div>'
                     + (f'<div style="color:#B0B7C3;font-size:0.9rem;margin-bottom:0.5rem;">{ev.get("body")}</div>'
                        if ev.get("body") else '')
-                    + _pace_chart_html
                     + _rich_metrics_html
                     + f'<div style="color:#8B95AD;font-size:0.85rem;margin-top:0.4rem;">'
-                    f'{"♥" if liked_by_me else "♡"} {like_count}  ·  {comment_count}</div>'
+                    f'{heart} {like_count}  ·  {comment_count}</div>'
                     f'</div>',
                     unsafe_allow_html=True,
                 )
@@ -2383,13 +2264,17 @@ with tab_feed:
                     _show_strava_in_feed = _strava_prefs.get("connected", False)
 
                 if _show_strava_in_feed:
-                    col_like, col_comment, col_strava = st.columns([1, 1, 1])
+                    col_profile, col_like, col_comment, col_strava = st.columns([1, 1, 1, 1])
                 else:
-                    col_like, col_comment = st.columns([1, 1])
+                    col_profile, col_like, col_comment = st.columns([1, 1, 1])
                     col_strava = None
+                with col_profile:
+                    if st.button("Profile", key=f"feed_profile_{ev['id']}_{idx}", use_container_width=True):
+                        st.session_state["viewing_profile_id"] = _ev_user_id
+                        st.rerun()
                 with col_like:
                     like_label = "Unlike" if liked_by_me else "Like"
-                    if st.button(like_label, key=f"feed_like_{ev['id']}_{idx}", use_container_width=True):
+                    if st.button(f"{heart} {like_label}", key=f"feed_like_{ev['id']}_{idx}", use_container_width=True):
                         try:
                             requests.post(
                                 f"{API_BASE}/feed/{ev['id']}/like",
@@ -2534,14 +2419,8 @@ def _fmt_time(seconds):
 with tab_profile:
     p = st.session_state.profile
     if not p:
-        st.markdown(
-            '<div class="pf-empty-state">'
-            '<div class="pf-empty-state-icon">—</div>'
-            '<div class="pf-empty-state-title">No profile data yet</div>'
-            '<div class="pf-empty-state-body">Connect to Garmin and sync to load your fitness profile.</div>'
-            '</div>',
-            unsafe_allow_html=True,
-        )
+        st.markdown(_skeleton_cards(3), unsafe_allow_html=True)
+        st.info("No profile data yet. Connect to Garmin and sync to load your fitness profile.")
     else:
         # Fetch analytics (cached per session)
         analytics = st.session_state.get("analytics")
@@ -2634,46 +2513,6 @@ with tab_profile:
                     _section_card("Weaknesses", _bullet_list(snap.get("weaknesses", []), "#F59E0B", "✗"), "#F59E0B"),
                     unsafe_allow_html=True,
                 )
-
-            # AI-driven Next Steps for weaknesses
-            if snap.get("weaknesses"):
-                with st.expander("Next Steps & Progress", expanded="_ai_snapshot_actions" in st.session_state):
-                    if "_ai_snapshot_actions" not in st.session_state:
-                        if st.button("Generate action plan", key="btn_ai_snapshot"):
-                            with st.spinner("Analysing weaknesses…"):
-                                try:
-                                    _ai_r = requests.post(
-                                        f"{API_BASE}/profile/ai-insights",
-                                        headers=_auth_headers(),
-                                        json={"section": "snapshot", "analytics": analytics},
-                                        timeout=30,
-                                    )
-                                    if _ai_r.status_code == 200:
-                                        st.session_state["_ai_snapshot_actions"] = _ai_r.json().get("actions", [])
-                                        st.rerun()
-                                    else:
-                                        st.warning("Could not generate insights. Try again later.")
-                                except Exception:
-                                    st.warning("AI service unavailable.")
-                    else:
-                        _snap_actions = st.session_state["_ai_snapshot_actions"]
-                        if _snap_actions:
-                            for _sa in _snap_actions:
-                                st.markdown(
-                                    f'<div style="border-left:3px solid #0EA5E9;padding:8px 12px;margin-bottom:8px;'
-                                    f'background:rgba(14,165,233,0.06);border-radius:0 8px 8px 0;">'
-                                    f'<div style="font-weight:600;color:#0EA5E9;font-size:0.85rem;">{_sa.get("weakness", "")}</div>'
-                                    f'<div style="margin-top:4px;">{_sa.get("action", "")}</div>'
-                                    f'<div style="margin-top:4px;font-size:0.78rem;color:#9CA3AF;">'
-                                    f'Track: {_sa.get("metric", "—")} · {_sa.get("timeline", "")}</div>'
-                                    f'</div>',
-                                    unsafe_allow_html=True,
-                                )
-                        else:
-                            st.info("No specific actions identified.")
-                        if st.button("Regenerate", key="btn_ai_snap_regen"):
-                            del st.session_state["_ai_snapshot_actions"]
-                            st.rerun()
 
             # HR Zone distribution
             zones = p.get("hr_zones", [])
@@ -2841,28 +2680,168 @@ with tab_profile:
                 unsafe_allow_html=True,
             )
 
-            # 4 metric cards
+            # 4 metric cards — clickable to expand detail panel
+            import plotly.graph_objects as go
+
+            _econ_metrics = {
+                "cadence": {
+                    "label": "Cadence", "unit": "spm", "color": "cyan", "chart_color": "#0EA5E9",
+                    "avg": econ.get("cadence_avg"), "grade": econ.get("cadence_grade", ""),
+                    "fmt": lambda v: f"{v:.0f}" if v else "—",
+                    "field": "avg_running_cadence",
+                    "ideal": "170–180 spm",
+                    "desc": (
+                        "**Cadence** is the number of steps you take per minute. "
+                        "Higher cadence (170–180 spm) generally means shorter ground contact, "
+                        "less braking force, and reduced injury risk. Elite runners typically maintain "
+                        "175–185 spm across most paces. If your cadence is below 170, try focusing on "
+                        "quick, light steps — a metronome app at +5% of your current rate can help."
+                    ),
+                    "zones": [
+                        ("< 165", "#F43F5E", "Low — high impact per step"),
+                        ("165–169", "#F59E0B", "Slightly low"),
+                        ("170–180", "#10B981", "Optimal range"),
+                        ("> 185", "#0EA5E9", "High — fine if natural"),
+                    ],
+                },
+                "stride": {
+                    "label": "Stride Length", "unit": "m", "color": "blue", "chart_color": "#3B82F6",
+                    "avg": econ.get("stride_length_avg"), "grade": econ.get("stride_grade", ""),
+                    "fmt": lambda v: f"{v:.2f}" if v else "—",
+                    "field": "avg_stride_length",
+                    "ideal": "1.0–1.4 m",
+                    "desc": (
+                        "**Stride length** is the distance covered in a single step. "
+                        "It naturally increases with pace — sprinting uses longer strides than easy runs. "
+                        "Overstriding (landing ahead of your center of mass) wastes energy and increases "
+                        "injury risk. A good stride length balances with cadence to produce your target pace. "
+                        "If your stride is short, work on hip mobility and glute activation drills."
+                    ),
+                    "zones": [
+                        ("< 1.0 m", "#F59E0B", "Short — may limit speed"),
+                        ("1.0–1.4 m", "#10B981", "Normal range"),
+                        ("> 1.4 m", "#F59E0B", "Long — possible overstriding"),
+                    ],
+                },
+                "gct": {
+                    "label": "Ground Contact", "unit": "ms", "color": "orange", "chart_color": "#F59E0B",
+                    "avg": econ.get("gct_avg"), "grade": econ.get("gct_grade", ""),
+                    "fmt": lambda v: f"{v:.0f}" if v else "—",
+                    "field": "avg_ground_contact_time",
+                    "ideal": "< 245 ms",
+                    "desc": (
+                        "**Ground contact time (GCT)** is how long your foot stays on the ground each step. "
+                        "Shorter GCT means you're spending more time in the air, which correlates with better "
+                        "running economy and faster paces. Elite runners average 200–220 ms. "
+                        "To improve GCT, focus on plyometrics (jump rope, box jumps), calf raises, "
+                        "and running drills like A-skips and high knees."
+                    ),
+                    "zones": [
+                        ("< 220 ms", "#10B981", "Excellent"),
+                        ("220–244 ms", "#0EA5E9", "Good"),
+                        ("245–269 ms", "#F59E0B", "Average"),
+                        ("≥ 270 ms", "#F43F5E", "Needs work"),
+                    ],
+                },
+                "vert_osc": {
+                    "label": "Vert. Oscillation", "unit": "cm", "color": "purple", "chart_color": "#8B5CF6",
+                    "avg": econ.get("vert_osc_avg"), "grade": econ.get("vert_osc_grade", ""),
+                    "fmt": lambda v: f"{v:.1f}" if v else "—",
+                    "field": "avg_vertical_oscillation",
+                    "ideal": "< 9 cm",
+                    "desc": (
+                        "**Vertical oscillation** is how much your body bounces up and down with each step. "
+                        "Excessive bounce means wasted energy — you want to move forward, not up. "
+                        "Lower values indicate more efficient running mechanics. "
+                        "To reduce vertical oscillation, focus on leaning slightly forward, "
+                        "increasing cadence, and strengthening your glutes and core."
+                    ),
+                    "zones": [
+                        ("< 7 cm", "#10B981", "Excellent"),
+                        ("7–8.9 cm", "#0EA5E9", "Good"),
+                        ("9–10.9 cm", "#F59E0B", "Average"),
+                        ("≥ 11 cm", "#F43F5E", "Excessive"),
+                    ],
+                },
+            }
+
+            _econ_keys = list(_econ_metrics.keys())
             ec1, ec2, ec3, ec4 = st.columns(4)
-            cad = econ.get("cadence_avg")
-            with ec1:
-                val = f"{cad:.0f}" if cad else "—"
-                st.markdown(_metric_card("Cadence", val, "spm", "cyan"), unsafe_allow_html=True)
-                st.markdown(f'<div style="text-align:center;font-size:0.75rem;color:#8B95AD;">{econ.get("cadence_grade","")}</div>', unsafe_allow_html=True)
-            with ec2:
-                sl = econ.get("stride_length_avg")
-                val = f"{sl:.2f}" if sl else "—"
-                st.markdown(_metric_card("Stride Length", val, "m", "blue"), unsafe_allow_html=True)
-                st.markdown(f'<div style="text-align:center;font-size:0.75rem;color:#8B95AD;">{econ.get("stride_grade","")}</div>', unsafe_allow_html=True)
-            with ec3:
-                gct = econ.get("gct_avg")
-                val = f"{gct:.0f}" if gct else "—"
-                st.markdown(_metric_card("Ground Contact", val, "ms", "orange"), unsafe_allow_html=True)
-                st.markdown(f'<div style="text-align:center;font-size:0.75rem;color:#8B95AD;">{econ.get("gct_grade","")}</div>', unsafe_allow_html=True)
-            with ec4:
-                vo = econ.get("vert_osc_avg")
-                val = f"{vo:.1f}" if vo else "—"
-                st.markdown(_metric_card("Vert. Oscillation", val, "cm", "purple"), unsafe_allow_html=True)
-                st.markdown(f'<div style="text-align:center;font-size:0.75rem;color:#8B95AD;">{econ.get("vert_osc_grade","")}</div>', unsafe_allow_html=True)
+            for _col, _key in zip([ec1, ec2, ec3, ec4], _econ_keys):
+                _m = _econ_metrics[_key]
+                with _col:
+                    st.markdown(_metric_card(_m["label"], _m["fmt"](_m["avg"]), _m["unit"], _m["color"]), unsafe_allow_html=True)
+                    st.markdown(f'<div style="text-align:center;font-size:0.75rem;color:#8B95AD;">{_m["grade"]}</div>', unsafe_allow_html=True)
+                    if st.button("Details", key=f"econ_detail_{_key}", use_container_width=True):
+                        st.session_state["_econ_detail"] = _key if st.session_state.get("_econ_detail") != _key else None
+                        st.rerun()
+
+            # --- Expanded detail panel for selected metric ---
+            _sel = st.session_state.get("_econ_detail")
+            if _sel and _sel in _econ_metrics:
+                _md = _econ_metrics[_sel]
+                st.markdown(
+                    f'<div style="border-left:3px solid {_md["chart_color"]};padding:12px 16px;margin:0.5rem 0 1rem;'
+                    f'background:rgba(26,29,43,0.6);border-radius:0 10px 10px 0;">'
+                    f'<div style="font-weight:700;color:{_md["chart_color"]};font-size:1rem;margin-bottom:6px;">'
+                    f'{_md["label"]} — {_md["fmt"](_md["avg"])} {_md["unit"]}</div>'
+                    f'<div style="font-size:0.85rem;color:#C8CDD8;line-height:1.6;">'
+                    f'Ideal range: <strong>{_md["ideal"]}</strong></div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+                st.markdown(_md["desc"])
+
+                # Reference zones
+                _zone_html = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin:0.5rem 0;">'
+                for _zr, _zc, _zl in _md["zones"]:
+                    _zone_html += (
+                        f'<div style="background:{_zc}15;border:1px solid {_zc}40;border-radius:8px;'
+                        f'padding:4px 10px;font-size:0.78rem;">'
+                        f'<span style="color:{_zc};font-weight:600;">{_zr}</span> '
+                        f'<span style="color:#8B95AD;">{_zl}</span></div>'
+                    )
+                _zone_html += '</div>'
+                st.markdown(_zone_html, unsafe_allow_html=True)
+
+                # Trend chart from activity data
+                _acts = p.get("recent_activities", [])
+                _sorted_acts = sorted(_acts, key=lambda a: a.get("start_time", ""))
+                _trend_dates, _trend_vals = [], []
+                for _a in _sorted_acts:
+                    _v = _a.get(_md["field"])
+                    if _v and _v > 0:
+                        _trend_dates.append(_a.get("start_time", "")[:10])
+                        _trend_vals.append(_v)
+
+                if len(_trend_vals) >= 2:
+                    _fig = go.Figure()
+                    _fig.add_trace(go.Scatter(
+                        x=_trend_dates, y=_trend_vals,
+                        mode="lines+markers",
+                        line=dict(color=_md["chart_color"], width=2),
+                        marker=dict(size=5),
+                        hovertemplate=f"%{{x}}<br>%{{y:.1f}} {_md['unit']}<extra></extra>",
+                    ))
+                    # Average line
+                    if _md["avg"]:
+                        _fig.add_hline(
+                            y=_md["avg"], line_dash="dot",
+                            line_color=_md["chart_color"], opacity=0.4,
+                            annotation_text=f"avg {_md['fmt'](_md['avg'])}",
+                            annotation_font_color="#8B95AD",
+                            annotation_font_size=10,
+                        )
+                    _fig.update_layout(
+                        title=f"{_md['label']} Over Time",
+                        yaxis_title=_md["unit"],
+                        **_pf_layout(height=280),
+                    )
+                    st.plotly_chart(_fig, use_container_width=True, key=f"econ_chart_{_sel}")
+                elif _trend_vals:
+                    st.caption(f"Only 1 activity with {_md['label'].lower()} data — need at least 2 for a trend chart.")
+                else:
+                    st.caption(f"No per-activity {_md['label'].lower()} data available from your watch.")
 
             # Inefficiency callouts
             ineff = econ.get("inefficiencies", [])
@@ -2878,46 +2857,6 @@ with tab_profile:
                     _section_card("Running Mechanics", "No significant inefficiencies detected. Mechanics look solid.", "#10B981"),
                     unsafe_allow_html=True,
                 )
-
-            # AI-driven Improvement Plan for economy
-            if econ.get("inefficiencies"):
-                with st.expander("Improvement Plan", expanded="_ai_economy_actions" in st.session_state):
-                    if "_ai_economy_actions" not in st.session_state:
-                        if st.button("Generate improvement drills", key="btn_ai_economy"):
-                            with st.spinner("Analysing running economy…"):
-                                try:
-                                    _ai_e = requests.post(
-                                        f"{API_BASE}/profile/ai-insights",
-                                        headers=_auth_headers(),
-                                        json={"section": "economy", "analytics": analytics},
-                                        timeout=30,
-                                    )
-                                    if _ai_e.status_code == 200:
-                                        st.session_state["_ai_economy_actions"] = _ai_e.json().get("actions", [])
-                                        st.rerun()
-                                    else:
-                                        st.warning("Could not generate drills. Try again later.")
-                                except Exception:
-                                    st.warning("AI service unavailable.")
-                    else:
-                        _econ_actions = st.session_state["_ai_economy_actions"]
-                        if _econ_actions:
-                            for _ea in _econ_actions:
-                                st.markdown(
-                                    f'<div style="border-left:3px solid #8B5CF6;padding:8px 12px;margin-bottom:8px;'
-                                    f'background:rgba(139,92,246,0.06);border-radius:0 8px 8px 0;">'
-                                    f'<div style="font-weight:600;color:#8B5CF6;font-size:0.85rem;">{_ea.get("metric", "")}</div>'
-                                    f'<div style="margin-top:4px;">{_ea.get("drill", "")}</div>'
-                                    f'<div style="margin-top:4px;font-size:0.78rem;color:#9CA3AF;">'
-                                    f'{_ea.get("frequency", "")} · Target: {_ea.get("target", "—")} · {_ea.get("timeline", "")}</div>'
-                                    f'</div>',
-                                    unsafe_allow_html=True,
-                                )
-                        else:
-                            st.info("No specific drills identified.")
-                        if st.button("Regenerate", key="btn_ai_econ_regen"):
-                            del st.session_state["_ai_economy_actions"]
-                            st.rerun()
 
         # ═════════════════════════════════════════════════════════════
         # SUB-TAB 4: LOAD & RECOVERY
@@ -3407,14 +3346,7 @@ with tab_profile:
                         fig_dist.update_layout(title="Run Distance", yaxis_title="km", **chart_layout)
                         st.plotly_chart(fig_dist, use_container_width=True, key="trend_distance")
             else:
-                st.markdown(
-                    '<div class="pf-empty-state">'
-                    '<div class="pf-empty-state-icon">—</div>'
-                    '<div class="pf-empty-state-title">Not enough data for trends</div>'
-                    '<div class="pf-empty-state-body">Need at least 2 activities. Sync your Garmin data to see trends.</div>'
-                    '</div>',
-                    unsafe_allow_html=True,
-                )
+                st.info("Need at least 2 activities to show trends. Sync your Garmin data.")
 
 
 # ── Tab 2: Training Plan ─────────────────────────────────────────────
@@ -4286,7 +4218,6 @@ with tab_calendar:
                     "initialView": "dayGridMonth",
                     "initialDate": str(date.today()),
                     "contentHeight": 420,
-                    "firstDay": 1,
                 }
 
                 cal_css = """
@@ -4303,11 +4234,6 @@ with tab_calendar:
                     .fc-button:hover { background: #252A35 !important; }
                     .fc-button-active { background: #10B981 !important; color: #0F1117 !important; border-color: #10B981 !important; }
                     .fc-toolbar-title { font-size: 1rem !important; font-weight: 700; color: #E8ECF4; }
-                    .fc-scroller { overflow: hidden !important; scrollbar-width: none !important; -ms-overflow-style: none !important; }
-                    .fc-scroller::-webkit-scrollbar { display: none !important; }
-                    .fc-scroller-harness { overflow: hidden !important; }
-                    html, body { overflow: hidden !important; scrollbar-width: none !important; }
-                    html::-webkit-scrollbar, body::-webkit-scrollbar { display: none !important; }
                 """
 
                 import streamlit.components.v1 as components
@@ -4342,13 +4268,6 @@ with tab_calendar:
                                         frames[i].style.minHeight = h + 'px';
                                         frames[i].style.overflow = 'hidden';
                                         frames[i].scrolling = 'no';
-                                        // Hide scrollbars inside the iframe
-                                        if (!fd.getElementById('pf-no-scroll')) {
-                                            var s = fd.createElement('style');
-                                            s.id = 'pf-no-scroll';
-                                            s.textContent = 'html, body { overflow: hidden !important; scrollbar-width: none !important; -ms-overflow-style: none !important; } html::-webkit-scrollbar, body::-webkit-scrollbar { display: none !important; }';
-                                            fd.head.appendChild(s);
-                                        }
                                         frames[i].contentWindow.dispatchEvent(new Event('resize'));
                                     }
                                 } catch(e) {}
@@ -4527,10 +4446,8 @@ with tab_calendar:
                                             if _sr.status_code == 200:
                                                 _sdata = _sr.json()
                                                 st.session_state[f"strava_sent_{_ai_act_id}"] = True
-                                                if _sdata.get("needs_reauth"):
-                                                    st.warning("Strava token lacks write permission. Please disconnect and reconnect Strava in **Settings** to grant activity:write access.")
-                                                elif _sdata.get("duplicate"):
-                                                    st.info("Activity already exists on Strava but could not be updated.")
+                                                if _sdata.get("duplicate"):
+                                                    st.warning("Activity exists on Strava but could not be updated — check Strava app permissions include activity:write")
                                                 elif _sdata.get("updated"):
                                                     st.success("Activity enhanced on Strava with PaceForge data!")
                                                     st.markdown(
@@ -4798,10 +4715,8 @@ with tab_calendar:
                                                 if _sr.status_code == 200:
                                                     _sdata = _sr.json()
                                                     st.session_state[f"strava_sent_{_plan_act_id}"] = True
-                                                    if _sdata.get("needs_reauth"):
-                                                        st.warning("Strava token lacks write permission. Please disconnect and reconnect Strava in **Settings** to grant activity:write access.")
-                                                    elif _sdata.get("duplicate"):
-                                                        st.info("Activity already exists on Strava but could not be updated.")
+                                                    if _sdata.get("duplicate"):
+                                                        st.warning("Activity exists on Strava but could not be updated — check Strava app permissions include activity:write")
                                                     elif _sdata.get("updated"):
                                                         st.success("Activity enhanced on Strava with PaceForge data!")
                                                         st.markdown(
