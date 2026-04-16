@@ -15,7 +15,6 @@ from paceforge.auth.database import (
     list_users,
     mark_reset_token_used,
     reset_connection,
-    revoke_all_refresh_tokens,
     update_last_login,
     update_user_profile,
     update_user_status,

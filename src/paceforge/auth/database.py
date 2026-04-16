@@ -728,17 +728,6 @@ def revoke_refresh_token(db_path: str, user_id: str, token: str) -> None:
         conn.commit()
 
 
-def revoke_all_refresh_tokens(db_path: str, user_id: str) -> None:
-    """Revoke all refresh tokens for a user (logout everywhere)."""
-    with _lock:
-        conn = _get_conn(db_path)
-        conn.execute(
-            "UPDATE refresh_tokens SET revoked = 1 WHERE user_id = ?",
-            (user_id,),
-        )
-        conn.commit()
-
-
 # ── Device Tokens (Push Notifications) ───────────────────────────────
 
 
