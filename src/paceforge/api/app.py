@@ -162,6 +162,30 @@ async def lifespan(app: FastAPI):
                 status="approved",
             )
             logger.info("Admin user seeded: %s", settings.admin_email)
+    # Update welcome feed event text
+    _WELCOME_BODY = (
+        "Here's how to get started:\n\n"
+        "1. To connect your Garmin account — go to User Profile → Connections and enter your "
+        "Garmin credentials. This syncs your activities, heart rate zones, and fitness metrics "
+        "automatically. Choose between syncing your running workouts only or also include your "
+        "cardio and hiit activities.\n\n"
+        "2. Check your Performance Profile — once synced, your VO₂max, training load, and "
+        "pacing data will appear in the Profile tab.\n\n"
+        "3. Create a Training Plan — head to the Plan tab and use the Plan Builder to set your "
+        "race goal, timeline, and preferred training days. The AI will generate a periodized plan "
+        "tailored to your fitness.\n\n"
+        "4. Add friends — find other runners in Settings → Friends and follow their progress "
+        "in the feed.\n\n"
+        "Feedback is always welcome! If you have questions or run into any issues, reach out to Victor."
+    )
+    from paceforge.auth.database import _get_conn, _lock
+    with _lock:
+        conn = _get_conn(settings.db_path)
+        conn.execute(
+            "UPDATE feed_events SET body = ? WHERE event_type = 'welcome'",
+            (_WELCOME_BODY,),
+        )
+        conn.commit()
     yield
 
 
