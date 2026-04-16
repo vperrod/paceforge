@@ -222,3 +222,113 @@ class TestAdminEndpoints:
         assert r.status_code == 200
         users = r.json()
         assert all(u["status"] == "approved" for u in users)
+
+    def test_admin_can_get_user_data(self, client, _setup_db):
+        _register_and_approve(_setup_db, "data@test.com", "pass1234", name="DataUser")
+        from paceforge.auth.database import get_user_by_email
+
+        user = get_user_by_email(_setup_db, "data@test.com")
+        token = _admin_token(_setup_db)
+        r = client.get(
+            f"/admin/users/{user['id']}/data",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert r.status_code == 200
+        data = r.json()
+        assert data["user"]["email"] == "data@test.com"
+
+    def test_admin_users_include_last_login(self, client, _setup_db):
+        token = _admin_token(_setup_db)
+        r = client.get(
+            "/admin/users",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert r.status_code == 200
+        for u in r.json():
+            assert "last_login" in u
+
+
+class TestForgotPassword:
+    def test_forgot_password_existing_email_returns_200(self, client, _setup_db):
+        r = client.post(
+            "/auth/forgot-password",
+            json={"email": "admin@test.com"},
+        )
+        assert r.status_code == 200
+        assert "reset link" in r.json()["message"].lower()
+
+    def test_forgot_password_nonexistent_email_returns_200(self, client, _setup_db):
+        r = client.post(
+            "/auth/forgot-password",
+            json={"email": "nobody@test.com"},
+        )
+        assert r.status_code == 200  # No email enumeration
+
+    def test_reset_password_invalid_token_returns_400(self, client, _setup_db):
+        r = client.post(
+            "/auth/reset-password",
+            json={"token": "invalid-token", "new_password": "newpass123"},
+        )
+        assert r.status_code == 400
+
+    def test_reset_password_valid_token_works(self, client, _setup_db):
+        import hashlib
+        import secrets
+        from datetime import UTC, datetime, timedelta
+
+        from paceforge.auth.database import (
+            create_password_reset_token,
+            get_user_by_email,
+        )
+
+        user = get_user_by_email(_setup_db, "admin@test.com")
+        raw_token = secrets.token_urlsafe(32)
+        token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+        expires = (datetime.now(UTC) + timedelta(hours=1)).isoformat()
+        create_password_reset_token(_setup_db, user["id"], token_hash, expires)
+
+        r = client.post(
+            "/auth/reset-password",
+            json={"token": raw_token, "new_password": "newpassword1"},
+        )
+        assert r.status_code == 200
+
+        # Can login with new password
+        r2 = client.post(
+            "/auth/login",
+            json={"email": "admin@test.com", "password": "newpassword1"},
+        )
+        assert r2.status_code == 200
+
+    def test_reset_password_expired_token_returns_400(self, client, _setup_db):
+        import hashlib
+        import secrets
+        from datetime import UTC, datetime, timedelta
+
+        from paceforge.auth.database import (
+            create_password_reset_token,
+            get_user_by_email,
+        )
+
+        user = get_user_by_email(_setup_db, "admin@test.com")
+        raw_token = secrets.token_urlsafe(32)
+        token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+        expires = (datetime.now(UTC) - timedelta(hours=1)).isoformat()
+        create_password_reset_token(_setup_db, user["id"], token_hash, expires)
+
+        r = client.post(
+            "/auth/reset-password",
+            json={"token": raw_token, "new_password": "newpassword1"},
+        )
+        assert r.status_code == 400
+
+    def test_login_tracks_last_login(self, client, _setup_db):
+        r = client.post(
+            "/auth/login",
+            json={"email": "admin@test.com", "password": "adminpass1"},
+        )
+        assert r.status_code == 200
+        from paceforge.auth.database import get_user_by_email
+
+        user = get_user_by_email(_setup_db, "admin@test.com")
+        assert user["last_login"] is not None

@@ -6,10 +6,9 @@ import asyncio
 import json
 import logging
 from contextlib import asynccontextmanager
-from datetime import UTC, date
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
-import httpx
 import jwt as pyjwt
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -20,6 +19,7 @@ from paceforge.api.config import settings
 from paceforge.auth.database import (
     add_comment,
     create_feed_event,
+    create_password_reset_token,
     create_user,
     get_comments,
     get_feed,
@@ -27,16 +27,19 @@ from paceforge.auth.database import (
     get_user_by_email,
     get_user_by_id,
     get_user_likes,
+    get_valid_reset_token,
     init_db,
     list_friends,
     list_pending_requests,
     list_sent_requests,
     list_users,
     load_user_data,
+    mark_reset_token_used,
     register_device_token,
     remove_device_token,
     remove_friend,
     respond_friend_request,
+    revoke_all_refresh_tokens,
     revoke_refresh_token,
     save_user_data,
     search_users,
@@ -44,6 +47,7 @@ from paceforge.auth.database import (
     store_refresh_token,
     toggle_like,
     update_garmin_email,
+    update_last_login,
     update_user_profile,
     update_user_status,
     validate_refresh_token,
@@ -51,9 +55,11 @@ from paceforge.auth.database import (
 from paceforge.auth.models import (
     AppLoginRequest,
     DeviceTokenRequest,
+    ForgotPasswordRequest,
     ProfileUpdateRequest,
     RefreshRequest,
     RegisterRequest,
+    ResetPasswordRequest,
     TokenResponse,
     UserOut,
     UserStatusUpdate,
@@ -232,38 +238,6 @@ def _send_registration_email(name: str, email: str, reason: str) -> None:
         logger.warning("Failed to send registration email: %s", e)
 
 
-def _send_approval_email(name: str, email: str) -> None:
-    """Send the user a notification that their account has been approved (best-effort)."""
-    if not settings.smtp_host:
-        return
-    import smtplib
-    from email.mime.text import MIMEText
-
-    body = (
-        f"Hi {name},\n\n"
-        f"Great news — your PaceForge account has been approved!\n\n"
-        f"You can now log in and start setting up your training:\n"
-        f"1. Connect your Garmin watch in Settings → Connections\n"
-        f"2. Create a training plan in the Plan tab\n\n"
-        f"If you have any questions, just reply to this email.\n\n"
-        f"Happy running!\n"
-        f"— Victor"
-    )
-    msg = MIMEText(body)
-    msg["Subject"] = "Your PaceForge account is approved!"
-    msg["From"] = settings.smtp_from or settings.smtp_user
-    msg["To"] = email
-
-    try:
-        with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10) as srv:
-            srv.starttls()
-            srv.login(settings.smtp_user, settings.smtp_password)
-            srv.send_message(msg)
-        logger.info("Approval email sent to %s", email)
-    except Exception as e:
-        logger.warning("Failed to send approval email: %s", e)
-
-
 # ── Public auth endpoints ────────────────────────────────────────────
 
 
@@ -283,6 +257,65 @@ async def register(req: RegisterRequest):
     return {"status": "ok", "message": "Registration submitted. An admin will review your request."}
 
 
+def _send_password_reset_email(email: str, reset_url: str) -> None:
+    """Send a password-reset link to the user (best-effort)."""
+    if not settings.smtp_host:
+        return
+    import smtplib
+    from email.mime.text import MIMEText
+
+    body = (
+        f"You requested a password reset for your PaceForge account.\n\n"
+        f"Click the link below to set a new password (valid for 1 hour):\n\n"
+        f"{reset_url}\n\n"
+        f"If you did not request this, you can safely ignore this email."
+    )
+    msg = MIMEText(body)
+    msg["Subject"] = "PaceForge: Password Reset"
+    msg["From"] = settings.smtp_from or settings.smtp_user
+    msg["To"] = email
+
+    try:
+        with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10) as srv:
+            srv.starttls()
+            srv.login(settings.smtp_user, settings.smtp_password)
+            srv.send_message(msg)
+        logger.info("Password reset email sent to %s", email)
+    except Exception as e:
+        logger.warning("Failed to send password reset email: %s", e)
+
+
+@app.post("/auth/forgot-password")
+async def forgot_password(req: ForgotPasswordRequest):
+    """Send a password-reset link. Always returns 200 to prevent email enumeration."""
+    import hashlib
+    import secrets
+    user = get_user_by_email(settings.db_path, req.email)
+    if user and user["status"] == "approved":
+        raw_token = secrets.token_urlsafe(32)
+        token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+        expires_at = (datetime.now(UTC) + timedelta(hours=1)).isoformat()
+        create_password_reset_token(settings.db_path, user["id"], token_hash, expires_at)
+        reset_url = f"{settings.app_base_url}/?reset_token={raw_token}"
+        _send_password_reset_email(user["email"], reset_url)
+    return {"status": "ok", "message": "If that email is registered, a reset link has been sent."}
+
+
+@app.post("/auth/reset-password")
+async def reset_password(req: ResetPasswordRequest):
+    """Reset the user's password using a valid reset token."""
+    import hashlib
+    token_hash = hashlib.sha256(req.token.encode()).hexdigest()
+    token_row = get_valid_reset_token(settings.db_path, token_hash)
+    if not token_row:
+        raise HTTPException(400, "Invalid or expired reset token")
+    user_id = token_row["user_id"]
+    update_user_profile(settings.db_path, user_id, password_hash=hash_password(req.new_password))
+    mark_reset_token_used(settings.db_path, token_row["id"])
+    revoke_all_refresh_tokens(settings.db_path, user_id)
+    return {"status": "ok", "message": "Password has been reset. You can now log in with your new password."}
+
+
 @app.post("/auth/login", response_model=TokenResponse)
 async def app_login(req: AppLoginRequest):
     user = get_user_by_email(settings.db_path, req.email)
@@ -299,6 +332,7 @@ async def app_login(req: AppLoginRequest):
     from datetime import UTC, datetime
     expires_at = datetime.fromtimestamp(refresh_payload["exp"], tz=UTC).isoformat()
     store_refresh_token(settings.db_path, user["id"], refresh, expires_at)
+    update_last_login(settings.db_path, user["id"])
     return TokenResponse(
         access_token=access, refresh_token=refresh,
         role=user["role"], name=user["name"], email=user["email"],
@@ -409,9 +443,25 @@ async def admin_update_user(
     updated = update_user_status(settings.db_path, user_id, status=body.status)
     if not updated:
         raise HTTPException(500, "Failed to update user")
-    if body.status == "approved":
-        _send_approval_email(target["name"], target["email"])
     return UserOut(**{k: v for k, v in updated.items() if k != "password_hash"})
+
+
+@app.get("/admin/users/{user_id}/data")
+async def admin_get_user_data(
+    user_id: str,
+    admin: dict = Depends(require_admin),
+):
+    """Return a user's profile, plan, and activities data (admin only)."""
+    user = get_user_by_id(settings.db_path, user_id)
+    if not user:
+        raise HTTPException(404, "User not found")
+    data = load_user_data(settings.db_path, user_id)
+    return {
+        "user": UserOut(**{k: v for k, v in user.items() if k != "password_hash"}).model_dump(),
+        "plan_json": data.get("plan_json") if data else None,
+        "activities_json": data.get("activities_json") if data else None,
+        "profile_json": data.get("profile_json") if data else None,
+    }
 
 
 # ── Request / Response models ────────────────────────────────────────
@@ -620,74 +670,6 @@ async def get_profile_analytics(user: dict = Depends(get_current_user)):
     return compute_all(profile)
 
 
-class AiInsightsRequest(BaseModel):
-    section: str  # "snapshot" or "economy"
-    analytics: dict
-
-
-@app.post("/profile/ai-insights")
-async def get_ai_insights(req: AiInsightsRequest, user: dict = Depends(get_current_user)):
-    """Use the AI coach to generate actionable insights for a profile section."""
-    import re as _re
-
-    # Resolve LLM
-    if settings.llm_provider == "anthropic" and settings.anthropic_api_key:
-        coach_key, coach_model, coach_provider = settings.anthropic_api_key, settings.anthropic_model, "anthropic"
-    elif settings.llm_provider == "openai" and settings.openai_api_key:
-        coach_key, coach_model, coach_provider = settings.openai_api_key, settings.openai_model, "openai"
-    elif settings.anthropic_api_key:
-        coach_key, coach_model, coach_provider = settings.anthropic_api_key, settings.anthropic_model, "anthropic"
-    elif settings.openai_api_key:
-        coach_key, coach_model, coach_provider = settings.openai_api_key, settings.openai_model, "openai"
-    else:
-        raise HTTPException(503, "AI coaching is not configured.")
-
-    uid = user["id"]
-    coach = _user_coach.get(uid)
-    if coach is None or getattr(coach, "_provider", None) != coach_provider:
-        coach = Coach(api_key=coach_key, model=coach_model, provider=coach_provider)
-        _user_coach[uid] = coach
-
-    if req.section == "snapshot":
-        weaknesses = req.analytics.get("snapshot", {}).get("weaknesses", [])
-        if not weaknesses:
-            return {"actions": []}
-        prompt = (
-            "Given these runner weaknesses, provide exactly one concrete action per weakness. "
-            "Return ONLY a JSON array, no other text. Each element: "
-            '{"weakness": "...", "action": "...", "metric": "...", "timeline": "..."}\n\n'
-            f"Weaknesses: {json.dumps(weaknesses)}"
-        )
-    elif req.section == "economy":
-        inefficiencies = req.analytics.get("economy", {}).get("inefficiencies", [])
-        if not inefficiencies:
-            return {"actions": []}
-        prompt = (
-            "Given these running economy inefficiencies, provide exactly one drill or exercise per issue. "
-            "Return ONLY a JSON array, no other text. Each element: "
-            '{"metric": "...", "drill": "...", "frequency": "...", "target": "...", "timeline": "..."}\n\n'
-            f"Inefficiencies: {json.dumps(inefficiencies)}"
-        )
-    else:
-        raise HTTPException(400, "section must be 'snapshot' or 'economy'")
-
-    result = coach.chat(
-        message=prompt,
-        profile=_user_profile.get(uid),
-        plan=_user_plans.get(uid, [None])[-1] if _user_plans.get(uid) else None,
-    )
-
-    # Extract JSON array from response
-    match = _re.search(r"\[.*]", result.reply, _re.DOTALL)
-    if match:
-        try:
-            actions = json.loads(match.group())
-            return {"actions": actions}
-        except json.JSONDecodeError:
-            pass
-    return {"actions": [], "raw": result.reply}
-
-
 @app.get("/activities", response_model=list[RecentActivity])
 async def get_activities(
     days: int = 240, sync: bool = False, user: dict = Depends(get_current_user)
@@ -776,77 +758,12 @@ async def save_preferences(body: dict, user: dict = Depends(get_current_user)):
 
 @app.get("/activities/{activity_id}")
 async def get_activity_detail(activity_id: int, user: dict = Depends(get_current_user)):
-    """Return detailed splits, HR zones, and summary for an activity.
-
-    Checks cache first; fetches from Garmin on miss and caches the result.
-    """
+    """Return detailed splits, HR zones, and summary for an activity."""
     uid = user["id"]
-    act_key = str(activity_id)
-
-    # Check cache
-    cached = load_user_data(settings.db_path, uid)
-    if cached and cached.get("activity_details_json"):
-        try:
-            details_cache = json.loads(cached["activity_details_json"])
-            if act_key in details_cache:
-                return details_cache[act_key]
-        except (json.JSONDecodeError, TypeError):
-            pass
-
-    # Fetch from Garmin
     garmin = _ensure_garmin(uid)
     if not garmin:
         raise HTTPException(404, "Garmin not connected \u2014 detailed view unavailable")
-    detail = garmin.get_activity_detail(activity_id)
-
-    # Cache the result
-    try:
-        existing_cache: dict = {}
-        if cached and cached.get("activity_details_json"):
-            existing_cache = json.loads(cached["activity_details_json"])
-        existing_cache[act_key] = detail
-        save_user_data(settings.db_path, uid, activity_details_json=json.dumps(existing_cache))
-    except Exception:
-        logger.warning("Could not cache activity detail for %s", activity_id)
-
-    return detail
-
-
-@app.get("/users/{user_id}/activities/{activity_id}/detail")
-async def get_user_activity_detail(user_id: str, activity_id: int, user: dict = Depends(get_current_user)):
-    """Return cached activity detail for a user (used in profile views)."""
-    uid = user["id"]
-    if user_id != uid:
-        friend_ids = get_friend_ids(settings.db_path, uid)
-        if user_id not in friend_ids:
-            raise HTTPException(403, "You can only view activities of friends")
-
-    cached = load_user_data(settings.db_path, user_id)
-    if cached and cached.get("activity_details_json"):
-        try:
-            details_cache = json.loads(cached["activity_details_json"])
-            detail = details_cache.get(str(activity_id))
-            if detail:
-                return detail
-        except (json.JSONDecodeError, TypeError):
-            pass
-
-    # If viewing own activity and not cached, try fetching from Garmin
-    if user_id == uid:
-        garmin = _ensure_garmin(uid)
-        if garmin:
-            detail = garmin.get_activity_detail(activity_id)
-            try:
-                existing_cache: dict = {}
-                if cached and cached.get("activity_details_json"):
-                    existing_cache = json.loads(cached["activity_details_json"])
-                existing_cache[str(activity_id)] = detail
-                save_user_data(settings.db_path, uid, activity_details_json=json.dumps(existing_cache))
-            except Exception:
-                logger.warning("Could not cache activity detail for %s", activity_id)
-            return detail
-
-    raise HTTPException(404, "Activity detail not available")
+    return garmin.get_activity_detail(activity_id)
 
 
 @app.post("/activities/{activity_id}/analyze")
@@ -1790,16 +1707,6 @@ async def approved_users(user: dict = Depends(get_current_user)):
 @app.get("/friends")
 async def get_friends(user: dict = Depends(get_current_user)):
     uid = user["id"]
-    # Admin: auto-accept any pending requests (sent or received)
-    if user["role"] == "admin":
-        from paceforge.auth.database import _get_conn
-        conn = _get_conn(settings.db_path)
-        pending = conn.execute(
-            "SELECT id FROM friends WHERE (requester_id = ? OR recipient_id = ?) AND status = 'pending'",
-            (uid, uid),
-        ).fetchall()
-        for row in pending:
-            respond_friend_request(settings.db_path, row["id"], accept=True)
     return {
         "friends": list_friends(settings.db_path, uid),
         "pending": list_pending_requests(settings.db_path, uid),
@@ -1815,9 +1722,6 @@ async def friend_request(body: dict, user: dict = Depends(get_current_user)):
     result = send_friend_request(settings.db_path, user["id"], recipient_id)
     if not result:
         raise HTTPException(400, "Cannot send friend request")
-    # Admin friend requests are auto-accepted
-    if user["role"] == "admin" and result.get("status") == "pending":
-        result = respond_friend_request(settings.db_path, result["id"], accept=True)
     return result
 
 
@@ -1841,7 +1745,7 @@ async def friend_remove(friendship_id: str, user: dict = Depends(get_current_use
 async def get_user_public_profile(user_id: str, user: dict = Depends(get_current_user)):
     """Return a friend's profile: fitness highlights, activities, HYROX, plan summary."""
     uid = user["id"]
-    if user_id != uid and user["role"] != "admin":
+    if user_id != uid:
         friend_ids = get_friend_ids(settings.db_path, uid)
         if user_id not in friend_ids:
             raise HTTPException(403, "You can only view profiles of friends")
@@ -1976,44 +1880,10 @@ def _backfill_feed_events(uid: str) -> None:
         logger.info("Backfilled %d feed events for user %s", created, uid)
 
 
-def _ensure_welcome_event() -> None:
-    """Create a single welcome guide event from the admin, shown to all users."""
-    from paceforge.auth.database import _get_conn
-    conn = _get_conn(settings.db_path)
-    exists = conn.execute(
-        "SELECT 1 FROM feed_events WHERE event_type = 'welcome'",
-    ).fetchone()
-    if exists:
-        return
-    admin = get_user_by_email(settings.db_path, settings.admin_email)
-    if not admin:
-        return
-    create_feed_event(
-        settings.db_path,
-        admin["id"],
-        event_type="welcome",
-        title="Welcome to PaceForge!",
-        body=(
-            "Here's how to get started:\n\n"
-            "1. Connect your Garmin watch \u2014 go to Settings \u2192 Connections and enter your "
-            "Garmin credentials. This syncs your activities, heart rate zones, and fitness metrics automatically.\n\n"
-            "2. Check your Performance Profile \u2014 once synced, your VO\u2082max, training load, and "
-            "pacing data will appear in the Profile tab.\n\n"
-            "3. Create a Training Plan \u2014 head to the Plan tab and use the Plan Builder to set your "
-            "race goal, timeline, and preferred training days. The AI will generate a periodized plan "
-            "tailored to your fitness.\n\n"
-            "4. Add friends \u2014 find other runners in Settings \u2192 Friends and follow their progress "
-            "in the feed.\n\n"
-            "Feedback is always welcome! If you have questions or run into any issues, reach out to Victor."
-        ),
-    )
-
-
 @app.get("/feed")
 async def feed(limit: int = 20, offset: int = 0, user: dict = Depends(get_current_user)):
     uid = user["id"]
     _backfill_feed_events(uid)
-    _ensure_welcome_event()
     friend_ids = get_friend_ids(settings.db_path, uid)
     all_ids = [uid] + friend_ids
     events = get_feed(settings.db_path, all_ids, limit=limit, offset=offset)
@@ -2390,17 +2260,6 @@ async def strava_push(activity_id: int, user: dict = Depends(get_current_user)):
                     "Updated existing Strava activity %s with PaceForge data",
                     strava_id,
                 )
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 403:
-                logger.warning("Strava 403 on update — token lacks activity:write scope")
-                return {
-                    "strava_activity_id": None,
-                    "url": None,
-                    "duplicate": True,
-                    "needs_reauth": True,
-                    "message": "Strava token lacks write permission. Please disconnect and reconnect Strava in Settings to grant activity:write access.",
-                }
-            logger.warning("Strava find/update failed, falling back to create: %s", e)
         except Exception as e:
             logger.warning("Strava find/update failed, falling back to create: %s", e)
 

@@ -45,6 +45,7 @@ class UserOut(BaseModel):
     created_at: str
     approved_at: str | None = None
     garmin_email: str | None = None
+    last_login: str | None = None
 
 
 class UserStatusUpdate(BaseModel):
@@ -56,3 +57,12 @@ class ProfileUpdateRequest(BaseModel):
     email: EmailStr | None = None
     new_password: str | None = Field(None, min_length=8, max_length=128)
     current_password: str = Field(..., min_length=1)
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(..., min_length=1)
+    new_password: str = Field(..., min_length=8, max_length=128)

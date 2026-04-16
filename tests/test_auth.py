@@ -7,11 +7,17 @@ from datetime import timedelta
 import pytest
 
 from paceforge.auth.database import (
+    create_password_reset_token,
     create_user,
     get_user_by_email,
+    get_valid_reset_token,
     init_db,
     list_users,
+    mark_reset_token_used,
     reset_connection,
+    revoke_all_refresh_tokens,
+    update_last_login,
+    update_user_profile,
     update_user_status,
 )
 from paceforge.auth.security import (
@@ -139,3 +145,65 @@ class TestUserDB:
 
     def test_nonexistent_user_returns_none(self, db_path):
         assert get_user_by_email(db_path, "no@one.com") is None
+
+
+# ── Last login tracking ──────────────────────────────────────────────
+
+
+class TestLastLogin:
+    def test_last_login_initially_none(self, db_path):
+        user = create_user(db_path, name="A", email="a@t.com", password_hash="h")
+        assert user.get("last_login") is None
+
+    def test_update_last_login(self, db_path):
+        user = create_user(db_path, name="A", email="a@t.com", password_hash="h")
+        update_last_login(db_path, user["id"])
+        updated = get_user_by_email(db_path, "a@t.com")
+        assert updated["last_login"] is not None
+        assert "T" in updated["last_login"]  # ISO format
+
+
+# ── Password reset tokens ────────────────────────────────────────────
+
+
+class TestPasswordResetTokens:
+    def test_create_and_validate_token(self, db_path):
+        import hashlib
+        user = create_user(db_path, name="A", email="a@t.com", password_hash="h")
+        token_hash = hashlib.sha256(b"test-token").hexdigest()
+        from datetime import UTC, datetime, timedelta
+        expires = (datetime.now(UTC) + timedelta(hours=1)).isoformat()
+        create_password_reset_token(db_path, user["id"], token_hash, expires)
+        row = get_valid_reset_token(db_path, token_hash)
+        assert row is not None
+        assert row["user_id"] == user["id"]
+        assert row["used_at"] is None
+
+    def test_expired_token_not_valid(self, db_path):
+        import hashlib
+        user = create_user(db_path, name="A", email="a@t.com", password_hash="h")
+        token_hash = hashlib.sha256(b"expired-token").hexdigest()
+        from datetime import UTC, datetime, timedelta
+        expires = (datetime.now(UTC) - timedelta(hours=1)).isoformat()
+        create_password_reset_token(db_path, user["id"], token_hash, expires)
+        assert get_valid_reset_token(db_path, token_hash) is None
+
+    def test_used_token_not_valid(self, db_path):
+        import hashlib
+        user = create_user(db_path, name="A", email="a@t.com", password_hash="h")
+        token_hash = hashlib.sha256(b"used-token").hexdigest()
+        from datetime import UTC, datetime, timedelta
+        expires = (datetime.now(UTC) + timedelta(hours=1)).isoformat()
+        token_id = create_password_reset_token(db_path, user["id"], token_hash, expires)
+        mark_reset_token_used(db_path, token_id)
+        assert get_valid_reset_token(db_path, token_hash) is None
+
+    def test_nonexistent_token_returns_none(self, db_path):
+        assert get_valid_reset_token(db_path, "nonexistent-hash") is None
+
+    def test_reset_updates_password(self, db_path):
+        user = create_user(db_path, name="A", email="a@t.com", password_hash=hash_password("old"))
+        new_hash = hash_password("newpassword")
+        update_user_profile(db_path, user["id"], password_hash=new_hash)
+        updated = get_user_by_email(db_path, "a@t.com")
+        assert verify_password("newpassword", updated["password_hash"])

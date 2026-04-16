@@ -22,7 +22,8 @@ CREATE TABLE IF NOT EXISTS users (
     reason        TEXT DEFAULT '',
     created_at    TEXT NOT NULL,
     approved_at   TEXT,
-    garmin_email  TEXT
+    garmin_email  TEXT,
+    last_login    TEXT
 );
 
 CREATE TABLE IF NOT EXISTS user_data (
@@ -88,6 +89,15 @@ CREATE TABLE IF NOT EXISTS device_tokens (
     created_at TEXT NOT NULL,
     UNIQUE(user_id, token)
 );
+
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id         TEXT PRIMARY KEY,
+    user_id    TEXT NOT NULL REFERENCES users(id),
+    token_hash TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    used_at    TEXT,
+    created_at TEXT NOT NULL
+);
 """
 
 _MIGRATIONS = [
@@ -108,6 +118,13 @@ _MIGRATIONS = [
     "ALTER TABLE user_data ADD COLUMN health_json TEXT",
     # Add activity_details_json for cached per-activity splits/HR zones
     "ALTER TABLE user_data ADD COLUMN activity_details_json TEXT",
+    # Add last_login column to users table
+    "ALTER TABLE users ADD COLUMN last_login TEXT",
+    # Create password_reset_tokens table
+    """CREATE TABLE IF NOT EXISTS password_reset_tokens (
+        id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id),
+        token_hash TEXT NOT NULL, expires_at TEXT NOT NULL,
+        used_at TEXT, created_at TEXT NOT NULL)""",
 ]
 
 
@@ -277,6 +294,67 @@ def update_user_profile(
         conn.commit()
     return get_user_by_id(db_path, user_id)
 
+def update_last_login(db_path: str, user_id: str) -> None:
+    """Set the last_login timestamp to now."""
+    now = datetime.now(UTC).isoformat()
+    with _lock:
+        conn = _get_conn(db_path)
+        conn.execute("UPDATE users SET last_login = ? WHERE id = ?", (now, user_id))
+        conn.commit()
+
+
+# ── Password reset tokens ────────────────────────────────────────────
+
+
+def create_password_reset_token(db_path: str, user_id: str, token_hash: str, expires_at: str) -> str:
+    """Insert a hashed password-reset token. Returns the row id."""
+    token_id = str(uuid.uuid4())
+    now = datetime.now(UTC).isoformat()
+    with _lock:
+        conn = _get_conn(db_path)
+        conn.execute(
+            "INSERT INTO password_reset_tokens (id, user_id, token_hash, expires_at, created_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (token_id, user_id, token_hash, expires_at, now),
+        )
+        conn.commit()
+    return token_id
+
+
+def get_valid_reset_token(db_path: str, token_hash: str) -> dict | None:
+    """Return the reset-token row if it exists, is unused, and not yet expired."""
+    now = datetime.now(UTC).isoformat()
+    with _lock:
+        conn = _get_conn(db_path)
+        row = conn.execute(
+            "SELECT * FROM password_reset_tokens "
+            "WHERE token_hash = ? AND used_at IS NULL AND expires_at > ?",
+            (token_hash, now),
+        ).fetchone()
+    return _row_to_dict(row)
+
+
+def mark_reset_token_used(db_path: str, token_id: str) -> None:
+    """Mark a password-reset token as used."""
+    now = datetime.now(UTC).isoformat()
+    with _lock:
+        conn = _get_conn(db_path)
+        conn.execute(
+            "UPDATE password_reset_tokens SET used_at = ? WHERE id = ?",
+            (now, token_id),
+        )
+        conn.commit()
+
+
+def revoke_all_refresh_tokens(db_path: str, user_id: str) -> None:
+    """Revoke every active refresh token for a user (e.g. after password reset)."""
+    with _lock:
+        conn = _get_conn(db_path)
+        conn.execute(
+            "UPDATE refresh_tokens SET revoked = 1 WHERE user_id = ? AND revoked = 0",
+            (user_id,),
+        )
+        conn.commit()
 
 # ── User data persistence ────────────────────────────────────────────
 

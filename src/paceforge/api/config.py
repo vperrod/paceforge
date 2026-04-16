@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     smtp_from: str = ""
     notify_email: str = ""  # Admin email to receive notifications
+    app_base_url: str = "https://paceforge-app.azurewebsites.net"
 
     model_config = {"env_prefix": "PACEFORGE_", "env_file": ".env"}
 

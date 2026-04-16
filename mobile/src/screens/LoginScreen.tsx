@@ -10,6 +10,7 @@ import {
   Alert,
   ActivityIndicator,
   ScrollView,
+  Linking,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuthStore } from '../store/auth';
@@ -92,6 +93,13 @@ export default function LoginScreen({ navigation }: Props) {
 
           <TouchableOpacity
             style={styles.linkButton}
+            onPress={() => Linking.openURL('https://paceforge-app.azurewebsites.net/?page=forgot_password')}
+          >
+            <Text style={styles.forgotText}>Forgot Password?</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.linkButton}
             onPress={() => navigation.navigate('Register')}
           >
             <Text style={styles.linkText}>Don't have an account? Register</Text>
@@ -169,6 +177,10 @@ const styles = StyleSheet.create({
   },
   linkText: {
     color: colors.primary,
+    fontSize: fontSize.sm,
+  },
+  forgotText: {
+    color: colors.textSecondary,
     fontSize: fontSize.sm,
   },
 });

@@ -1526,6 +1526,12 @@ def _render_garmin_activity_detail(detail: dict, activity_type: str = "running")
 # ═══════════════════════════════════════════════════════════════════════
 
 if st.session_state.jwt is None:
+    # Check for password reset token in URL query params
+    _reset_token = st.query_params.get("reset_token")
+    if _reset_token and st.session_state.page not in ("reset_password",):
+        st.session_state.page = "reset_password"
+        st.session_state._reset_token = _reset_token
+
     # Centered auth container
     _left, auth_col, _right = st.columns([1, 1.2, 1])
 
@@ -1585,6 +1591,82 @@ if st.session_state.jwt is None:
                 st.session_state.page = "login"
                 st.rerun()
 
+        elif st.session_state.page == "forgot_password":
+            st.markdown('<div class="pf-auth-form">', unsafe_allow_html=True)
+            st.markdown("#### Forgot Password")
+            st.markdown(
+                '<p style="color:#8B95AD;font-size:0.9rem;margin-bottom:1rem;">'
+                'Enter your email and we\'ll send you a reset link.</p>',
+                unsafe_allow_html=True,
+            )
+            with st.form("forgot_form"):
+                forgot_email = st.text_input("Email")
+                forgot_submitted = st.form_submit_button("Send Reset Link", type="primary", use_container_width=True)
+            st.markdown('</div>', unsafe_allow_html=True)
+
+            if forgot_submitted:
+                if not forgot_email:
+                    st.error("Please enter your email address.")
+                else:
+                    try:
+                        r = requests.post(
+                            f"{API_BASE}/auth/forgot-password",
+                            json={"email": forgot_email},
+                            timeout=15,
+                        )
+                        if r.status_code == 200:
+                            st.success("If that email is registered, a reset link has been sent. Check your inbox.")
+                        else:
+                            st.error(f"Failed: {_error_detail(r)}")
+                    except requests.ConnectionError:
+                        st.error("Cannot reach PaceForge API. Is the server running?")
+
+            st.markdown("")
+            if st.button("← Back to Login", use_container_width=True, key="back_forgot"):
+                st.session_state.page = "login"
+                st.rerun()
+
+        elif st.session_state.page == "reset_password":
+            st.markdown('<div class="pf-auth-form">', unsafe_allow_html=True)
+            st.markdown("#### Reset Password")
+            _rt = st.session_state.get("_reset_token", "")
+            if not _rt:
+                st.error("No reset token found. Please use the link from your email.")
+            else:
+                with st.form("reset_form"):
+                    new_pw = st.text_input("New Password (min 8 characters)", type="password")
+                    new_pw_confirm = st.text_input("Confirm New Password", type="password")
+                    reset_submitted = st.form_submit_button("Reset Password", type="primary", use_container_width=True)
+                if reset_submitted:
+                    if not new_pw or len(new_pw) < 8:
+                        st.error("Password must be at least 8 characters.")
+                    elif new_pw != new_pw_confirm:
+                        st.error("Passwords do not match.")
+                    else:
+                        try:
+                            r = requests.post(
+                                f"{API_BASE}/auth/reset-password",
+                                json={"token": _rt, "new_password": new_pw},
+                                timeout=15,
+                            )
+                            if r.status_code == 200:
+                                st.success("Password has been reset! You can now sign in.")
+                                st.session_state.page = "login"
+                                st.session_state.pop("_reset_token", None)
+                                st.query_params.clear()
+                            else:
+                                st.error(_error_detail(r))
+                        except requests.ConnectionError:
+                            st.error("Cannot reach PaceForge API. Is the server running?")
+            st.markdown('</div>', unsafe_allow_html=True)
+
+            st.markdown("")
+            if st.button("← Back to Login", use_container_width=True, key="back_reset"):
+                st.session_state.page = "login"
+                st.session_state.pop("_reset_token", None)
+                st.query_params.clear()
+                st.rerun()
+
         else:
             st.markdown('<div class="pf-auth-form">', unsafe_allow_html=True)
             st.markdown("#### Welcome Back")
@@ -1619,6 +1701,9 @@ if st.session_state.jwt is None:
                     st.error("Cannot reach PaceForge API. Is the server running?")
 
             st.markdown("")
+            if st.button("Forgot Password?", use_container_width=True, key="forgot_pw_link"):
+                st.session_state.page = "forgot_password"
+                st.rerun()
             st.markdown(
                 '<p class="pf-auth-footer">Don\'t have an account?</p>',
                 unsafe_allow_html=True,
@@ -6197,6 +6282,12 @@ if tab_admin is not None:
                     badge_cls = "admin"
                     badge_label = "ADMIN"
 
+                _last_login_str = ""
+                if u.get("last_login"):
+                    _last_login_str = u["last_login"][:16].replace("T", " ")
+                else:
+                    _last_login_str = "Never"
+
                 with st.container(border=True):
                     info_col, action_col = st.columns([3, 1])
                     with info_col:
@@ -6213,8 +6304,11 @@ if tab_admin is not None:
                         )
                         if u.get("reason"):
                             st.caption(f"Reason: {u['reason']}")
-                        st.caption(f"Registered: {u['created_at'][:10]}")
+                        st.caption(f"Registered: {u['created_at'][:10]}  ·  Last login: {_last_login_str}")
                     with action_col:
+                        if st.button("View", key=f"view_{u['id']}", use_container_width=True):
+                            st.session_state[f"admin_detail_{u['id']}"] = not st.session_state.get(f"admin_detail_{u['id']}", False)
+                            st.rerun()
                         if u["status"] == "pending":
                             if st.button("Approve", key=f"approve_{u['id']}", type="primary", use_container_width=True):
                                 r = requests.patch(
@@ -6253,3 +6347,89 @@ if tab_admin is not None:
                                     st.rerun()
                                 else:
                                     st.error("Failed")
+
+                    # ── User detail drill-down ──
+                    if st.session_state.get(f"admin_detail_{u['id']}", False):
+                        st.divider()
+                        _detail_cache_key = f"admin_user_data_{u['id']}"
+                        if _detail_cache_key not in st.session_state:
+                            try:
+                                _dr = requests.get(
+                                    f"{API_BASE}/admin/users/{u['id']}/data",
+                                    headers=_auth_headers(),
+                                    timeout=15,
+                                )
+                                if _dr.status_code == 200:
+                                    st.session_state[_detail_cache_key] = _dr.json()
+                                else:
+                                    st.session_state[_detail_cache_key] = None
+                                    st.error(f"Failed to load user data: {_error_detail(_dr)}")
+                            except (requests.ConnectionError, requests.ReadTimeout):
+                                st.session_state[_detail_cache_key] = None
+                                st.error("Cannot reach API")
+                        _udata = st.session_state.get(_detail_cache_key)
+                        if _udata:
+                            _dcol1, _dcol2, _dcol3 = st.columns(3)
+
+                            # Profile summary
+                            with _dcol1:
+                                st.markdown("**Profile**")
+                                _profile_raw = _udata.get("profile_json")
+                                if _profile_raw:
+                                    try:
+                                        _prof = json.loads(_profile_raw) if isinstance(_profile_raw, str) else _profile_raw
+                                        _vdot = _prof.get("vdot") or _prof.get("estimated_vdot")
+                                        if _vdot:
+                                            st.metric("VDOT", f"{float(_vdot):.1f}")
+                                        _weekly = _prof.get("weekly_mileage") or _prof.get("weekly_distance_km")
+                                        if _weekly:
+                                            st.metric("Weekly km", f"{float(_weekly):.0f}")
+                                        _goal = _prof.get("goal_type") or _prof.get("goal")
+                                        if _goal:
+                                            st.caption(f"Goal: {_goal}")
+                                    except (json.JSONDecodeError, TypeError, ValueError):
+                                        st.caption("Could not parse profile data")
+                                else:
+                                    st.caption("No profile data")
+
+                            # Recent activities
+                            with _dcol2:
+                                st.markdown("**Recent Activities**")
+                                _acts_raw = _udata.get("activities_json")
+                                if _acts_raw:
+                                    try:
+                                        _acts = json.loads(_acts_raw) if isinstance(_acts_raw, str) else _acts_raw
+                                        if isinstance(_acts, list) and _acts:
+                                            for _a in _acts[:5]:
+                                                _aname = _a.get("activityName") or _a.get("name", "Activity")
+                                                _adate = (_a.get("startTimeLocal") or _a.get("date", ""))[:10]
+                                                _adist = _a.get("distance")
+                                                _dist_str = f" · {_adist/1000:.1f} km" if _adist else ""
+                                                st.caption(f"{_adate} — {_aname}{_dist_str}")
+                                        else:
+                                            st.caption("No activities")
+                                    except (json.JSONDecodeError, TypeError, ValueError):
+                                        st.caption("Could not parse activities data")
+                                else:
+                                    st.caption("No activities data")
+
+                            # Current plan
+                            with _dcol3:
+                                st.markdown("**Current Plan**")
+                                _plan_raw = _udata.get("plan_json")
+                                if _plan_raw:
+                                    try:
+                                        _plan = json.loads(_plan_raw) if isinstance(_plan_raw, str) else _plan_raw
+                                        _pgoal = _plan.get("goal_type") or _plan.get("goal", "")
+                                        _ptarget = _plan.get("target_date", "")
+                                        _pweeks = _plan.get("weeks")
+                                        if _pgoal:
+                                            st.caption(f"Goal: {_pgoal}")
+                                        if _ptarget:
+                                            st.caption(f"Target: {_ptarget}")
+                                        if _pweeks and isinstance(_pweeks, list):
+                                            st.caption(f"{len(_pweeks)} weeks planned")
+                                    except (json.JSONDecodeError, TypeError, ValueError):
+                                        st.caption("Could not parse plan data")
+                                else:
+                                    st.caption("No plan data")
