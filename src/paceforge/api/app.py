@@ -357,6 +357,8 @@ async def auth_refresh(req: RefreshRequest):
     if not user or user["status"] != "approved":
         raise HTTPException(401, "Account not active")
 
+    update_last_login(settings.db_path, user_id)
+
     # Rotate: revoke old refresh token, issue new pair
     revoke_refresh_token(settings.db_path, user_id, req.refresh_token)
     new_access = create_access_token(user["id"], user["role"], settings.jwt_secret)

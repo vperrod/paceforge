@@ -6419,16 +6419,29 @@ if tab_admin is not None:
                                 _plan_raw = _udata.get("plan_json")
                                 if _plan_raw:
                                     try:
-                                        _plan = json.loads(_plan_raw) if isinstance(_plan_raw, str) else _plan_raw
-                                        _pgoal = _plan.get("goal_type") or _plan.get("goal", "")
-                                        _ptarget = _plan.get("target_date", "")
-                                        _pweeks = _plan.get("weeks")
-                                        if _pgoal:
-                                            st.caption(f"Goal: {_pgoal}")
-                                        if _ptarget:
-                                            st.caption(f"Target: {_ptarget}")
-                                        if _pweeks and isinstance(_pweeks, list):
-                                            st.caption(f"{len(_pweeks)} weeks planned")
+                                        _plan_data = json.loads(_plan_raw) if isinstance(_plan_raw, str) else _plan_raw
+                                        # plan_json is a list of plans — find first accepted or latest
+                                        if isinstance(_plan_data, list):
+                                            _plan = next((_p for _p in _plan_data if isinstance(_p, dict) and _p.get("accepted")), None)
+                                            if not _plan and _plan_data and isinstance(_plan_data[0], dict):
+                                                _plan = _plan_data[0]
+                                        elif isinstance(_plan_data, dict):
+                                            _plan = _plan_data
+                                        else:
+                                            _plan = None
+                                        if _plan:
+                                            _pgoal = _plan.get("goal_type") or _plan.get("goal", "")
+                                            _ptarget = _plan.get("target_date", "")
+                                            _pweeks = _plan.get("weeks")
+                                            if _pgoal:
+                                                st.caption(f"Goal: {_pgoal}")
+                                            if _ptarget:
+                                                st.caption(f"Target: {_ptarget}")
+                                            if _pweeks and isinstance(_pweeks, list):
+                                                st.caption(f"{len(_pweeks)} weeks planned")
+                                            st.caption(f"{len(_plan_data)} plan(s) total")
+                                        else:
+                                            st.caption("No plan data")
                                     except (json.JSONDecodeError, TypeError, ValueError):
                                         st.caption("Could not parse plan data")
                                 else:
