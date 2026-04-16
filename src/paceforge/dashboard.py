@@ -120,9 +120,9 @@ html, body, [class*="css"] {
     border-color: rgba(14,165,233,0.5);
     box-shadow: 0 0 12px rgba(14,165,233,0.1);
 }
-/* Economy metric cards — click-through invisible buttons */
-div[data-testid="column"]:has([class*="st-key-econ_detail_"]) .pf-metric-card {
-    cursor: pointer;
+/* Economy metric cards — clickable card overlay */
+div[data-testid="column"]:has([class*="st-key-econ_detail_"]) {
+    position: relative;
 }
 div[data-testid="column"]:has([class*="st-key-econ_detail_"]):hover .pf-metric-card:not(.pf-selected) {
     border-color: rgba(148,163,194,0.3);
@@ -130,18 +130,16 @@ div[data-testid="column"]:has([class*="st-key-econ_detail_"]):hover .pf-metric-c
     transform: translateY(-2px);
 }
 [class*="st-key-econ_detail_"] {
-    margin-top: -6rem;
-    height: 0;
-    overflow: visible;
-}
-[class*="st-key-econ_detail_"] > div,
-[class*="st-key-econ_detail_"] > div > div {
-    height: 6rem;
+    position: absolute;
+    inset: 0;
+    z-index: 2;
 }
 [class*="st-key-econ_detail_"] button {
     opacity: 0 !important;
     width: 100% !important;
-    height: 6rem !important;
+    height: 100% !important;
+    position: absolute !important;
+    inset: 0 !important;
     cursor: pointer !important;
     padding: 0 !important;
     border: none !important;
