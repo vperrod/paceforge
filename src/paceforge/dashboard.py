@@ -4422,6 +4422,7 @@ with tab_calendar:
                     .fc-button:hover { background: #252A35 !important; }
                     .fc-button-active { background: #10B981 !important; color: #0F1117 !important; border-color: #10B981 !important; }
                     .fc-toolbar-title { font-size: 1rem !important; font-weight: 700; color: #E8ECF4; }
+                    .fc-scroller { overflow: hidden !important; }
                 """
 
                 import streamlit.components.v1 as components
