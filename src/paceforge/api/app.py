@@ -1703,6 +1703,9 @@ async def friend_request(body: dict, user: dict = Depends(get_current_user)):
     result = send_friend_request(settings.db_path, user["id"], recipient_id)
     if not result:
         raise HTTPException(400, "Cannot send friend request")
+    # Admin friend requests are auto-accepted
+    if user["role"] == "admin" and result.get("status") == "pending":
+        result = respond_friend_request(settings.db_path, result["id"], accept=True)
     return result
 
 
@@ -1726,7 +1729,7 @@ async def friend_remove(friendship_id: str, user: dict = Depends(get_current_use
 async def get_user_public_profile(user_id: str, user: dict = Depends(get_current_user)):
     """Return a friend's profile: fitness highlights, activities, HYROX, plan summary."""
     uid = user["id"]
-    if user_id != uid:
+    if user_id != uid and user["role"] != "admin":
         friend_ids = get_friend_ids(settings.db_path, uid)
         if user_id not in friend_ids:
             raise HTTPException(403, "You can only view profiles of friends")
@@ -1861,10 +1864,44 @@ def _backfill_feed_events(uid: str) -> None:
         logger.info("Backfilled %d feed events for user %s", created, uid)
 
 
+def _ensure_welcome_event() -> None:
+    """Create a single welcome guide event from the admin, shown to all users."""
+    from paceforge.auth.database import _get_conn
+    conn = _get_conn(settings.db_path)
+    exists = conn.execute(
+        "SELECT 1 FROM feed_events WHERE event_type = 'welcome'",
+    ).fetchone()
+    if exists:
+        return
+    admin = get_user_by_email(settings.db_path, settings.admin_email)
+    if not admin:
+        return
+    create_feed_event(
+        settings.db_path,
+        admin["id"],
+        event_type="welcome",
+        title="Welcome to PaceForge!",
+        body=(
+            "Here's how to get started:\n\n"
+            "1. Connect your Garmin watch \u2014 go to Settings \u2192 Connections and enter your "
+            "Garmin credentials. This syncs your activities, heart rate zones, and fitness metrics automatically.\n\n"
+            "2. Check your Performance Profile \u2014 once synced, your VO\u2082max, training load, and "
+            "pacing data will appear in the Profile tab.\n\n"
+            "3. Create a Training Plan \u2014 head to the Plan tab and use the Plan Builder to set your "
+            "race goal, timeline, and preferred training days. The AI will generate a periodized plan "
+            "tailored to your fitness.\n\n"
+            "4. Add friends \u2014 find other runners in Settings \u2192 Friends and follow their progress "
+            "in the feed.\n\n"
+            "Feedback is always welcome! If you have questions or run into any issues, reach out to Victor."
+        ),
+    )
+
+
 @app.get("/feed")
 async def feed(limit: int = 20, offset: int = 0, user: dict = Depends(get_current_user)):
     uid = user["id"]
     _backfill_feed_events(uid)
+    _ensure_welcome_event()
     friend_ids = get_friend_ids(settings.db_path, uid)
     all_ids = [uid] + friend_ids
     events = get_feed(settings.db_path, all_ids, limit=limit, offset=offset)

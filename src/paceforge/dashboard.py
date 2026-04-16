@@ -64,6 +64,11 @@ _CUSTOM_CSS = """
     --pf-sky-dim: rgba(14, 165, 233, 0.12);
     --pf-rose: #F43F5E;
     --pf-rose-dim: rgba(244, 63, 94, 0.12);
+    --pf-violet: #8B5CF6;
+    --pf-violet-dim: rgba(139, 92, 246, 0.12);
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
     --space-xs: 4px;
     --space-sm: 8px;
     --space-md: 16px;
@@ -693,7 +698,7 @@ footer { visibility: hidden; }
     content: '';
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(15, 17, 23, 0.65);
+    background: rgba(15, 17, 23, 0.45);
     z-index: 99998;
     pointer-events: all;
     animation: pf-fade-in 150ms ease-out;
@@ -705,17 +710,16 @@ footer { visibility: hidden; }
 [data-testid="stAppViewContainer"][data-stale="true"]::before {
     content: '';
     position: fixed;
-    top: 50%; left: 50%;
-    margin-top: -16px; margin-left: -16px;
-    width: 32px; height: 32px;
-    border: 3px solid var(--pf-border-strong);
-    border-top-color: var(--pf-emerald);
-    border-radius: 50%;
+    top: 0; left: 0;
+    width: 30%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--pf-emerald), transparent);
     z-index: 99999;
-    animation: pf-spin 0.7s linear infinite;
+    animation: pf-progress 1.2s var(--ease-out) infinite;
 }
-@keyframes pf-spin {
-    to { transform: rotate(360deg); }
+@keyframes pf-progress {
+    0% { left: -30%; }
+    100% { left: 100%; }
 }
 
 /* ── Mobile Responsive ───────────────────────────────── */
@@ -879,7 +883,8 @@ details[open] > div {
 .pf-auth-form {
     background: var(--pf-card);
     border: 1px solid var(--pf-border);
-    border-radius: 14px;
+    border-top: 2px solid var(--pf-emerald);
+    border-radius: var(--radius-lg);
     padding: var(--space-lg) var(--space-xl);
 }
 .pf-auth-form h4 {
@@ -910,6 +915,47 @@ iframe[title="streamlit_calendar.calendar"]::-webkit-scrollbar {
 }
 [data-testid="stCustomComponentV1"] > div {
     overflow: hidden !important;
+}
+
+/* ── Status dot indicators ───────────────────────────── */
+.pf-status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* ── Empty state ─────────────────────────────────────── */
+.pf-empty-state {
+    text-align: center;
+    padding: 3rem 1.5rem;
+    color: var(--pf-text-secondary);
+}
+.pf-empty-state-icon {
+    font-size: 2rem;
+    color: var(--pf-text-tertiary);
+    margin-bottom: var(--space-md);
+    opacity: 0.5;
+}
+.pf-empty-state-title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--pf-text);
+    margin-bottom: var(--space-xs);
+}
+.pf-empty-state-body {
+    font-size: 0.85rem;
+    color: var(--pf-text-secondary);
+    max-width: 320px;
+    margin: 0 auto;
+    line-height: 1.5;
+}
+
+/* ── Tab panel fade ──────────────────────────────────── */
+.stTabs [data-baseweb="tab-panel"] {
+    animation: pf-fade-up 200ms var(--ease-out);
 }
 </style>
 """
@@ -958,7 +1004,7 @@ _PF_CHART_LAYOUT = dict(
     plot_bgcolor="rgba(0,0,0,0)",
     font=dict(family="Figtree, sans-serif", color="#E8ECF4", size=11),
     margin=dict(l=40, r=20, t=30, b=30),
-    height=250,
+    height=300,
     xaxis=dict(gridcolor="rgba(148,163,194,0.06)", zeroline=False),
     yaxis=dict(gridcolor="rgba(148,163,194,0.08)", zeroline=False),
     legend=dict(font=dict(color="#8B95AD", size=10)),
@@ -989,7 +1035,7 @@ def _render_brand(size: str = "normal") -> str:
         <div class="pf-auth-hero">
             {img}
             <h1 class="pf-auth-title">PACE<span>FORGE</span></h1>
-            <p class="pf-auth-subtitle">AI-Powered Running Coach</p>
+            <p class="pf-auth-subtitle">Train smarter. Race faster.</p>
         </div>"""
     img = f'<img src="{_LOGO_URI}" style="width:36px;height:36px;">' if _LOGO_URI else ""
     return f"""
@@ -1745,6 +1791,9 @@ if not st.session_state._restored and st.session_state.jwt:
         st.session_state._restored = True
         st.rerun()  # Rerun so calendar renders with freshly loaded data
 
+if not st.session_state._restored and st.session_state.jwt:
+    st.stop()  # Don't render rest of page while still loading
+
 # ── Sidebar ──────────────────────────────────────────────────────────
 
 with st.sidebar:
@@ -1767,16 +1816,18 @@ with st.sidebar:
     # Garmin status indicator in sidebar
     if st.session_state.garmin_logged_in:
         st.markdown(
-            '<div style="background:#10B98122;color:#10B981;padding:6px 12px;border-radius:8px;'
-            'font-size:0.8rem;font-weight:600;text-align:center;margin-bottom:0.5rem;">'
-            '⌚ Garmin Connected</div>',
+            '<div style="background:#10B98122;color:#10B981;padding:6px 12px;border-radius:var(--radius-sm);'
+            'font-size:0.8rem;font-weight:600;display:flex;align-items:center;justify-content:center;'
+            'gap:6px;margin-bottom:0.5rem;">'
+            '<span class="pf-status-dot" style="background:#10B981;"></span> Garmin Connected</div>',
             unsafe_allow_html=True,
         )
     else:
         st.markdown(
-            '<div style="background:#F59E0B22;color:#F59E0B;padding:6px 12px;border-radius:8px;'
-            'font-size:0.8rem;font-weight:600;text-align:center;margin-bottom:0.5rem;">'
-            '⌚ Garmin Not Connected</div>',
+            '<div style="background:#F59E0B22;color:#F59E0B;padding:6px 12px;border-radius:var(--radius-sm);'
+            'font-size:0.8rem;font-weight:600;display:flex;align-items:center;justify-content:center;'
+            'gap:6px;margin-bottom:0.5rem;">'
+            '<span class="pf-status-dot" style="background:#F59E0B;"></span> Garmin Not Connected</div>',
             unsafe_allow_html=True,
         )
 
@@ -1889,18 +1940,18 @@ if _p:
     if _p.get("vo2_max"):
         _header_stats.append(("VO\u2082", str(_p["vo2_max"]), "#10B981"))
     if _p.get("resting_hr"):
-        _header_stats.append(("RHR", f"{_p['resting_hr']} bpm", "#4DA6FF"))
+        _header_stats.append(("RHR", f"{_p['resting_hr']} bpm", "#0EA5E9"))
     if _p.get("weekly_mileage_km"):
         _header_stats.append(("Weekly", f"{_p['weekly_mileage_km']} km", "#8B5CF6"))
     if _p.get("body_battery_current"):
         _bb = _p["body_battery_current"]
-        _bb_color = "#10B981" if _bb >= 50 else "#F59E0B" if _bb >= 25 else "#FF5252"
+        _bb_color = "#10B981" if _bb >= 50 else "#F59E0B" if _bb >= 25 else "#F43F5E"
         _header_stats.append(("Battery", str(_bb), _bb_color))
 
 _stat_pills_html = ""
 for _label, _val, _color in _header_stats:
     _stat_pills_html += (
-        f'<div style="background:{_color}15;border:1px solid {_color}33;border-radius:10px;'
+        f'<div style="background:{_color}15;border:1px solid {_color}33;border-radius:var(--radius-md);'
         f'padding:6px 14px;display:flex;align-items:center;gap:6px;">'
         f'<span style="color:{_color}99;font-size:0.75rem;font-weight:500;">{_label}</span>'
         f'<span style="color:{_color};font-weight:700;font-size:0.95rem;">{_val}</span>'
@@ -1911,32 +1962,32 @@ for _label, _val, _color in _header_stats:
 _workout_html = ""
 if _today_workout:
     _wt = _today_workout.get("workout_type", "")
-    _wt_icons = {"easy": "\U0001f7e2", "tempo": "\U0001f7e0", "interval": "\U0001f534", "long_run": "\U0001f535",
-                 "recovery": "\U0001f49a", "race": "\U0001f3c1", "rest": "\U0001f634", "speed": "\u26a1", "threshold": "\U0001f7e1"}
-    _wt_icon = _wt_icons.get(_wt, "\U0001f3c3")
+    _wt_colors = {"easy": "#34D399", "tempo": "#F59E0B", "interval": "#F43F5E", "long_run": "#0EA5E9",
+                  "recovery": "#6EE7B7", "race": "#F43F5E", "rest": "#6B7280", "speed": "#E11D48", "threshold": "#D97706"}
+    _wt_color = _wt_colors.get(_wt, "#8B95AD")
     _wo_name = _today_workout.get("name", _wt.replace("_", " ").title())
     _completed = _today_workout.get("completed", False)
     if _completed:
         _workout_html = (
-            f'<div style="background:#10B98115;border:1px solid #10B98133;border-radius:10px;'
+            f'<div style="background:#10B98115;border:1px solid #10B98133;border-radius:var(--radius-md);'
             f'padding:6px 14px;display:flex;align-items:center;gap:6px;">'
-            f'<span style="font-size:0.85rem;">\u2705</span>'
+            f'<span class="pf-status-dot" style="background:#10B981;"></span>'
             f'<span style="color:#10B981;font-weight:600;font-size:0.85rem;">{_wo_name}</span>'
             f'</div>'
         )
     else:
         _workout_html = (
-            f'<div style="background:#FFB80015;border:1px solid #FFB80033;border-radius:10px;'
+            f'<div style="background:{_wt_color}15;border:1px solid {_wt_color}33;border-radius:var(--radius-md);'
             f'padding:6px 14px;display:flex;align-items:center;gap:6px;">'
-            f'<span style="font-size:0.85rem;">{_wt_icon}</span>'
-            f'<span style="color:#FFB800;font-weight:600;font-size:0.85rem;">Today: {_wo_name}</span>'
+            f'<span class="pf-status-dot" style="background:{_wt_color};"></span>'
+            f'<span style="color:{_wt_color};font-weight:600;font-size:0.85rem;">Today: {_wo_name}</span>'
             f'</div>'
         )
 elif any(isinstance(pl, dict) and pl.get("accepted") for pl in (st.session_state.plans or [])):
     _workout_html = (
-        '<div style="background:#10B98115;border:1px solid #10B98133;border-radius:10px;'
+        '<div style="background:#10B98115;border:1px solid #10B98133;border-radius:var(--radius-md);'
         'padding:6px 14px;display:flex;align-items:center;gap:6px;">'
-        '<span style="font-size:0.85rem;">\U0001f634</span>'
+        '<span class="pf-status-dot" style="background:#6B7280;"></span>'
         '<span style="color:#69F0AE;font-weight:600;font-size:0.85rem;">Rest day</span>'
         '</div>'
     )
@@ -1947,7 +1998,7 @@ _greeting = "Good morning" if _hour < 12 else "Good afternoon" if _hour < 18 els
 
 st.markdown(
     f'<div style="background:linear-gradient(135deg, #161821 0%, #252830 100%);'
-    f'border:1px solid #252A35;border-radius:14px;padding:1rem 1.5rem;margin-bottom:1rem;'
+    f'border:1px solid #252A35;border-radius:var(--radius-lg);padding:1rem 1.5rem;margin-bottom:1rem;'
     f'display:flex;align-items:center;gap:1.2rem;flex-wrap:wrap;">'
     # Avatar
     f'<div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#10B981,#00A854);'
@@ -2202,16 +2253,17 @@ with tab_feed:
 
         if not feed_events:
             st.markdown(
-                '<div style="text-align:center;padding:3rem;color:#8B95AD;">'
-                ''
-                "<div>No activity yet! Complete a workout or add friends to see their activity here.</div>"
+                '<div class="pf-empty-state">'
+                '<div class="pf-empty-state-icon">—</div>'
+                '<div class="pf-empty-state-title">No activity yet</div>'
+                '<div class="pf-empty-state-body">Complete a workout or add friends to see their activity here.</div>'
                 "</div>",
                 unsafe_allow_html=True,
             )
         else:
             for idx, ev in enumerate(feed_events):
                 _event_type_icons = {
-                    "activity": "●", "plan": "●", "pb": "●", "hyrox": "●", "milestone": "●",
+                    "activity": "●", "plan": "●", "pb": "●", "hyrox": "●", "milestone": "●", "welcome": "●",
                 }
                 icon = _event_type_icons.get(ev.get("event_type", ""), "●")
                 user_name = ev.get("user_name", "Unknown")
@@ -2221,7 +2273,6 @@ with tab_feed:
                 like_count = ev.get("like_count", 0)
                 comment_count = ev.get("comment_count", 0)
                 liked_by_me = ev.get("liked_by_me", False)
-                heart = "♥" if liked_by_me else "♡"
 
                 # Parse metadata for rich cards
                 _ev_meta_raw = ev.get("metadata")
@@ -2311,7 +2362,7 @@ with tab_feed:
                     + _pace_chart_html
                     + _rich_metrics_html
                     + f'<div style="color:#8B95AD;font-size:0.85rem;margin-top:0.4rem;">'
-                    f'{heart} {like_count}  ·  {comment_count}</div>'
+                    f'{"♥" if liked_by_me else "♡"} {like_count}  ·  {comment_count}</div>'
                     f'</div>',
                     unsafe_allow_html=True,
                 )
@@ -2338,7 +2389,7 @@ with tab_feed:
                     col_strava = None
                 with col_like:
                     like_label = "Unlike" if liked_by_me else "Like"
-                    if st.button(f"{heart} {like_label}", key=f"feed_like_{ev['id']}_{idx}", use_container_width=True):
+                    if st.button(like_label, key=f"feed_like_{ev['id']}_{idx}", use_container_width=True):
                         try:
                             requests.post(
                                 f"{API_BASE}/feed/{ev['id']}/like",
@@ -2483,8 +2534,14 @@ def _fmt_time(seconds):
 with tab_profile:
     p = st.session_state.profile
     if not p:
-        st.markdown(_skeleton_cards(3), unsafe_allow_html=True)
-        st.info("No profile data yet. Connect to Garmin and sync to load your fitness profile.")
+        st.markdown(
+            '<div class="pf-empty-state">'
+            '<div class="pf-empty-state-icon">—</div>'
+            '<div class="pf-empty-state-title">No profile data yet</div>'
+            '<div class="pf-empty-state-body">Connect to Garmin and sync to load your fitness profile.</div>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
     else:
         # Fetch analytics (cached per session)
         analytics = st.session_state.get("analytics")
@@ -3270,7 +3327,14 @@ with tab_profile:
                         fig_dist.update_layout(title="Run Distance", yaxis_title="km", **chart_layout)
                         st.plotly_chart(fig_dist, use_container_width=True, key="trend_distance")
             else:
-                st.info("Need at least 2 activities to show trends. Sync your Garmin data.")
+                st.markdown(
+                    '<div class="pf-empty-state">'
+                    '<div class="pf-empty-state-icon">—</div>'
+                    '<div class="pf-empty-state-title">Not enough data for trends</div>'
+                    '<div class="pf-empty-state-body">Need at least 2 activities. Sync your Garmin data to see trends.</div>'
+                    '</div>',
+                    unsafe_allow_html=True,
+                )
 
 
 # ── Tab 2: Training Plan ─────────────────────────────────────────────

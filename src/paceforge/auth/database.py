@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS friends (
 CREATE TABLE IF NOT EXISTS feed_events (
     id          TEXT PRIMARY KEY,
     user_id     TEXT NOT NULL REFERENCES users(id),
-    event_type  TEXT NOT NULL CHECK(event_type IN ('activity', 'plan', 'pb', 'hyrox', 'milestone')),
+    event_type  TEXT NOT NULL CHECK(event_type IN ('activity', 'plan', 'pb', 'hyrox', 'milestone', 'welcome')),
     title       TEXT NOT NULL,
     body        TEXT,
     metadata    TEXT,
@@ -134,6 +134,21 @@ def init_db(db_path: str) -> None:
                 conn.commit()
             except Exception:
                 pass  # Column already exists
+        # Migrate feed_events CHECK constraint to add 'welcome' event type
+        try:
+            info = conn.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='feed_events'").fetchone()
+            if info and "'welcome'" not in (info[0] or ""):
+                conn.executescript("""
+                    CREATE TABLE feed_events_new (
+                        id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id),
+                        event_type TEXT NOT NULL CHECK(event_type IN ('activity','plan','pb','hyrox','milestone','welcome')),
+                        title TEXT NOT NULL, body TEXT, metadata TEXT, created_at TEXT NOT NULL);
+                    INSERT INTO feed_events_new SELECT * FROM feed_events;
+                    DROP TABLE feed_events;
+                    ALTER TABLE feed_events_new RENAME TO feed_events;
+                """)
+        except Exception:
+            pass
 
 
 def close_db() -> None:
@@ -509,7 +524,7 @@ def get_feed(db_path: str, user_ids: list[str], *, limit: int = 20, offset: int 
             f"(SELECT COUNT(*) FROM feed_likes WHERE event_id = e.id) AS like_count, "
             f"(SELECT COUNT(*) FROM feed_comments WHERE event_id = e.id) AS comment_count "
             f"FROM feed_events e JOIN users u ON u.id = e.user_id "
-            f"WHERE e.user_id IN ({placeholders}) "
+            f"WHERE e.user_id IN ({placeholders}) OR e.event_type = 'welcome' "
             f"ORDER BY e.created_at DESC LIMIT ? OFFSET ?",
             (*user_ids, limit, offset),
         ).fetchall()
