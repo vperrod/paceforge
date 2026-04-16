@@ -116,6 +116,38 @@ html, body, [class*="css"] {
     border-color: var(--pf-border-strong);
     transform: translateY(-1px);
 }
+.pf-metric-card.pf-selected {
+    border-color: rgba(14,165,233,0.5);
+    box-shadow: 0 0 12px rgba(14,165,233,0.1);
+}
+/* Economy metric cards — click-through invisible buttons */
+div[data-testid="column"]:has([class*="st-key-econ_detail_"]) .pf-metric-card {
+    cursor: pointer;
+}
+div[data-testid="column"]:has([class*="st-key-econ_detail_"]):hover .pf-metric-card:not(.pf-selected) {
+    border-color: rgba(148,163,194,0.3);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+}
+[class*="st-key-econ_detail_"] {
+    margin-top: -6rem;
+    height: 0;
+    overflow: visible;
+}
+[class*="st-key-econ_detail_"] > div,
+[class*="st-key-econ_detail_"] > div > div {
+    height: 6rem;
+}
+[class*="st-key-econ_detail_"] button {
+    opacity: 0 !important;
+    width: 100% !important;
+    height: 6rem !important;
+    cursor: pointer !important;
+    padding: 0 !important;
+    border: none !important;
+    background: none !important;
+    min-height: 0 !important;
+}
 .pf-metric-label {
     font-family: var(--font-body);
     font-size: 0.72rem;
@@ -2769,11 +2801,14 @@ with tab_profile:
             ec1, ec2, ec3, ec4 = st.columns(4)
             for _col, _key in zip([ec1, ec2, ec3, ec4], _econ_keys):
                 _m = _econ_metrics[_key]
+                _is_sel = st.session_state.get("_econ_detail") == _key
                 with _col:
-                    st.markdown(_metric_card(_m["label"], _m["fmt"](_m["avg"]), _m["unit"], _m["color"]), unsafe_allow_html=True)
+                    _sel_cls = " pf-selected" if _is_sel else ""
+                    _card_html = _metric_card(_m["label"], _m["fmt"](_m["avg"]), _m["unit"], _m["color"])
+                    st.markdown(_card_html.replace('class="pf-metric-card', f'class="pf-metric-card{_sel_cls}'), unsafe_allow_html=True)
                     st.markdown(f'<div style="text-align:center;font-size:0.75rem;color:#8B95AD;">{_m["grade"]}</div>', unsafe_allow_html=True)
-                    if st.button("Details", key=f"econ_detail_{_key}", use_container_width=True):
-                        st.session_state["_econ_detail"] = _key if st.session_state.get("_econ_detail") != _key else None
+                    if st.button("\u3164", key=f"econ_detail_{_key}", use_container_width=True):
+                        st.session_state["_econ_detail"] = _key if not _is_sel else None
                         st.rerun()
 
             # --- Expanded detail panel for selected metric ---
