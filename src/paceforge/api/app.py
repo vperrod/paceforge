@@ -1722,6 +1722,16 @@ async def approved_users(user: dict = Depends(get_current_user)):
 @app.get("/friends")
 async def get_friends(user: dict = Depends(get_current_user)):
     uid = user["id"]
+    # Admin: auto-accept any pending requests (sent or received)
+    if user["role"] == "admin":
+        from paceforge.auth.database import _get_conn
+        conn = _get_conn(settings.db_path)
+        pending = conn.execute(
+            "SELECT id FROM friends WHERE (requester_id = ? OR recipient_id = ?) AND status = 'pending'",
+            (uid, uid),
+        ).fetchall()
+        for row in pending:
+            respond_friend_request(settings.db_path, row["id"], accept=True)
     return {
         "friends": list_friends(settings.db_path, uid),
         "pending": list_pending_requests(settings.db_path, uid),
