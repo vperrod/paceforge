@@ -2635,6 +2635,46 @@ with tab_profile:
                     unsafe_allow_html=True,
                 )
 
+            # AI-driven Next Steps for weaknesses
+            if snap.get("weaknesses"):
+                with st.expander("Next Steps & Progress", expanded="_ai_snapshot_actions" in st.session_state):
+                    if "_ai_snapshot_actions" not in st.session_state:
+                        if st.button("Generate action plan", key="btn_ai_snapshot"):
+                            with st.spinner("Analysing weaknesses…"):
+                                try:
+                                    _ai_r = requests.post(
+                                        f"{API_BASE}/profile/ai-insights",
+                                        headers=_auth_headers(),
+                                        json={"section": "snapshot", "analytics": analytics},
+                                        timeout=30,
+                                    )
+                                    if _ai_r.status_code == 200:
+                                        st.session_state["_ai_snapshot_actions"] = _ai_r.json().get("actions", [])
+                                        st.rerun()
+                                    else:
+                                        st.warning("Could not generate insights. Try again later.")
+                                except Exception:
+                                    st.warning("AI service unavailable.")
+                    else:
+                        _snap_actions = st.session_state["_ai_snapshot_actions"]
+                        if _snap_actions:
+                            for _sa in _snap_actions:
+                                st.markdown(
+                                    f'<div style="border-left:3px solid #0EA5E9;padding:8px 12px;margin-bottom:8px;'
+                                    f'background:rgba(14,165,233,0.06);border-radius:0 8px 8px 0;">'
+                                    f'<div style="font-weight:600;color:#0EA5E9;font-size:0.85rem;">{_sa.get("weakness", "")}</div>'
+                                    f'<div style="margin-top:4px;">{_sa.get("action", "")}</div>'
+                                    f'<div style="margin-top:4px;font-size:0.78rem;color:#9CA3AF;">'
+                                    f'Track: {_sa.get("metric", "—")} · {_sa.get("timeline", "")}</div>'
+                                    f'</div>',
+                                    unsafe_allow_html=True,
+                                )
+                        else:
+                            st.info("No specific actions identified.")
+                        if st.button("Regenerate", key="btn_ai_snap_regen"):
+                            del st.session_state["_ai_snapshot_actions"]
+                            st.rerun()
+
             # HR Zone distribution
             zones = p.get("hr_zones", [])
             if zones:
@@ -2838,6 +2878,46 @@ with tab_profile:
                     _section_card("Running Mechanics", "No significant inefficiencies detected. Mechanics look solid.", "#10B981"),
                     unsafe_allow_html=True,
                 )
+
+            # AI-driven Improvement Plan for economy
+            if econ.get("inefficiencies"):
+                with st.expander("Improvement Plan", expanded="_ai_economy_actions" in st.session_state):
+                    if "_ai_economy_actions" not in st.session_state:
+                        if st.button("Generate improvement drills", key="btn_ai_economy"):
+                            with st.spinner("Analysing running economy…"):
+                                try:
+                                    _ai_e = requests.post(
+                                        f"{API_BASE}/profile/ai-insights",
+                                        headers=_auth_headers(),
+                                        json={"section": "economy", "analytics": analytics},
+                                        timeout=30,
+                                    )
+                                    if _ai_e.status_code == 200:
+                                        st.session_state["_ai_economy_actions"] = _ai_e.json().get("actions", [])
+                                        st.rerun()
+                                    else:
+                                        st.warning("Could not generate drills. Try again later.")
+                                except Exception:
+                                    st.warning("AI service unavailable.")
+                    else:
+                        _econ_actions = st.session_state["_ai_economy_actions"]
+                        if _econ_actions:
+                            for _ea in _econ_actions:
+                                st.markdown(
+                                    f'<div style="border-left:3px solid #8B5CF6;padding:8px 12px;margin-bottom:8px;'
+                                    f'background:rgba(139,92,246,0.06);border-radius:0 8px 8px 0;">'
+                                    f'<div style="font-weight:600;color:#8B5CF6;font-size:0.85rem;">{_ea.get("metric", "")}</div>'
+                                    f'<div style="margin-top:4px;">{_ea.get("drill", "")}</div>'
+                                    f'<div style="margin-top:4px;font-size:0.78rem;color:#9CA3AF;">'
+                                    f'{_ea.get("frequency", "")} · Target: {_ea.get("target", "—")} · {_ea.get("timeline", "")}</div>'
+                                    f'</div>',
+                                    unsafe_allow_html=True,
+                                )
+                        else:
+                            st.info("No specific drills identified.")
+                        if st.button("Regenerate", key="btn_ai_econ_regen"):
+                            del st.session_state["_ai_economy_actions"]
+                            st.rerun()
 
         # ═════════════════════════════════════════════════════════════
         # SUB-TAB 4: LOAD & RECOVERY

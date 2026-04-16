@@ -620,6 +620,74 @@ async def get_profile_analytics(user: dict = Depends(get_current_user)):
     return compute_all(profile)
 
 
+class AiInsightsRequest(BaseModel):
+    section: str  # "snapshot" or "economy"
+    analytics: dict
+
+
+@app.post("/profile/ai-insights")
+async def get_ai_insights(req: AiInsightsRequest, user: dict = Depends(get_current_user)):
+    """Use the AI coach to generate actionable insights for a profile section."""
+    import re as _re
+
+    # Resolve LLM
+    if settings.llm_provider == "anthropic" and settings.anthropic_api_key:
+        coach_key, coach_model, coach_provider = settings.anthropic_api_key, settings.anthropic_model, "anthropic"
+    elif settings.llm_provider == "openai" and settings.openai_api_key:
+        coach_key, coach_model, coach_provider = settings.openai_api_key, settings.openai_model, "openai"
+    elif settings.anthropic_api_key:
+        coach_key, coach_model, coach_provider = settings.anthropic_api_key, settings.anthropic_model, "anthropic"
+    elif settings.openai_api_key:
+        coach_key, coach_model, coach_provider = settings.openai_api_key, settings.openai_model, "openai"
+    else:
+        raise HTTPException(503, "AI coaching is not configured.")
+
+    uid = user["id"]
+    coach = _user_coach.get(uid)
+    if coach is None or getattr(coach, "_provider", None) != coach_provider:
+        coach = Coach(api_key=coach_key, model=coach_model, provider=coach_provider)
+        _user_coach[uid] = coach
+
+    if req.section == "snapshot":
+        weaknesses = req.analytics.get("snapshot", {}).get("weaknesses", [])
+        if not weaknesses:
+            return {"actions": []}
+        prompt = (
+            "Given these runner weaknesses, provide exactly one concrete action per weakness. "
+            "Return ONLY a JSON array, no other text. Each element: "
+            '{"weakness": "...", "action": "...", "metric": "...", "timeline": "..."}\n\n'
+            f"Weaknesses: {json.dumps(weaknesses)}"
+        )
+    elif req.section == "economy":
+        inefficiencies = req.analytics.get("economy", {}).get("inefficiencies", [])
+        if not inefficiencies:
+            return {"actions": []}
+        prompt = (
+            "Given these running economy inefficiencies, provide exactly one drill or exercise per issue. "
+            "Return ONLY a JSON array, no other text. Each element: "
+            '{"metric": "...", "drill": "...", "frequency": "...", "target": "...", "timeline": "..."}\n\n'
+            f"Inefficiencies: {json.dumps(inefficiencies)}"
+        )
+    else:
+        raise HTTPException(400, "section must be 'snapshot' or 'economy'")
+
+    result = coach.chat(
+        message=prompt,
+        profile=_user_profile.get(uid),
+        plan=_user_plans.get(uid, [None])[-1] if _user_plans.get(uid) else None,
+    )
+
+    # Extract JSON array from response
+    match = _re.search(r"\[.*]", result.reply, _re.DOTALL)
+    if match:
+        try:
+            actions = json.loads(match.group())
+            return {"actions": actions}
+        except json.JSONDecodeError:
+            pass
+    return {"actions": [], "raw": result.reply}
+
+
 @app.get("/activities", response_model=list[RecentActivity])
 async def get_activities(
     days: int = 240, sync: bool = False, user: dict = Depends(get_current_user)
