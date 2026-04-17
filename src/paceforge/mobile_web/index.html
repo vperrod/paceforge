@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0F1117">
+<title>PaceForge</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='6' y='18' width='5' height='8' rx='1' fill='%2310B981' opacity='.3'/><rect x='13' y='12' width='5' height='14' rx='1' fill='%2310B981' opacity='.6'/><rect x='20' y='5' width='5' height='21' rx='1' fill='%2310B981'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0F1117;--surface:#161821;--card:#1A1D2B;--elevated:#1C1F2B;
+  --border:rgba(148,163,194,.12);--border-s:rgba(148,163,194,.08);--border-x:rgba(148,163,194,.18);
+  --text:#E8ECF4;--text-2:#8B95AD;--text-3:#5C6478;
+  --emerald:#10B981;--emerald-d:rgba(16,185,129,.12);--emerald-g:rgba(16,185,129,.06);
+  --amber:#F59E0B;--amber-d:rgba(245,158,11,.12);
+  --sky:#0EA5E9;--sky-d:rgba(14,165,233,.12);
+  --rose:#F43F5E;--rose-d:rgba(244,63,94,.12);
+  --violet:#8B5CF6;
+  --r:12px;--r-sm:8px;
+  --ease:cubic-bezier(.23,1,.32,1);
+  --font-d:'Manrope',sans-serif;--font-b:'Figtree',sans-serif;--font-m:'JetBrains Mono',monospace;
+  --safe-b:env(safe-area-inset-bottom,0px);
+}
+html{height:100%;-webkit-tap-highlight-color:transparent}
+body{
+  font-family:var(--font-b);color:var(--text);background:var(--bg);
+  min-height:100%;display:flex;flex-direction:column;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden;
+}
+input,textarea,select,button{font-family:inherit;font-size:inherit;color:inherit}
+a{color:var(--emerald);text-decoration:none}
+
+/* ── Layout ─────────────────────────────────── */
+#app{flex:1;display:flex;flex-direction:column;min-height:100dvh}
+.page{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 16px calc(72px + var(--safe-b))}
+.page.auth-page{display:flex;align-items:center;justify-content:center;padding:24px}
+
+/* ── Bottom Nav ─────────────────────────────── */
+.tab-bar{
+  position:fixed;bottom:0;left:0;right:0;
+  background:var(--surface);border-top:1px solid var(--border);
+  display:flex;padding:6px 0 calc(6px + var(--safe-b));z-index:100;
+}
+.tab-bar button{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+  background:none;border:none;color:var(--text-3);font-size:10px;
+  padding:6px 0;cursor:pointer;transition:color .15s;font-family:var(--font-b);
+}
+.tab-bar button.active{color:var(--emerald)}
+.tab-bar button svg{width:22px;height:22px}
+
+/* ── Auth ───────────────────────────────────── */
+.auth-box{width:100%;max-width:380px}
+.auth-logo{text-align:center;margin-bottom:32px}
+.auth-logo svg{width:48px;height:48px;margin-bottom:12px}
+.auth-logo h1{font-family:var(--font-d);font-size:1.5rem;font-weight:800;letter-spacing:-.02em}
+.auth-logo p{color:var(--text-2);font-size:.85rem;margin-top:4px}
+.auth-form{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:24px}
+.auth-form h2{font-family:var(--font-d);font-size:1.1rem;font-weight:700;margin-bottom:20px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:.8rem;font-weight:500;color:var(--text-2);margin-bottom:6px}
+.field input{
+  width:100%;background:var(--elevated);border:1px solid var(--border);
+  border-radius:var(--r-sm);padding:12px 14px;font-size:.95rem;outline:none;
+  transition:border-color .15s;
+}
+.field input:focus{border-color:var(--emerald)}
+.btn{
+  width:100%;padding:13px;border:none;border-radius:var(--r-sm);
+  font-weight:600;font-size:.95rem;cursor:pointer;
+  transition:opacity .15s,transform .1s;
+}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--emerald);color:#0F1117}
+.btn-primary:disabled{opacity:.5}
+.btn-ghost{background:transparent;color:var(--text-2);border:1px solid var(--border)}
+.btn-link{
+  background:none;border:none;color:var(--text-2);font-size:.85rem;
+  padding:8px;cursor:pointer;width:100%;text-align:center;
+}
+.btn-link:hover{color:var(--emerald)}
+.auth-footer{text-align:center;margin-top:16px;color:var(--text-3);font-size:.85rem}
+.error-msg{background:var(--rose-d);color:var(--rose);padding:10px 14px;border-radius:var(--r-sm);font-size:.85rem;margin-bottom:12px}
+.success-msg{background:var(--emerald-d);color:var(--emerald);padding:10px 14px;border-radius:var(--r-sm);font-size:.85rem;margin-bottom:12px}
+
+/* ── Cards & Metrics ────────────────────────── */
+.card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:16px;margin-bottom:12px;
+}
+.metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.metric{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:14px;
+}
+.metric-label{font-size:.7rem;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+.metric-value{font-family:var(--font-m);font-size:1.4rem;font-weight:700;margin-top:4px;line-height:1.2}
+.metric-sub{font-size:.75rem;color:var(--text-2);margin-top:2px}
+.section-title{
+  font-family:var(--font-d);font-size:1rem;font-weight:700;
+  margin-bottom:12px;display:flex;align-items:center;gap:8px;
+}
+
+/* ── Workout Cards ──────────────────────────── */
+.workout-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;
+  cursor:pointer;transition:border-color .15s;
+}
+.workout-card:active{border-color:var(--emerald)}
+.wo-bar{width:4px;border-radius:2px;align-self:stretch;flex-shrink:0}
+.wo-info{flex:1;min-width:0}
+.wo-name{font-weight:600;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wo-meta{font-size:.78rem;color:var(--text-2);margin-top:2px}
+.wo-badge{
+  font-size:.65rem;font-weight:600;padding:3px 8px;border-radius:6px;
+  white-space:nowrap;flex-shrink:0;
+}
+
+/* ── Week Selector ──────────────────────────── */
+.week-nav{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;margin-bottom:12px;-webkit-overflow-scrolling:touch}
+.week-nav::-webkit-scrollbar{display:none}
+.week-btn{
+  flex-shrink:0;padding:8px 14px;border-radius:var(--r-sm);border:1px solid var(--border);
+  background:var(--card);color:var(--text-2);font-size:.8rem;font-weight:600;
+  cursor:pointer;white-space:nowrap;transition:all .15s;
+}
+.week-btn.active{background:var(--emerald);color:#0F1117;border-color:var(--emerald)}
+
+/* ── Calendar ───────────────────────────────── */
+.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.cal-header h3{font-family:var(--font-d);font-weight:700;font-size:1rem}
+.cal-nav{display:flex;gap:8px}
+.cal-nav button{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);
+  width:36px;height:36px;display:flex;align-items:center;justify-content:center;
+  color:var(--text);cursor:pointer;font-size:1.1rem;
+}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;gap:2px}
+.cal-day-label{font-size:.65rem;color:var(--text-3);font-weight:600;padding:6px 0;text-transform:uppercase}
+.cal-day{
+  aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-size:.85rem;border-radius:var(--r-sm);cursor:pointer;
+  position:relative;transition:background .15s;gap:2px;
+}
+.cal-day:active{background:var(--elevated)}
+.cal-day.today{color:var(--emerald);font-weight:700}
+.cal-day.selected{background:var(--emerald);color:#0F1117;font-weight:700}
+.cal-day.other-month{color:var(--text-3);opacity:.4}
+.cal-dots{display:flex;gap:3px;position:absolute;bottom:4px}
+.cal-dot{width:5px;height:5px;border-radius:50%}
+.cal-entry{
+  display:flex;align-items:center;gap:10px;padding:12px 14px;
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  margin-bottom:8px;
+}
+.cal-entry-bar{width:4px;border-radius:2px;align-self:stretch;flex-shrink:0}
+.cal-entry-info{flex:1;min-width:0}
+.cal-entry-title{font-weight:600;font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal-entry-sub{font-size:.75rem;color:var(--text-2);margin-top:1px}
+
+/* ── Feed ───────────────────────────────────── */
+.feed-item{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:16px;margin-bottom:12px;
+}
+.feed-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.feed-avatar{
+  width:36px;height:36px;border-radius:50%;background:var(--emerald-d);
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:.85rem;color:var(--emerald);flex-shrink:0;
+}
+.feed-user{font-weight:600;font-size:.9rem}
+.feed-time{font-size:.75rem;color:var(--text-3)}
+.feed-body{font-size:.88rem;line-height:1.5;color:var(--text-2);margin-bottom:10px}
+.feed-actions{display:flex;gap:16px}
+.feed-actions button{
+  background:none;border:none;color:var(--text-3);font-size:.8rem;
+  display:flex;align-items:center;gap:4px;cursor:pointer;padding:4px 0;
+}
+.feed-actions button.liked{color:var(--rose)}
+.comment-list{margin-top:10px;border-top:1px solid var(--border);padding-top:10px}
+.comment{font-size:.82rem;margin-bottom:6px}
+.comment b{color:var(--text);font-weight:600}
+.comment-input{
+  display:flex;gap:8px;margin-top:8px;
+}
+.comment-input input{
+  flex:1;background:var(--elevated);border:1px solid var(--border);
+  border-radius:var(--r-sm);padding:8px 12px;font-size:.85rem;outline:none;
+}
+.comment-input input:focus{border-color:var(--emerald)}
+.comment-input button{
+  background:var(--emerald);color:#0F1117;border:none;border-radius:var(--r-sm);
+  padding:8px 14px;font-weight:600;font-size:.85rem;cursor:pointer;flex-shrink:0;
+}
+
+/* ── AI Coach ───────────────────────────────── */
+.chat-messages{flex:1;overflow-y:auto;padding-bottom:12px}
+.chat-msg{margin-bottom:12px;max-width:85%;animation:fadeUp .2s var(--ease)}
+.chat-msg.user{margin-left:auto}
+.chat-bubble{
+  padding:12px 16px;border-radius:16px;font-size:.9rem;line-height:1.5;
+  word-wrap:break-word;
+}
+.chat-msg.user .chat-bubble{background:var(--emerald);color:#0F1117;border-bottom-right-radius:4px}
+.chat-msg.assistant .chat-bubble{background:var(--card);border:1px solid var(--border);border-bottom-left-radius:4px;color:var(--text)}
+.chat-input{
+  display:flex;gap:8px;padding:12px 0;border-top:1px solid var(--border);
+  position:sticky;bottom:0;background:var(--bg);
+}
+.chat-input input{
+  flex:1;background:var(--card);border:1px solid var(--border);
+  border-radius:20px;padding:12px 18px;font-size:.9rem;outline:none;
+}
+.chat-input input:focus{border-color:var(--emerald)}
+.chat-input button{
+  background:var(--emerald);color:#0F1117;border:none;border-radius:50%;
+  width:44px;height:44px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;flex-shrink:0;font-size:1.1rem;
+}
+
+/* ── Profile ────────────────────────────────── */
+.profile-header{text-align:center;margin-bottom:20px}
+.profile-avatar{
+  width:64px;height:64px;border-radius:50%;background:var(--emerald-d);
+  display:flex;align-items:center;justify-content:center;margin:0 auto 10px;
+  font-size:1.5rem;font-weight:700;color:var(--emerald);
+}
+.profile-name{font-family:var(--font-d);font-weight:700;font-size:1.2rem}
+.profile-email{font-size:.85rem;color:var(--text-2);margin-top:2px}
+.settings-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:14px 0;border-bottom:1px solid var(--border);
+}
+.settings-row:last-child{border-bottom:none}
+.settings-label{font-size:.9rem;font-weight:500}
+.settings-value{font-size:.85rem;color:var(--text-2)}
+.toggle{
+  width:44px;height:26px;border-radius:13px;border:none;
+  background:var(--text-3);position:relative;cursor:pointer;transition:background .2s;
+}
+.toggle.on{background:var(--emerald)}
+.toggle::after{
+  content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;
+  border-radius:50%;background:#fff;transition:transform .2s var(--ease);
+}
+.toggle.on::after{transform:translateX(18px)}
+
+/* ── HYROX ──────────────────────────────────── */
+.hyrox-station{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:12px 0;border-bottom:1px solid var(--border);
+}
+.hyrox-station:last-child{border-bottom:none}
+.hyrox-name{font-size:.85rem;font-weight:500}
+.hyrox-time{font-family:var(--font-m);font-size:.9rem;font-weight:600}
+
+/* ── Admin ──────────────────────────────────── */
+.admin-user{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:14px;margin-bottom:10px;
+}
+.admin-name{font-weight:600;font-size:.9rem;display:flex;align-items:center;gap:8px}
+.admin-badge{
+  font-size:.6rem;font-weight:700;padding:2px 8px;border-radius:4px;text-transform:uppercase;
+}
+.admin-badge.approved{background:var(--emerald-d);color:var(--emerald)}
+.admin-badge.pending{background:var(--amber-d);color:var(--amber)}
+.admin-badge.rejected{background:var(--rose-d);color:var(--rose)}
+.admin-badge.admin{background:var(--sky-d);color:var(--sky)}
+.admin-meta{font-size:.78rem;color:var(--text-2);margin-top:4px}
+.admin-actions{display:flex;gap:8px;margin-top:10px}
+.admin-actions button{
+  flex:1;padding:8px;border-radius:var(--r-sm);border:none;
+  font-weight:600;font-size:.8rem;cursor:pointer;
+}
+
+/* ── Loading & Empty ────────────────────────── */
+.loading{display:flex;justify-content:center;padding:40px 0}
+.spinner{
+  width:28px;height:28px;border:3px solid var(--border);
+  border-top-color:var(--emerald);border-radius:50%;
+  animation:spin .6s linear infinite;
+}
+.empty{text-align:center;padding:40px 0;color:var(--text-3);font-size:.9rem}
+
+/* ── Animations ─────────────────────────────── */
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.fade-in{animation:fadeUp .25s var(--ease)}
+
+/* ── Modal / Sheet ──────────────────────────── */
+.sheet-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;
+  opacity:0;transition:opacity .2s;pointer-events:none;
+}
+.sheet-overlay.open{opacity:1;pointer-events:auto}
+.sheet{
+  position:fixed;bottom:0;left:0;right:0;z-index:201;
+  background:var(--surface);border-radius:16px 16px 0 0;
+  padding:20px 16px calc(20px + var(--safe-b));
+  transform:translateY(100%);transition:transform .3s var(--ease);
+  max-height:85dvh;overflow-y:auto;
+}
+.sheet-overlay.open .sheet{transform:translateY(0)}
+.sheet-handle{width:36px;height:4px;border-radius:2px;background:var(--text-3);margin:0 auto 16px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// PaceForge Mobile Web — Single Page Application
+// ═══════════════════════════════════════════════════════
+
+const API = '';  // same origin — nginx proxies /auth/, /activities, etc.
+
+// ── State ──────────────────────────────────────────────
+const state = {
+  jwt: localStorage.getItem('pf_jwt'),
+  refresh: localStorage.getItem('pf_refresh'),
+  user: JSON.parse(localStorage.getItem('pf_user') || 'null'),
+  tab: 'snapshot',
+  authPage: 'login', // login | register | forgot
+};
+
+// ── API helpers ────────────────────────────────────────
+async function api(path, opts = {}) {
+  const headers = { 'Content-Type': 'application/json', ...opts.headers };
+  if (state.jwt) headers['Authorization'] = `Bearer ${state.jwt}`;
+  const res = await fetch(API + path, { ...opts, headers });
+  if (res.status === 401 && state.refresh) {
+    const ok = await refreshToken();
+    if (ok) {
+      headers['Authorization'] = `Bearer ${state.jwt}`;
+      return fetch(API + path, { ...opts, headers });
+    }
+  }
+  return res;
+}
+
+async function apiJson(path, opts) {
+  const res = await api(path, opts);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || 'Request failed');
+  }
+  return res.json();
+}
+
+async function refreshToken() {
+  try {
+    const res = await fetch(API + '/auth/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: state.refresh }),
+    });
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    state.jwt = data.access_token;
+    state.refresh = data.refresh_token;
+    localStorage.setItem('pf_jwt', state.jwt);
+    localStorage.setItem('pf_refresh', state.refresh);
+    return true;
+  } catch { logout(); return false; }
+}
+
+function logout() {
+  state.jwt = null; state.refresh = null; state.user = null;
+  localStorage.removeItem('pf_jwt');
+  localStorage.removeItem('pf_refresh');
+  localStorage.removeItem('pf_user');
+  render();
+}
+
+// ── SVG Icons (inline, small) ──────────────────────────
+const icons = {
+  snapshot: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"/></svg>`,
+  plan: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>`,
+  calendar: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>`,
+  feed: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>`,
+  coach: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>`,
+  profile: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
+  hyrox: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>`,
+  admin: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>`,
+  send: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>`,
+  heart: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>`,
+  comment: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>`,
+};
+
+const logo = `<svg viewBox="0 0 512 512" fill="none" width="100%"><rect x="100" y="320" width="60" height="120" rx="8" fill="#10B981" opacity=".25"/><rect x="200" y="220" width="60" height="220" rx="8" fill="#10B981" opacity=".5"/><rect x="300" y="100" width="60" height="340" rx="8" fill="#10B981" opacity=".85"/><path d="M130 310 L230 210 L330 90" stroke="#10B981" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M318 118 L330 90 L306 96" stroke="#10B981" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`;
+
+// ── Data caches ────────────────────────────────────────
+const cache = {};
+
+async function cached(key, fetcher, ttl = 60000) {
+  if (cache[key] && Date.now() - cache[key].t < ttl) return cache[key].v;
+  const v = await fetcher();
+  cache[key] = { v, t: Date.now() };
+  return v;
+}
+
+function clearCache(prefix) {
+  for (const k of Object.keys(cache)) { if (k.startsWith(prefix)) delete cache[k]; }
+}
+
+// ── Render Router ──────────────────────────────────────
+function render() {
+  const app = document.getElementById('app');
+  if (!state.jwt) {
+    app.innerHTML = renderAuth();
+    bindAuth();
+  } else {
+    app.innerHTML = renderApp();
+    bindApp();
+    loadTab(state.tab);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// AUTH PAGES
+// ═══════════════════════════════════════════════════════
+function renderAuth() {
+  let form = '';
+  if (state.authPage === 'register') {
+    form = `
+      <div class="auth-form"><h2>Create Account</h2>
+        <div id="auth-msg"></div>
+        <div class="field"><label>Full Name</label><input id="reg-name" autocomplete="name"></div>
+        <div class="field"><label>Email</label><input id="reg-email" type="email" autocomplete="email"></div>
+        <div class="field"><label>Password (min 8 chars)</label><input id="reg-pw" type="password"></div>
+        <div class="field"><label>Confirm Password</label><input id="reg-pw2" type="password"></div>
+        <div class="field"><label>Why do you want access?</label><input id="reg-reason" placeholder="Training for a marathon..."></div>
+        <button class="btn btn-primary" id="reg-btn">Create Account</button>
+      </div>
+      <button class="btn-link" id="to-login">← Back to Login</button>`;
+  } else if (state.authPage === 'forgot') {
+    form = `
+      <div class="auth-form"><h2>Forgot Password</h2>
+        <p style="color:var(--text-2);font-size:.85rem;margin-bottom:16px">Enter your email and we'll send you a reset link.</p>
+        <div id="auth-msg"></div>
+        <div class="field"><label>Email</label><input id="forgot-email" type="email"></div>
+        <button class="btn btn-primary" id="forgot-btn">Send Reset Link</button>
+      </div>
+      <button class="btn-link" id="to-login">← Back to Login</button>`;
+  } else {
+    form = `
+      <div class="auth-form"><h2>Welcome Back</h2>
+        <div id="auth-msg"></div>
+        <div class="field"><label>Email</label><input id="login-email" type="email" autocomplete="email"></div>
+        <div class="field"><label>Password</label><input id="login-pw" type="password" autocomplete="current-password"></div>
+        <button class="btn btn-primary" id="login-btn">Sign In</button>
+      </div>
+      <button class="btn-link" id="to-forgot">Forgot Password?</button>
+      <div class="auth-footer">Don't have an account?</div>
+      <button class="btn btn-ghost" id="to-register" style="margin-top:8px">Create Account</button>`;
+  }
+  return `<div class="page auth-page"><div class="auth-box fade-in">
+    <div class="auth-logo">${logo}<h1>PaceForge</h1><p>AI-Powered Running Plans</p></div>
+    ${form}
+  </div></div>`;
+}
+
+function bindAuth() {
+  const msg = (html, type='error') => {
+    const el = document.getElementById('auth-msg');
+    if (el) el.innerHTML = `<div class="${type}-msg">${html}</div>`;
+  };
+
+  on('login-btn', 'click', async () => {
+    const email = val('login-email'), pw = val('login-pw');
+    if (!email || !pw) return msg('Please fill in all fields');
+    disableBtn('login-btn');
+    try {
+      const data = await apiJson('/auth/login', { method: 'POST', body: JSON.stringify({ email, password: pw }) });
+      state.jwt = data.access_token;
+      state.refresh = data.refresh_token;
+      state.user = { name: data.name, email: data.email, role: data.role };
+      localStorage.setItem('pf_jwt', state.jwt);
+      localStorage.setItem('pf_refresh', state.refresh);
+      localStorage.setItem('pf_user', JSON.stringify(state.user));
+      render();
+    } catch (e) { msg(e.message); enableBtn('login-btn', 'Sign In'); }
+  });
+
+  on('reg-btn', 'click', async () => {
+    const name = val('reg-name'), email = val('reg-email'), pw = val('reg-pw'), pw2 = val('reg-pw2'), reason = val('reg-reason');
+    if (!name || !email || !pw) return msg('All fields except reason are required');
+    if (pw.length < 8) return msg('Password must be at least 8 characters');
+    if (pw !== pw2) return msg('Passwords do not match');
+    disableBtn('reg-btn');
+    try {
+      await apiJson('/auth/register', { method: 'POST', body: JSON.stringify({ name, email, password: pw, reason }) });
+      msg('Registration submitted! An admin will review your request.', 'success');
+    } catch (e) { msg(e.message); enableBtn('reg-btn', 'Create Account'); }
+  });
+
+  on('forgot-btn', 'click', async () => {
+    const email = val('forgot-email');
+    if (!email) return msg('Please enter your email');
+    disableBtn('forgot-btn');
+    try {
+      await apiJson('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) });
+      msg('If that email is registered, a reset link has been sent.', 'success');
+    } catch (e) { msg(e.message); enableBtn('forgot-btn', 'Send Reset Link'); }
+  });
+
+  on('to-login', 'click', () => { state.authPage = 'login'; render(); });
+  on('to-register', 'click', () => { state.authPage = 'register'; render(); });
+  on('to-forgot', 'click', () => { state.authPage = 'forgot'; render(); });
+
+  // Check for reset token in URL
+  const params = new URLSearchParams(location.search);
+  const resetToken = params.get('reset_token');
+  if (resetToken) showResetSheet(resetToken);
+}
+
+function showResetSheet(token) {
+  document.body.insertAdjacentHTML('beforeend', `
+    <div class="sheet-overlay open" id="reset-overlay">
+      <div class="sheet">
+        <div class="sheet-handle"></div>
+        <h2 style="font-family:var(--font-d);font-weight:700;margin-bottom:16px">Reset Password</h2>
+        <div id="reset-msg"></div>
+        <div class="field"><label>New Password (min 8 chars)</label><input id="reset-pw" type="password"></div>
+        <div class="field"><label>Confirm New Password</label><input id="reset-pw2" type="password"></div>
+        <button class="btn btn-primary" id="reset-btn">Reset Password</button>
+      </div>
+    </div>`);
+
+  on('reset-btn', 'click', async () => {
+    const pw = val('reset-pw'), pw2 = val('reset-pw2');
+    const msgEl = document.getElementById('reset-msg');
+    if (!pw || pw.length < 8) { msgEl.innerHTML = '<div class="error-msg">Password must be at least 8 characters</div>'; return; }
+    if (pw !== pw2) { msgEl.innerHTML = '<div class="error-msg">Passwords do not match</div>'; return; }
+    disableBtn('reset-btn');
+    try {
+      await apiJson('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, new_password: pw }) });
+      msgEl.innerHTML = '<div class="success-msg">Password has been reset! You can now sign in.</div>';
+      history.replaceState(null, '', location.pathname);
+      setTimeout(() => { document.getElementById('reset-overlay')?.remove(); }, 2000);
+    } catch (e) { msgEl.innerHTML = `<div class="error-msg">${e.message}</div>`; enableBtn('reset-btn', 'Reset Password'); }
+  });
+
+  on('reset-overlay', 'click', (e) => {
+    if (e.target.id === 'reset-overlay') { e.target.remove(); history.replaceState(null, '', location.pathname); }
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// MAIN APP SHELL
+// ═══════════════════════════════════════════════════════
+function renderApp() {
+  const tabs = [
+    ['snapshot', 'Home', icons.snapshot],
+    ['plan', 'Plan', icons.plan],
+    ['calendar', 'Calendar', icons.calendar],
+    ['feed', 'Feed', icons.feed],
+    ['coach', 'Coach', icons.coach],
+  ];
+  // Extra tabs for profile / hyrox / admin accessible via profile page
+  return `
+    <div class="page" id="page-content"></div>
+    <div class="tab-bar">
+      ${tabs.map(([id, label, icon]) =>
+        `<button data-tab="${id}" class="${state.tab === id ? 'active' : ''}">${icon}<span>${label}</span></button>`
+      ).join('')}
+    </div>`;
+}
+
+function bindApp() {
+  document.querySelectorAll('.tab-bar button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.tab = btn.dataset.tab;
+      document.querySelectorAll('.tab-bar button').forEach(b => b.classList.toggle('active', b.dataset.tab === state.tab));
+      loadTab(state.tab);
+    });
+  });
+}
+
+async function loadTab(tab) {
+  const page = document.getElementById('page-content');
+  if (!page) return;
+  page.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  try {
+    switch (tab) {
+      case 'snapshot': await renderSnapshot(page); break;
+      case 'plan': await renderPlan(page); break;
+      case 'calendar': await renderCalendar(page); break;
+      case 'feed': await renderFeed(page); break;
+      case 'coach': renderCoach(page); break;
+      default: page.innerHTML = '<div class="empty">Coming soon</div>';
+    }
+  } catch (e) {
+    page.innerHTML = `<div class="empty">Failed to load: ${e.message}</div>`;
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// TAB: SNAPSHOT
+// ═══════════════════════════════════════════════════════
+async function renderSnapshot(page) {
+  const [analytics, profile] = await Promise.all([
+    cached('analytics', () => apiJson('/profile/analytics')),
+    cached('profile', () => apiJson('/auth/profile')),
+  ]);
+
+  const a = analytics || {};
+  const run = a.running_profile || {};
+  const body = a.body_composition || {};
+  const zones = a.heart_rate_zones || {};
+  const preds = a.race_predictions || {};
+  const vo2 = run.estimated_vo2max;
+  const vdot = run.vdot;
+  const weeklyKm = run.weekly_distance_km;
+  const weeklyRuns = run.runs_per_week;
+  const weight = body.weight_kg;
+
+  // Greeting
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+
+  let html = `<div class="fade-in">
+    <div style="margin-bottom:20px">
+      <div style="font-size:.85rem;color:var(--text-2)">${greeting}</div>
+      <div style="font-family:var(--font-d);font-size:1.3rem;font-weight:700">${state.user?.name || 'Runner'}</div>
+    </div>
+
+    <div class="metric-grid">
+      ${metricCard('VDOT', vdot ? vdot.toFixed(1) : '—', 'Fitness level')}
+      ${metricCard('VO₂max', vo2 ? vo2.toFixed(1) : '—', 'ml/kg/min')}
+      ${metricCard('Weekly', weeklyKm ? weeklyKm.toFixed(0) + ' km' : '—', weeklyRuns ? weeklyRuns + ' runs/wk' : '')}
+      ${metricCard('Weight', weight ? weight.toFixed(1) + ' kg' : '—', '')}
+    </div>`;
+
+  // HR Zones
+  if (zones.zones && zones.zones.length) {
+    html += `<div class="section-title">Heart Rate Zones</div><div class="card">`;
+    const maxPct = Math.max(...zones.zones.map(z => z.percentage || 0), 1);
+    for (const z of zones.zones) {
+      const pct = z.percentage || 0;
+      const barW = Math.max(pct / maxPct * 100, 2);
+      const color = ['#10B981','#0EA5E9','#F59E0B','#F97316','#F43F5E'][z.zone - 1] || '#8B95AD';
+      html += `<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <span style="width:22px;font-size:.75rem;color:var(--text-3);font-weight:600">Z${z.zone}</span>
+        <div style="flex:1;height:18px;background:var(--elevated);border-radius:4px;overflow:hidden">
+          <div style="height:100%;width:${barW}%;background:${color};border-radius:4px;transition:width .4s var(--ease)"></div>
+        </div>
+        <span style="width:38px;text-align:right;font-family:var(--font-m);font-size:.75rem;color:var(--text-2)">${pct.toFixed(0)}%</span>
+      </div>`;
+    }
+    html += `</div>`;
+  }
+
+  // Race predictions
+  if (preds.predictions && preds.predictions.length) {
+    html += `<div class="section-title">Race Predictions</div><div class="card">`;
+    for (const p of preds.predictions) {
+      html += `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+        <span style="font-weight:500;font-size:.88rem">${p.distance}</span>
+        <span style="font-family:var(--font-m);font-size:.88rem;color:var(--emerald)">${p.time}</span>
+      </div>`;
+    }
+    html += `</div>`;
+  }
+
+  // Quick links
+  html += `
+    <div style="margin-top:8px;display:flex;flex-direction:column;gap:8px">
+      <button class="btn btn-ghost" onclick="state.tab='profile';loadTab('profile')">
+        ${icons.profile} Profile & Settings
+      </button>
+      ${state.user?.role === 'admin' ? `<button class="btn btn-ghost" onclick="state.tab='admin';loadTab('admin')">
+        ${icons.admin} Admin Panel
+      </button>` : ''}
+      <button class="btn btn-ghost" onclick="state.tab='hyrox';loadTab('hyrox')">
+        ${icons.hyrox} HYROX
+      </button>
+    </div>
+  </div>`;
+
+  page.innerHTML = html;
+}
+
+function metricCard(label, value, sub) {
+  return `<div class="metric"><div class="metric-label">${label}</div><div class="metric-value">${value}</div>${sub ? `<div class="metric-sub">${sub}</div>` : ''}</div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+// TAB: PLAN
+// ═══════════════════════════════════════════════════════
+async function renderPlan(page) {
+  const plans = await cached('plans', () => apiJson('/plans'));
+  const active = plans.find(p => p.accepted);
+
+  if (!active) {
+    page.innerHTML = `<div class="fade-in">
+      <div class="section-title">Training Plan</div>
+      <div class="empty">No active plan. Generate one from the desktop app.</div>
+    </div>`;
+    return;
+  }
+
+  const weeks = active.weeks || [];
+  let currentWeek = 0;
+  const today = new Date().toISOString().slice(0, 10);
+  weeks.forEach((w, i) => {
+    const wDates = (w.workouts || []).map(x => x.scheduled_date).filter(Boolean);
+    if (wDates.some(d => d >= today)) currentWeek = currentWeek || i;
+  });
+
+  function renderWeek(wi) {
+    const w = weeks[wi];
+    if (!w) return '';
+    let html = '';
+    for (const wo of w.workouts || []) {
+      const typeColors = { easy_run: 'var(--emerald)', tempo: 'var(--amber)', long_run: 'var(--sky)', speed: 'var(--rose)', rest: 'var(--text-3)' };
+      const color = typeColors[wo.workout_type] || 'var(--text-2)';
+      const dist = wo.estimated_distance_meters ? (wo.estimated_distance_meters / 1000).toFixed(1) + ' km' : '';
+      const badge = wo.completed ? `<span class="wo-badge" style="background:var(--emerald-d);color:var(--emerald)">Done</span>` : '';
+      html += `<div class="workout-card" data-wo='${JSON.stringify(wo).replace(/'/g, "&#39;")}'>
+        <div class="wo-bar" style="background:${color}"></div>
+        <div class="wo-info">
+          <div class="wo-name">${wo.name || 'Workout'}</div>
+          <div class="wo-meta">${wo.scheduled_date || ''} ${dist ? '· ' + dist : ''}</div>
+        </div>
+        ${badge}
+      </div>`;
+    }
+    return html;
+  }
+
+  let html = `<div class="fade-in">
+    <div class="section-title">Training Plan</div>
+    <div style="font-size:.82rem;color:var(--text-2);margin-bottom:12px">
+      ${active.goal_type || ''} ${active.target_date ? '· Target: ' + active.target_date : ''}
+    </div>
+    <div class="week-nav" id="week-nav">
+      ${weeks.map((w, i) => `<button class="week-btn ${i === currentWeek ? 'active' : ''}" data-week="${i}">W${i + 1}</button>`).join('')}
+    </div>
+    <div id="week-content">${renderWeek(currentWeek)}</div>
+  </div>`;
+
+  page.innerHTML = html;
+
+  // Scroll to current week button
+  const activeBtn = page.querySelector('.week-btn.active');
+  if (activeBtn) activeBtn.scrollIntoView({ inline: 'center', block: 'nearest' });
+
+  // Week nav
+  page.querySelectorAll('.week-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      page.querySelectorAll('.week-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('week-content').innerHTML = renderWeek(+btn.dataset.week);
+      bindWorkoutCards();
+    });
+  });
+
+  bindWorkoutCards();
+}
+
+function bindWorkoutCards() {
+  document.querySelectorAll('.workout-card[data-wo]').forEach(card => {
+    card.addEventListener('click', () => {
+      try {
+        const wo = JSON.parse(card.dataset.wo);
+        showWorkoutSheet(wo);
+      } catch {}
+    });
+  });
+}
+
+function showWorkoutSheet(wo) {
+  const dist = wo.estimated_distance_meters ? (wo.estimated_distance_meters / 1000).toFixed(1) + ' km' : '';
+  const dur = wo.estimated_duration_seconds ? Math.round(wo.estimated_duration_seconds / 60) + ' min' : '';
+  let stepsHtml = '';
+  if (wo.steps && wo.steps.length) {
+    stepsHtml = `<div style="margin-top:12px"><div style="font-weight:600;font-size:.85rem;margin-bottom:8px">Steps</div>`;
+    for (const s of wo.steps) {
+      stepsHtml += `<div style="padding:8px 12px;background:var(--elevated);border-radius:var(--r-sm);margin-bottom:6px;font-size:.82rem">
+        <div style="font-weight:500">${s.description || s.type || 'Step'}</div>
+        ${s.duration ? `<div style="color:var(--text-2);margin-top:2px">${s.duration}</div>` : ''}
+        ${s.target_pace ? `<div style="color:var(--emerald);margin-top:2px">Pace: ${s.target_pace}</div>` : ''}
+      </div>`;
+    }
+    stepsHtml += '</div>';
+  }
+
+  openSheet(`
+    <h3 style="font-family:var(--font-d);font-weight:700;font-size:1.1rem;margin-bottom:4px">${wo.name || 'Workout'}</h3>
+    <div style="font-size:.82rem;color:var(--text-2);margin-bottom:12px">
+      ${wo.workout_type?.replace(/_/g, ' ') || ''} ${dist ? '· ' + dist : ''} ${dur ? '· ~' + dur : ''}
+    </div>
+    ${wo.purpose ? `<div style="font-size:.85rem;color:var(--text-2);margin-bottom:12px">${wo.purpose}</div>` : ''}
+    ${stepsHtml}
+    ${wo.completed ? `<div style="margin-top:12px;font-size:.85rem;color:var(--emerald);font-weight:600">✓ Completed</div>` : ''}
+  `);
+}
+
+// ═══════════════════════════════════════════════════════
+// TAB: CALENDAR
+// ═══════════════════════════════════════════════════════
+async function renderCalendar(page) {
+  const now = new Date();
+  let viewYear = now.getFullYear(), viewMonth = now.getMonth();
+  const calEntries = {};
+
+  // Load data in parallel
+  const [plans, activities] = await Promise.all([
+    cached('plans', () => apiJson('/plans')),
+    cached('activities', () => apiJson('/activities?days=240').catch(() => [])),
+  ]);
+  let scheduled = [];
+  try { scheduled = await cached('scheduled', () => apiJson('/garmin/scheduled-workouts').catch(() => [])); } catch {}
+
+  // Build matched IDs set
+  const matchedIds = new Set();
+  for (const plan of plans || []) {
+    if (!plan.accepted) continue;
+    for (const w of plan.weeks || []) {
+      for (const wo of w.workouts || []) {
+        if (wo.matched_activity_id) matchedIds.add(String(wo.matched_activity_id));
+      }
+    }
+  }
+
+  // Activities
+  for (const act of activities || []) {
+    const d = (act.startTimeLocal || '').slice(0, 10);
+    if (!d || matchedIds.has(String(act.activityId))) continue;
+    const isRun = (act.activityType?.typeKey || '').toLowerCase().includes('running');
+    const distKm = act.distance ? (act.distance / 1000).toFixed(1) : null;
+    const name = act.activityName || act.activityType?.typeKey || 'Activity';
+    let sub = '';
+    if (isRun && distKm && act.duration) {
+      const ps = act.duration / (act.distance / 1000);
+      sub = `${distKm} km · ${Math.floor(ps/60)}:${String(Math.round(ps%60)).padStart(2,'0')}/km`;
+    } else if (distKm) { sub = `${distKm} km`; }
+    if (!calEntries[d]) calEntries[d] = [];
+    calEntries[d].push({ type: 'activity', title: '✓ ' + name, sub, color: isRun ? 'var(--emerald)' : 'var(--violet)' });
+  }
+
+  // Plan workouts
+  const active = (plans || []).find(p => p.accepted);
+  if (active) {
+    for (const w of active.weeks || []) {
+      for (const wo of w.workouts || []) {
+        if (!wo.scheduled_date) continue;
+        const d = wo.scheduled_date;
+        if (!calEntries[d]) calEntries[d] = [];
+        const distKm = wo.estimated_distance_meters ? (wo.estimated_distance_meters / 1000).toFixed(1) + ' km' : '';
+        calEntries[d].push({
+          type: 'planned', title: (wo.completed ? '✓ ' : '○ ') + (wo.name || 'Workout'),
+          sub: [wo.workout_type?.replace(/_/g, ' '), distKm].filter(Boolean).join(' · '),
+          color: wo.completed ? 'var(--emerald)' : 'var(--sky)', data: wo
+        });
+      }
+    }
+  }
+
+  // Scheduled
+  for (const sw of scheduled || []) {
+    const d = (sw.date || '').slice(0, 10);
+    if (!d) continue;
+    if (!calEntries[d]) calEntries[d] = [];
+    calEntries[d].push({ type: 'scheduled', title: '📅 ' + (sw.workoutName || 'Scheduled'), sub: '', color: 'var(--sky)' });
+  }
+
+  function drawMonth() {
+    const first = new Date(viewYear, viewMonth, 1);
+    const last = new Date(viewYear, viewMonth + 1, 0);
+    const startDay = first.getDay();
+    const monthName = first.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+    let grid = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => `<div class="cal-day-label">${d}</div>`).join('');
+
+    // Prev month fill
+    const prevLast = new Date(viewYear, viewMonth, 0).getDate();
+    for (let i = startDay - 1; i >= 0; i--) {
+      grid += `<div class="cal-day other-month">${prevLast - i}</div>`;
+    }
+
+    for (let d = 1; d <= last.getDate(); d++) {
+      const ds = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const isToday = ds === new Date().toISOString().slice(0, 10);
+      const entries = calEntries[ds] || [];
+      const dots = entries.slice(0, 3).map(e => `<div class="cal-dot" style="background:${e.color}"></div>`).join('');
+      grid += `<div class="cal-day ${isToday ? 'today' : ''}" data-date="${ds}">
+        ${d}
+        ${dots ? `<div class="cal-dots">${dots}</div>` : ''}
+      </div>`;
+    }
+
+    // Next month fill
+    const totalCells = startDay + last.getDate();
+    const remaining = (7 - totalCells % 7) % 7;
+    for (let i = 1; i <= remaining; i++) {
+      grid += `<div class="cal-day other-month">${i}</div>`;
+    }
+
+    return `<div class="fade-in">
+      <div class="cal-header">
+        <h3>${monthName}</h3>
+        <div class="cal-nav">
+          <button id="cal-prev">‹</button>
+          <button id="cal-next">›</button>
+        </div>
+      </div>
+      <div class="cal-grid">${grid}</div>
+      <div id="cal-details" style="margin-top:12px"></div>
+    </div>`;
+  }
+
+  function reDraw() {
+    page.innerHTML = drawMonth();
+    page.querySelectorAll('.cal-day[data-date]').forEach(el => {
+      el.addEventListener('click', () => {
+        page.querySelectorAll('.cal-day.selected').forEach(s => s.classList.remove('selected'));
+        el.classList.add('selected');
+        const entries = calEntries[el.dataset.date] || [];
+        const details = document.getElementById('cal-details');
+        if (!entries.length) { details.innerHTML = '<div class="empty" style="padding:16px 0">No activities</div>'; return; }
+        details.innerHTML = entries.map(e => `
+          <div class="cal-entry" ${e.data ? `data-wo='${JSON.stringify(e.data).replace(/'/g, "&#39;")}'` : ''} style="cursor:${e.data ? 'pointer' : 'default'}">
+            <div class="cal-entry-bar" style="background:${e.color}"></div>
+            <div class="cal-entry-info">
+              <div class="cal-entry-title">${e.title}</div>
+              ${e.sub ? `<div class="cal-entry-sub">${e.sub}</div>` : ''}
+            </div>
+          </div>`).join('');
+        details.querySelectorAll('[data-wo]').forEach(c => {
+          c.addEventListener('click', () => { try { showWorkoutSheet(JSON.parse(c.dataset.wo)); } catch {} });
+        });
+      });
+    });
+    on('cal-prev', 'click', () => { viewMonth--; if (viewMonth < 0) { viewMonth = 11; viewYear--; } reDraw(); });
+    on('cal-next', 'click', () => { viewMonth++; if (viewMonth > 11) { viewMonth = 0; viewYear++; } reDraw(); });
+  }
+
+  reDraw();
+}
+
+// ═══════════════════════════════════════════════════════
+// TAB: FEED
+// ═══════════════════════════════════════════════════════
+async function renderFeed(page) {
+  const events = await cached('feed', () => apiJson('/feed?limit=30'), 30000);
+  if (!events || !events.length) {
+    page.innerHTML = '<div class="fade-in"><div class="section-title">Feed</div><div class="empty">No activity yet.</div></div>';
+    return;
+  }
+
+  // Get current user likes
+  let userLikes = {};
+  try {
+    const profile = await cached('profile', () => apiJson('/auth/profile'));
+    // We'll track likes in memory after toggle
+  } catch {}
+
+  let html = '<div class="fade-in"><div class="section-title">Feed</div>';
+  for (const ev of events) {
+    const initials = (ev.user_name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    const timeAgo = formatTimeAgo(ev.created_at);
+    const likeCount = ev.like_count || 0;
+    const commentCount = ev.comment_count || 0;
+    const isLiked = ev.user_liked;
+
+    html += `<div class="feed-item" id="feed-${ev.id}">
+      <div class="feed-header">
+        <div class="feed-avatar">${initials}</div>
+        <div>
+          <div class="feed-user">${ev.user_name || 'User'}</div>
+          <div class="feed-time">${timeAgo}</div>
+        </div>
+      </div>
+      <div class="feed-body"><b>${ev.title}</b>${ev.body ? '<br>' + ev.body : ''}</div>
+      <div class="feed-actions">
+        <button class="${isLiked ? 'liked' : ''}" data-like="${ev.id}">${icons.heart} <span>${likeCount}</span></button>
+        <button data-comments="${ev.id}">${icons.comment} <span>${commentCount}</span></button>
+      </div>
+      <div id="comments-${ev.id}"></div>
+    </div>`;
+  }
+  html += '</div>';
+  page.innerHTML = html;
+
+  // Like buttons
+  page.querySelectorAll('[data-like]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.like;
+      try {
+        const res = await apiJson(`/feed/${id}/like`, { method: 'POST' });
+        const span = btn.querySelector('span');
+        if (res.liked) { btn.classList.add('liked'); span.textContent = +span.textContent + 1; }
+        else { btn.classList.remove('liked'); span.textContent = Math.max(0, +span.textContent - 1); }
+      } catch {}
+    });
+  });
+
+  // Comment toggle
+  page.querySelectorAll('[data-comments]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.comments;
+      const container = document.getElementById(`comments-${id}`);
+      if (container.innerHTML) { container.innerHTML = ''; return; }
+      try {
+        const comments = await apiJson(`/feed/${id}/comments`);
+        let ch = '<div class="comment-list">';
+        for (const c of comments || []) {
+          ch += `<div class="comment"><b>${c.user_name || 'User'}:</b> ${escHtml(c.body)}</div>`;
+        }
+        ch += `<div class="comment-input">
+          <input placeholder="Add a comment..." id="ci-${id}">
+          <button data-send-comment="${id}">Send</button>
+        </div></div>`;
+        container.innerHTML = ch;
+        const sendBtn = container.querySelector(`[data-send-comment="${id}"]`);
+        sendBtn?.addEventListener('click', async () => {
+          const input = document.getElementById(`ci-${id}`);
+          const body = input.value.trim();
+          if (!body) return;
+          await apiJson(`/feed/${id}/comment`, { method: 'POST', body: JSON.stringify({ body }) });
+          input.value = '';
+          clearCache('feed');
+          const count = btn.querySelector('span');
+          count.textContent = +count.textContent + 1;
+          // Re-fetch comments
+          const updated = await apiJson(`/feed/${id}/comments`);
+          const list = container.querySelector('.comment-list');
+          let uch = '';
+          for (const c of updated || []) { uch += `<div class="comment"><b>${c.user_name || 'User'}:</b> ${escHtml(c.body)}</div>`; }
+          // Keep the input
+          const inputHtml = `<div class="comment-input"><input placeholder="Add a comment..." id="ci-${id}"><button data-send-comment="${id}">Send</button></div>`;
+          container.innerHTML = `<div class="comment-list">${uch}${inputHtml}</div>`;
+        });
+      } catch {}
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// TAB: AI COACH
+// ═══════════════════════════════════════════════════════
+function renderCoach(page) {
+  const messages = cache._chatMsgs || [];
+  page.innerHTML = `<div style="display:flex;flex-direction:column;height:calc(100dvh - 88px)">
+    <div class="section-title" style="margin-bottom:8px">AI Coach</div>
+    <div class="chat-messages" id="chat-msgs">
+      ${messages.length ? messages.map(m => `
+        <div class="chat-msg ${m.role}">
+          <div class="chat-bubble">${m.content}</div>
+        </div>`).join('') : '<div class="empty" style="padding:60px 0">Ask me anything about your training</div>'}
+    </div>
+    <div class="chat-input">
+      <input id="chat-in" placeholder="Ask your coach..." enterkeyhint="send">
+      <button id="chat-send">${icons.send}</button>
+    </div>
+  </div>`;
+
+  const scrollToBottom = () => {
+    const el = document.getElementById('chat-msgs');
+    if (el) el.scrollTop = el.scrollHeight;
+  };
+  scrollToBottom();
+
+  const sendMsg = async () => {
+    const input = document.getElementById('chat-in');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+
+    if (!cache._chatMsgs) cache._chatMsgs = [];
+    cache._chatMsgs.push({ role: 'user', content: escHtml(text) });
+
+    const msgs = document.getElementById('chat-msgs');
+    msgs.innerHTML += `<div class="chat-msg user"><div class="chat-bubble">${escHtml(text)}</div></div>`;
+    msgs.innerHTML += `<div class="chat-msg assistant" id="coach-typing"><div class="chat-bubble"><div class="spinner" style="width:18px;height:18px;border-width:2px"></div></div></div>`;
+    scrollToBottom();
+
+    try {
+      const res = await apiJson('/coach/chat', {
+        method: 'POST',
+        body: JSON.stringify({ message: text, history: cache._chatMsgs.filter(m => m.role !== 'typing').map(m => ({ role: m.role, content: m.content })) }),
+      });
+      document.getElementById('coach-typing')?.remove();
+      const reply = res.reply || res.message || 'I couldn\'t generate a response.';
+      cache._chatMsgs.push({ role: 'assistant', content: reply });
+      msgs.innerHTML += `<div class="chat-msg assistant"><div class="chat-bubble">${formatMarkdown(reply)}</div></div>`;
+      scrollToBottom();
+    } catch (e) {
+      document.getElementById('coach-typing')?.remove();
+      msgs.innerHTML += `<div class="chat-msg assistant"><div class="chat-bubble" style="color:var(--rose)">Error: ${e.message}</div></div>`;
+      scrollToBottom();
+    }
+  };
+
+  on('chat-send', 'click', sendMsg);
+  document.getElementById('chat-in')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMsg(); });
+}
+
+// ═══════════════════════════════════════════════════════
+// EXTRAS: Profile, HYROX, Admin (loaded via quick links)
+// ═══════════════════════════════════════════════════════
+
+// These load into the same page area when accessed via Snapshot links
+
+// ── Profile tab (invoked from snapshot quick link)
+const origLoadTab = loadTab;
+loadTab = async function(tab) {
+  if (tab === 'profile') return renderProfilePage();
+  if (tab === 'hyrox') return renderHyroxPage();
+  if (tab === 'admin') return renderAdminPage();
+  return origLoadTab(tab);
+};
+
+async function renderProfilePage() {
+  const page = document.getElementById('page-content');
+  page.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  try {
+    const profile = await apiJson('/auth/profile');
+    state.user = { name: profile.name, email: profile.email, role: profile.role };
+    localStorage.setItem('pf_user', JSON.stringify(state.user));
+
+    let garminStatus = 'Unknown';
+    try { const gs = await apiJson('/garmin/status'); garminStatus = gs.connected ? 'Connected' : 'Not connected'; } catch { garminStatus = 'Not connected'; }
+
+    page.innerHTML = `<div class="fade-in">
+      <div class="profile-header">
+        <div class="profile-avatar">${(profile.name || '?')[0].toUpperCase()}</div>
+        <div class="profile-name">${profile.name}</div>
+        <div class="profile-email">${profile.email}</div>
+      </div>
+      <div class="card">
+        <div class="settings-row"><span class="settings-label">Role</span><span class="settings-value">${profile.role}</span></div>
+        <div class="settings-row"><span class="settings-label">Status</span><span class="settings-value">${profile.status}</span></div>
+        <div class="settings-row"><span class="settings-label">Garmin</span><span class="settings-value">${garminStatus}</span></div>
+        ${profile.garmin_email ? `<div class="settings-row"><span class="settings-label">Garmin Email</span><span class="settings-value" style="font-size:.78rem">${profile.garmin_email}</span></div>` : ''}
+        <div class="settings-row"><span class="settings-label">Registered</span><span class="settings-value">${(profile.created_at || '').slice(0, 10)}</span></div>
+      </div>
+      <button class="btn btn-ghost" style="margin-top:8px;color:var(--rose);border-color:var(--rose-d)" id="logout-btn">Sign Out</button>
+      <button class="btn-link" style="margin-top:12px" onclick="state.tab='snapshot';document.querySelectorAll('.tab-bar button')[0].click()">← Back</button>
+    </div>`;
+
+    on('logout-btn', 'click', logout);
+  } catch (e) { page.innerHTML = `<div class="empty">Failed: ${e.message}</div>`; }
+}
+
+async function renderHyroxPage() {
+  const page = document.getElementById('page-content');
+  page.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  try {
+    const results = await apiJson('/hyrox/results').catch(() => []);
+    let html = `<div class="fade-in"><div class="section-title">HYROX Results</div>`;
+    if (!results || !results.length) {
+      html += '<div class="empty">No HYROX results found. Search from the desktop app.</div>';
+    } else {
+      for (const race of results) {
+        html += `<div class="card">
+          <div style="font-weight:600;margin-bottom:8px">${race.race_name || 'Race'} — ${race.overall_time || ''}</div>`;
+        if (race.stations && race.stations.length) {
+          for (const s of race.stations) {
+            html += `<div class="hyrox-station"><span class="hyrox-name">${s.name || s.station}</span><span class="hyrox-time">${s.time || ''}</span></div>`;
+          }
+        }
+        html += '</div>';
+      }
+    }
+    html += '<button class="btn-link" style="margin-top:12px" onclick="state.tab=\'snapshot\';document.querySelectorAll(\'.tab-bar button\')[0].click()">← Back</button></div>';
+    page.innerHTML = html;
+  } catch (e) { page.innerHTML = `<div class="empty">Failed: ${e.message}</div>`; }
+}
+
+async function renderAdminPage() {
+  const page = document.getElementById('page-content');
+  if (state.user?.role !== 'admin') { page.innerHTML = '<div class="empty">Admin access required</div>'; return; }
+  page.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  try {
+    const users = await apiJson('/admin/users');
+    let html = `<div class="fade-in"><div class="section-title">Admin — User Management</div>
+      <div class="metric-grid" style="margin-bottom:16px">
+        ${metricCard('Pending', String(users.filter(u => u.status === 'pending').length), '')}
+        ${metricCard('Approved', String(users.filter(u => u.status === 'approved').length), '')}
+      </div>`;
+
+    for (const u of users) {
+      const badgeCls = u.role === 'admin' ? 'admin' : u.status;
+      const badgeLabel = u.role === 'admin' ? 'ADMIN' : u.status.toUpperCase();
+      const lastLogin = u.last_login ? u.last_login.slice(0, 16).replace('T', ' ') : 'Never';
+      html += `<div class="admin-user">
+        <div class="admin-name">${u.name} <span class="admin-badge ${badgeCls}">${badgeLabel}</span></div>
+        <div class="admin-meta">${u.email}${u.garmin_email ? ' · Garmin: ' + u.garmin_email : ''}</div>
+        <div class="admin-meta">Registered: ${(u.created_at || '').slice(0, 10)} · Last login: ${lastLogin}</div>
+        ${u.reason ? `<div class="admin-meta">Reason: ${u.reason}</div>` : ''}
+        <div class="admin-actions">
+          ${u.status === 'pending' ? `
+            <button style="background:var(--emerald);color:#0F1117" data-approve="${u.id}">Approve</button>
+            <button style="background:var(--rose-d);color:var(--rose)" data-reject="${u.id}">Reject</button>
+          ` : ''}
+          ${u.status === 'approved' && u.role !== 'admin' ? `
+            <button style="background:var(--rose-d);color:var(--rose)" data-reject="${u.id}">Revoke</button>
+          ` : ''}
+        </div>
+      </div>`;
+    }
+    html += '<button class="btn-link" style="margin-top:12px" onclick="state.tab=\'snapshot\';document.querySelectorAll(\'.tab-bar button\')[0].click()">← Back</button></div>';
+    page.innerHTML = html;
+
+    page.querySelectorAll('[data-approve]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        await apiJson(`/admin/users/${btn.dataset.approve}`, { method: 'PATCH', body: JSON.stringify({ status: 'approved' }) });
+        clearCache('');
+        renderAdminPage();
+      });
+    });
+    page.querySelectorAll('[data-reject]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        await apiJson(`/admin/users/${btn.dataset.reject}`, { method: 'PATCH', body: JSON.stringify({ status: 'rejected' }) });
+        clearCache('');
+        renderAdminPage();
+      });
+    });
+  } catch (e) { page.innerHTML = `<div class="empty">Failed: ${e.message}</div>`; }
+}
+
+// ═══════════════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════════════
+function on(id, event, handler) { document.getElementById(id)?.addEventListener(event, handler); }
+function val(id) { return (document.getElementById(id)?.value || '').trim(); }
+function disableBtn(id) { const b = document.getElementById(id); if (b) { b.disabled = true; b.textContent = '...'; } }
+function enableBtn(id, text) { const b = document.getElementById(id); if (b) { b.disabled = false; b.textContent = text; } }
+function escHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function formatTimeAgo(iso) {
+  if (!iso) return '';
+  const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+  if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+  return new Date(iso).toLocaleDateString();
+}
+
+function formatMarkdown(text) {
+  return escHtml(text)
+    .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+    .replace(/\n/g, '<br>');
+}
+
+function openSheet(content) {
+  document.querySelectorAll('.sheet-overlay').forEach(e => e.remove());
+  document.body.insertAdjacentHTML('beforeend', `
+    <div class="sheet-overlay open" id="sheet-overlay">
+      <div class="sheet"><div class="sheet-handle"></div>${content}</div>
+    </div>`);
+  on('sheet-overlay', 'click', (e) => { if (e.target.id === 'sheet-overlay') e.target.remove(); });
+}
+
+// ── Boot ───────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
