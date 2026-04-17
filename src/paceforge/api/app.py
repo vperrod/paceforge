@@ -12,6 +12,8 @@ from pathlib import Path
 import jwt as pyjwt
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from paceforge.ai.coach import Coach
@@ -2427,3 +2429,25 @@ async def post_health_data(payload: dict, user: dict = Depends(get_current_user)
 
     save_user_data(settings.db_path, uid, health_json=json.dumps(result))
     return result
+
+# ── Mobile Web SPA ───────────────────────────────────────────────────
+_mobile_web_dir = Path(__file__).resolve().parent.parent / "mobile_web"
+
+
+@app.get("/m")
+async def mobile_web_redirect():
+    """Redirect /m to /m/ for consistency."""
+    from fastapi.responses import RedirectResponse
+
+    return RedirectResponse("/m/")
+
+
+@app.get("/m/{path:path}")
+async def mobile_web_spa(path: str = ""):
+    """Serve the mobile web SPA — always return index.html for client-side routing."""
+    if path and (_mobile_web_dir / path).is_file():
+        return FileResponse(_mobile_web_dir / path)
+    index = _mobile_web_dir / "index.html"
+    if not index.exists():
+        raise HTTPException(404, "Mobile web app not found")
+    return FileResponse(index, media_type="text/html")
