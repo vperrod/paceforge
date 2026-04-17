@@ -403,7 +403,7 @@ const cache = {};
 async function cached(key, fetcher, ttl = 60000) {
   if (cache[key] && Date.now() - cache[key].t < ttl) return cache[key].v;
   const v = await fetcher();
-  cache[key] = { v, t: Date.now() };
+  if (v !== null && v !== undefined) cache[key] = { v, t: Date.now() };
   return v;
 }
 
@@ -608,8 +608,8 @@ async function loadTab(tab) {
 // ═══════════════════════════════════════════════════════
 async function renderSnapshot(page) {
   const [analytics, profile] = await Promise.all([
-    cached('analytics', () => apiJson('/profile/analytics')),
-    cached('profile', () => apiJson('/auth/profile')),
+    cached('analytics', () => apiJson('/profile/analytics').catch(() => null)),
+    cached('profile', () => apiJson('/auth/profile').catch(() => null)),
   ]);
 
   const a = analytics || {};
@@ -697,7 +697,7 @@ function metricCard(label, value, sub) {
 // TAB: PLAN
 // ═══════════════════════════════════════════════════════
 async function renderPlan(page) {
-  const plans = await cached('plans', () => apiJson('/plans'));
+  const plans = await cached('plans', () => apiJson('/plans').catch(() => []));
   const active = plans.find(p => p.accepted);
 
   if (!active) {
@@ -815,7 +815,7 @@ async function renderCalendar(page) {
 
   // Load data in parallel
   const [plans, activities] = await Promise.all([
-    cached('plans', () => apiJson('/plans')),
+    cached('plans', () => apiJson('/plans').catch(() => [])),
     cached('activities', () => apiJson('/activities?days=240').catch(() => [])),
   ]);
   let scheduled = [];
@@ -952,7 +952,7 @@ async function renderCalendar(page) {
 // TAB: FEED
 // ═══════════════════════════════════════════════════════
 async function renderFeed(page) {
-  const events = await cached('feed', () => apiJson('/feed?limit=30'), 30000);
+  const events = await cached('feed', () => apiJson('/feed?limit=30').catch(() => []), 30000);
   if (!events || !events.length) {
     page.innerHTML = '<div class="fade-in"><div class="section-title">Feed</div><div class="empty">No activity yet.</div></div>';
     return;

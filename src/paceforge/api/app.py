@@ -1204,10 +1204,22 @@ async def coach_chat(req: ChatRequest, user: dict = Depends(get_current_user)):
         )
         _user_coach[uid] = coach
 
+    # Load profile/plan from DB if not in memory (mobile web SPA)
+    profile = _user_profile.get(uid)
+    if not profile:
+        cached = load_user_data(settings.db_path, uid)
+        if cached and cached.get("profile_json"):
+            profile = UserFitnessProfile.model_validate_json(cached["profile_json"])
+            _user_profile[uid] = profile
+    if uid not in _user_plans:
+        _user_plans[uid] = _load_plans(uid)
+    plans = _user_plans.get(uid, [])
+    plan = plans[-1] if plans else None
+
     result = coach.chat(
         message=req.message,
-        profile=_user_profile.get(uid),
-        plan=_user_plans.get(uid, [None])[-1] if _user_plans.get(uid) else None,
+        profile=profile,
+        plan=plan,
     )
     return ChatResponse(reply=result.reply)
 
