@@ -157,7 +157,7 @@ a{color:var(--emerald);text-decoration:none}
 .cal-entry{
   display:flex;align-items:center;gap:10px;padding:12px 14px;
   background:var(--card);border:1px solid var(--border);border-radius:var(--r);
-  margin-bottom:8px;
+  margin-bottom:8px;cursor:pointer;
 }
 .cal-entry-bar{width:4px;border-radius:2px;align-self:stretch;flex-shrink:0}
 .cal-entry-info{flex:1;min-width:0}
@@ -241,16 +241,25 @@ a{color:var(--emerald);text-decoration:none}
 .settings-row:last-child{border-bottom:none}
 .settings-label{font-size:.9rem;font-weight:500}
 .settings-value{font-size:.85rem;color:var(--text-2)}
-.toggle{
-  width:44px;height:26px;border-radius:13px;border:none;
-  background:var(--text-3);position:relative;cursor:pointer;transition:background .2s;
+
+/* ── Sub-tabs (Profile sections) ────────────── */
+.sub-tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:14px;-webkit-overflow-scrolling:touch}
+.sub-tabs::-webkit-scrollbar{display:none}
+.sub-tab{
+  flex-shrink:0;padding:7px 14px;border-radius:20px;border:1px solid var(--border);
+  background:var(--card);color:var(--text-2);font-size:.78rem;font-weight:600;
+  cursor:pointer;white-space:nowrap;transition:all .15s;
 }
-.toggle.on{background:var(--emerald)}
-.toggle::after{
-  content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;
-  border-radius:50%;background:#fff;transition:transform .2s var(--ease);
+.sub-tab.active{background:var(--emerald);color:#0F1117;border-color:var(--emerald)}
+
+/* ── Gauge / Progress ───────────────────────── */
+.gauge-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.gauge-bar{flex:1;height:8px;background:var(--elevated);border-radius:4px;overflow:hidden}
+.gauge-fill{height:100%;border-radius:4px;transition:width .4s var(--ease)}
+.grade-badge{
+  display:inline-block;font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:4px;
+  margin-left:6px;
 }
-.toggle.on::after{transform:translateX(18px)}
 
 /* ── HYROX ──────────────────────────────────── */
 .hyrox-station{
@@ -310,6 +319,39 @@ a{color:var(--emerald);text-decoration:none}
 }
 .sheet-overlay.open .sheet{transform:translateY(0)}
 .sheet-handle{width:36px;height:4px;border-radius:2px;background:var(--text-3);margin:0 auto 16px}
+
+/* ── Activity Detail Grid ───────────────────── */
+.detail-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+.detail-item{text-align:center;padding:10px 4px;background:var(--elevated);border-radius:var(--r-sm)}
+.detail-item .d-val{font-family:var(--font-m);font-size:.9rem;font-weight:600}
+.detail-item .d-lbl{font-size:.65rem;color:var(--text-3);margin-top:2px;text-transform:uppercase}
+
+/* ── Plan Header ────────────────────────────── */
+.plan-header{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:14px}
+.plan-title{font-family:var(--font-d);font-weight:700;font-size:1.1rem;margin-bottom:4px}
+.plan-meta{font-size:.8rem;color:var(--text-2);margin-bottom:8px}
+.pace-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
+.pace-item{font-size:.78rem;display:flex;justify-content:space-between;padding:6px 10px;background:var(--elevated);border-radius:var(--r-sm)}
+.pace-label{color:var(--text-2)}
+.pace-val{font-family:var(--font-m);font-weight:600;color:var(--emerald)}
+
+/* ── Top Bar Icons ──────────────────────────── */
+.top-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.top-bar-icons{display:flex;gap:10px}
+.top-bar-icons button{
+  background:none;border:none;color:var(--text-3);cursor:pointer;
+  width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+  border-radius:50%;transition:background .15s;
+}
+.top-bar-icons button:active{background:var(--elevated)}
+.top-bar-icons button svg{width:20px;height:20px}
+
+/* ── Training Effect Bar ────────────────────── */
+.te-bar{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.te-label{font-size:.75rem;color:var(--text-2);width:70px;flex-shrink:0}
+.te-track{flex:1;height:6px;background:var(--elevated);border-radius:3px;overflow:hidden}
+.te-fill{height:100%;border-radius:3px;transition:width .3s var(--ease)}
+.te-val{font-family:var(--font-m);font-size:.75rem;width:28px;text-align:right}
 </style>
 </head>
 <body>
@@ -320,15 +362,15 @@ a{color:var(--emerald);text-decoration:none}
 // PaceForge Mobile Web — Single Page Application
 // ═══════════════════════════════════════════════════════
 
-const API = '';  // same origin — nginx proxies /auth/, /activities, etc.
+const API = '';
 
 // ── State ──────────────────────────────────────────────
 const state = {
   jwt: localStorage.getItem('pf_jwt'),
   refresh: localStorage.getItem('pf_refresh'),
   user: JSON.parse(localStorage.getItem('pf_user') || 'null'),
-  tab: 'snapshot',
-  authPage: 'login', // login | register | forgot
+  tab: 'home',
+  authPage: 'login',
 };
 
 // ── API helpers ────────────────────────────────────────
@@ -380,19 +422,19 @@ function logout() {
   render();
 }
 
-// ── SVG Icons (inline, small) ──────────────────────────
+// ── SVG Icons ──────────────────────────────────────────
 const icons = {
-  snapshot: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"/></svg>`,
+  home: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"/></svg>`,
+  profile: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
   plan: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>`,
   calendar: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>`,
-  feed: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>`,
   coach: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>`,
-  profile: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
-  hyrox: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>`,
+  settings: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>`,
   admin: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>`,
   send: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>`,
   heart: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>`,
   comment: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>`,
+  hyrox: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>`,
 };
 
 const logo = `<svg viewBox="0 0 512 512" fill="none" width="100%"><rect x="100" y="320" width="60" height="120" rx="8" fill="#10B981" opacity=".25"/><rect x="200" y="220" width="60" height="220" rx="8" fill="#10B981" opacity=".5"/><rect x="300" y="100" width="60" height="340" rx="8" fill="#10B981" opacity=".85"/><path d="M130 310 L230 210 L330 90" stroke="#10B981" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M318 118 L330 90 L306 96" stroke="#10B981" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`;
@@ -516,7 +558,6 @@ function bindAuth() {
   on('to-register', 'click', () => { state.authPage = 'register'; render(); });
   on('to-forgot', 'click', () => { state.authPage = 'forgot'; render(); });
 
-  // Check for reset token in URL
   const params = new URLSearchParams(location.search);
   const resetToken = params.get('reset_token');
   if (resetToken) showResetSheet(resetToken);
@@ -546,7 +587,7 @@ function showResetSheet(token) {
       msgEl.innerHTML = '<div class="success-msg">Password has been reset! You can now sign in.</div>';
       history.replaceState(null, '', location.pathname);
       setTimeout(() => { document.getElementById('reset-overlay')?.remove(); }, 2000);
-    } catch (e) { msgEl.innerHTML = `<div class="error-msg">${e.message}</div>`; enableBtn('reset-btn', 'Reset Password'); }
+    } catch (e) { msgEl.innerHTML = `<div class="error-msg">${escHtml(e.message)}</div>`; enableBtn('reset-btn', 'Reset Password'); }
   });
 
   on('reset-overlay', 'click', (e) => {
@@ -559,13 +600,12 @@ function showResetSheet(token) {
 // ═══════════════════════════════════════════════════════
 function renderApp() {
   const tabs = [
-    ['snapshot', 'Home', icons.snapshot],
+    ['home', 'Home', icons.home],
+    ['fitness', 'Profile', icons.profile],
     ['plan', 'Plan', icons.plan],
     ['calendar', 'Calendar', icons.calendar],
-    ['feed', 'Feed', icons.feed],
     ['coach', 'Coach', icons.coach],
   ];
-  // Extra tabs for profile / hyrox / admin accessible via profile page
   return `
     <div class="page" id="page-content"></div>
     <div class="tab-bar">
@@ -591,110 +631,527 @@ async function loadTab(tab) {
   page.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
   try {
     switch (tab) {
-      case 'snapshot': await renderSnapshot(page); break;
+      case 'home': await renderHome(page); break;
+      case 'fitness': await renderFitness(page); break;
       case 'plan': await renderPlan(page); break;
       case 'calendar': await renderCalendar(page); break;
-      case 'feed': await renderFeed(page); break;
       case 'coach': renderCoach(page); break;
+      case 'settings': await renderSettings(page); break;
+      case 'admin': await renderAdminPage(page); break;
+      case 'hyrox': await renderHyroxPage(page); break;
       default: page.innerHTML = '<div class="empty">Coming soon</div>';
     }
   } catch (e) {
-    page.innerHTML = `<div class="empty">Failed to load: ${e.message}</div>`;
+    page.innerHTML = `<div class="empty">Failed to load: ${escHtml(e.message)}</div>`;
   }
 }
 
 // ═══════════════════════════════════════════════════════
-// TAB: SNAPSHOT
+// TAB: HOME (Metrics + Feed)
 // ═══════════════════════════════════════════════════════
-async function renderSnapshot(page) {
-  const [analytics, profile] = await Promise.all([
+async function renderHome(page) {
+  const [analytics, feed] = await Promise.all([
     cached('analytics', () => apiJson('/profile/analytics').catch(() => null)),
-    cached('profile', () => apiJson('/auth/profile').catch(() => null)),
+    cached('feed', () => apiJson('/feed?limit=20').catch(() => []), 30000),
   ]);
 
   const a = analytics || {};
-  const run = a.running_profile || {};
-  const body = a.body_composition || {};
-  const zones = a.heart_rate_zones || {};
-  const preds = a.race_predictions || {};
-  const vo2 = run.estimated_vo2max;
-  const vdot = run.vdot;
-  const weeklyKm = run.weekly_distance_km;
-  const weeklyRuns = run.runs_per_week;
-  const weight = body.weight_kg;
+  const snap = a.snapshot || {};
+  const aero = a.aerobic || {};
+  const loadRec = a.load_recovery || {};
 
-  // Greeting
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
 
   let html = `<div class="fade-in">
-    <div style="margin-bottom:20px">
-      <div style="font-size:.85rem;color:var(--text-2)">${greeting}</div>
-      <div style="font-family:var(--font-d);font-size:1.3rem;font-weight:700">${state.user?.name || 'Runner'}</div>
+    <div class="top-bar">
+      <div>
+        <div style="font-size:.82rem;color:var(--text-2)">${greeting}</div>
+        <div style="font-family:var(--font-d);font-size:1.3rem;font-weight:700">${state.user?.name || 'Runner'}</div>
+      </div>
+      <div class="top-bar-icons">
+        <button onclick="state.tab='settings';loadTab('settings')" title="Settings">${icons.settings}</button>
+        ${state.user?.role === 'admin' ? `<button onclick="state.tab='admin';loadTab('admin')" title="Admin">${icons.admin}</button>` : ''}
+      </div>
     </div>
 
     <div class="metric-grid">
-      ${metricCard('VDOT', vdot ? vdot.toFixed(1) : '—', 'Fitness level')}
-      ${metricCard('VO₂max', vo2 ? vo2.toFixed(1) : '—', 'ml/kg/min')}
-      ${metricCard('Weekly', weeklyKm ? weeklyKm.toFixed(0) + ' km' : '—', weeklyRuns ? weeklyRuns + ' runs/wk' : '')}
-      ${metricCard('Weight', weight ? weight.toFixed(1) + ' kg' : '—', '')}
+      ${metricCard('VDOT', snap.vdot ? snap.vdot.toFixed(1) : '—', snap.fitness_level || '')}
+      ${metricCard('VO₂max', aero.vo2max_category || '—', aero.cardiac_efficiency ? 'Cardiac: ' + aero.cardiac_efficiency : '')}
+      ${metricCard('Status', snap.training_status || '—', loadRec.fatigue_risk ? 'Fatigue: ' + loadRec.fatigue_risk : '')}
+      ${metricCard('Battery', loadRec.body_battery != null ? loadRec.body_battery : '—', loadRec.stress_level ? 'Stress: ' + loadRec.stress_level : '')}
     </div>`;
 
-  // HR Zones
-  if (zones.zones && zones.zones.length) {
-    html += `<div class="section-title">Heart Rate Zones</div><div class="card">`;
-    const maxPct = Math.max(...zones.zones.map(z => z.percentage || 0), 1);
-    for (const z of zones.zones) {
-      const pct = z.percentage || 0;
-      const barW = Math.max(pct / maxPct * 100, 2);
-      const color = ['#10B981','#0EA5E9','#F59E0B','#F97316','#F43F5E'][z.zone - 1] || '#8B95AD';
-      html += `<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-        <span style="width:22px;font-size:.75rem;color:var(--text-3);font-weight:600">Z${z.zone}</span>
-        <div style="flex:1;height:18px;background:var(--elevated);border-radius:4px;overflow:hidden">
-          <div style="height:100%;width:${barW}%;background:${color};border-radius:4px;transition:width .4s var(--ease)"></div>
-        </div>
-        <span style="width:38px;text-align:right;font-family:var(--font-m);font-size:.75rem;color:var(--text-2)">${pct.toFixed(0)}%</span>
-      </div>`;
+  // Feed section
+  html += `<div class="section-title" style="margin-top:8px">Activity Feed</div>`;
+  if (feed && feed.length) {
+    for (const ev of feed) {
+      html += renderFeedItem(ev);
     }
-    html += `</div>`;
+  } else {
+    html += '<div class="empty" style="padding:20px 0">No activity yet.</div>';
   }
-
-  // Race predictions
-  if (preds.predictions && preds.predictions.length) {
-    html += `<div class="section-title">Race Predictions</div><div class="card">`;
-    for (const p of preds.predictions) {
-      html += `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
-        <span style="font-weight:500;font-size:.88rem">${p.distance}</span>
-        <span style="font-family:var(--font-m);font-size:.88rem;color:var(--emerald)">${p.time}</span>
-      </div>`;
-    }
-    html += `</div>`;
-  }
-
-  // Quick links
-  html += `
-    <div style="margin-top:8px;display:flex;flex-direction:column;gap:8px">
-      <button class="btn btn-ghost" onclick="state.tab='profile';loadTab('profile')">
-        ${icons.profile} Profile & Settings
-      </button>
-      ${state.user?.role === 'admin' ? `<button class="btn btn-ghost" onclick="state.tab='admin';loadTab('admin')">
-        ${icons.admin} Admin Panel
-      </button>` : ''}
-      <button class="btn btn-ghost" onclick="state.tab='hyrox';loadTab('hyrox')">
-        ${icons.hyrox} HYROX
-      </button>
-    </div>
-  </div>`;
-
+  html += '</div>';
   page.innerHTML = html;
+  bindFeedActions(page);
 }
 
-function metricCard(label, value, sub) {
-  return `<div class="metric"><div class="metric-label">${label}</div><div class="metric-value">${value}</div>${sub ? `<div class="metric-sub">${sub}</div>` : ''}</div>`;
+function renderFeedItem(ev) {
+  const initials = (ev.user_name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  const timeAgo = formatTimeAgo(ev.created_at);
+  const likeCount = ev.like_count || 0;
+  const commentCount = ev.comment_count || 0;
+  const isLiked = ev.user_liked;
+
+  // Show metadata for activity events
+  let metaHtml = '';
+  if (ev.metadata) {
+    const m = ev.metadata;
+    const parts = [];
+    if (m.distance_km) parts.push(m.distance_km.toFixed(1) + ' km');
+    else if (m.distance_meters) parts.push((m.distance_meters / 1000).toFixed(1) + ' km');
+    if (m.pace) parts.push(m.pace + '/km');
+    else if (m.avg_pace_sec_per_km) parts.push(formatPace(m.avg_pace_sec_per_km) + '/km');
+    if (m.avg_hr) parts.push(m.avg_hr + ' bpm');
+    if (parts.length) metaHtml = `<div style="font-size:.78rem;color:var(--text-3);margin-top:4px;font-family:var(--font-m)">${parts.join(' · ')}</div>`;
+  }
+
+  return `<div class="feed-item" id="feed-${ev.id}">
+    <div class="feed-header">
+      <div class="feed-avatar">${initials}</div>
+      <div style="flex:1">
+        <div class="feed-user">${escHtml(ev.user_name || 'User')}</div>
+        <div class="feed-time">${timeAgo}</div>
+      </div>
+    </div>
+    <div class="feed-body"><b>${escHtml(ev.title)}</b>${ev.body ? '<br>' + escHtml(ev.body) : ''}${metaHtml}</div>
+    <div class="feed-actions">
+      <button class="${isLiked ? 'liked' : ''}" data-like="${ev.id}">${icons.heart} <span>${likeCount}</span></button>
+      <button data-comments="${ev.id}">${icons.comment} <span>${commentCount}</span></button>
+    </div>
+    <div id="comments-${ev.id}"></div>
+  </div>`;
+}
+
+function bindFeedActions(page) {
+  page.querySelectorAll('[data-like]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.like;
+      try {
+        const res = await apiJson(`/feed/${id}/like`, { method: 'POST' });
+        const span = btn.querySelector('span');
+        if (res.liked) { btn.classList.add('liked'); span.textContent = +span.textContent + 1; }
+        else { btn.classList.remove('liked'); span.textContent = Math.max(0, +span.textContent - 1); }
+      } catch {}
+    });
+  });
+
+  page.querySelectorAll('[data-comments]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.comments;
+      const container = document.getElementById(`comments-${id}`);
+      if (container.innerHTML) { container.innerHTML = ''; return; }
+      try {
+        const comments = await apiJson(`/feed/${id}/comments`);
+        let ch = '<div class="comment-list">';
+        for (const c of comments || []) {
+          ch += `<div class="comment"><b>${escHtml(c.user_name || 'User')}:</b> ${escHtml(c.body)}</div>`;
+        }
+        ch += `<div class="comment-input">
+          <input placeholder="Add a comment..." id="ci-${id}">
+          <button data-send-comment="${id}">Send</button>
+        </div></div>`;
+        container.innerHTML = ch;
+        const sendBtn = container.querySelector(`[data-send-comment="${id}"]`);
+        sendBtn?.addEventListener('click', async () => {
+          const input = document.getElementById(`ci-${id}`);
+          const body = input.value.trim();
+          if (!body) return;
+          await apiJson(`/feed/${id}/comment`, { method: 'POST', body: JSON.stringify({ body }) });
+          input.value = '';
+          clearCache('feed');
+          const count = btn.querySelector('span');
+          count.textContent = +count.textContent + 1;
+          const updated = await apiJson(`/feed/${id}/comments`);
+          let uch = '';
+          for (const c of updated || []) { uch += `<div class="comment"><b>${escHtml(c.user_name || 'User')}:</b> ${escHtml(c.body)}</div>`; }
+          container.innerHTML = `<div class="comment-list">${uch}<div class="comment-input"><input placeholder="Add a comment..." id="ci-${id}"><button data-send-comment="${id}">Send</button></div></div>`;
+        });
+      } catch {}
+    });
+  });
 }
 
 // ═══════════════════════════════════════════════════════
-// TAB: PLAN
+// TAB: FITNESS PROFILE (7 sub-sections)
+// ═══════════════════════════════════════════════════════
+async function renderFitness(page) {
+  const analytics = await cached('analytics', () => apiJson('/profile/analytics').catch(() => null));
+  if (!analytics) {
+    page.innerHTML = '<div class="fade-in"><div class="section-title">Fitness Profile</div><div class="empty">No data. Sync from Garmin first.</div></div>';
+    return;
+  }
+
+  const subTabs = [
+    ['snapshot', 'Snapshot'],
+    ['aerobic', 'Aerobic'],
+    ['economy', 'Economy'],
+    ['load', 'Load'],
+    ['races', 'Races'],
+    ['training', 'Training'],
+    ['hyrox_p', 'HYROX'],
+  ];
+
+  let activeSub = 'snapshot';
+
+  function drawFitness() {
+    let html = `<div class="fade-in">
+      <div class="section-title">Fitness Profile</div>
+      <div class="sub-tabs">
+        ${subTabs.map(([id, label]) => `<button class="sub-tab ${activeSub === id ? 'active' : ''}" data-sub="${id}">${label}</button>`).join('')}
+      </div>
+      <div id="fitness-content"></div>
+    </div>`;
+    page.innerHTML = html;
+
+    page.querySelectorAll('.sub-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        activeSub = btn.dataset.sub;
+        page.querySelectorAll('.sub-tab').forEach(b => b.classList.toggle('active', b.dataset.sub === activeSub));
+        drawSubContent();
+      });
+    });
+    drawSubContent();
+  }
+
+  function drawSubContent() {
+    const el = document.getElementById('fitness-content');
+    if (!el) return;
+    switch (activeSub) {
+      case 'snapshot': el.innerHTML = renderSnapshot(analytics); break;
+      case 'aerobic': el.innerHTML = renderAerobic(analytics); break;
+      case 'economy': el.innerHTML = renderEconomy(analytics); break;
+      case 'load': el.innerHTML = renderLoadRecovery(analytics); break;
+      case 'races': el.innerHTML = renderRaces(analytics); break;
+      case 'training': el.innerHTML = renderTraining(analytics); break;
+      case 'hyrox_p': el.innerHTML = renderHyroxProfile(analytics); break;
+    }
+  }
+
+  drawFitness();
+}
+
+function renderSnapshot(a) {
+  const s = a.snapshot || {};
+  const levelColors = { Beginner: 'var(--sky)', Intermediate: 'var(--emerald)', Advanced: 'var(--amber)', Elite: 'var(--rose)' };
+  const color = levelColors[s.fitness_level] || 'var(--text-2)';
+
+  let html = `<div class="card">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <span style="font-family:var(--font-d);font-weight:700;font-size:1.1rem">${s.fitness_level || '—'}</span>
+      <span class="grade-badge" style="background:${color}22;color:${color}">${s.training_status || ''}</span>
+    </div>
+    ${s.vdot ? `<div style="font-size:.85rem;color:var(--text-2);margin-bottom:8px">VDOT: <span style="font-family:var(--font-m);color:var(--emerald)">${s.vdot.toFixed(1)}</span></div>` : ''}
+    ${s.training_age_estimate ? `<div style="font-size:.82rem;color:var(--text-2)">Training age: ${s.training_age_estimate}</div>` : ''}
+  </div>`;
+
+  if (s.strengths && s.strengths.length) {
+    html += `<div class="card">
+      <div style="font-weight:600;font-size:.85rem;margin-bottom:8px;color:var(--emerald)">Strengths</div>
+      ${s.strengths.map(x => `<div style="font-size:.82rem;color:var(--text-2);padding:3px 0">+ ${escHtml(x)}</div>`).join('')}
+    </div>`;
+  }
+  if (s.weaknesses && s.weaknesses.length) {
+    html += `<div class="card">
+      <div style="font-weight:600;font-size:.85rem;margin-bottom:8px;color:var(--amber)">Areas to Improve</div>
+      ${s.weaknesses.map(x => `<div style="font-size:.82rem;color:var(--text-2);padding:3px 0">- ${escHtml(x)}</div>`).join('')}
+    </div>`;
+  }
+  return html;
+}
+
+function renderAerobic(a) {
+  const ae = a.aerobic || {};
+  let html = `<div class="card">
+    <div style="font-weight:600;font-size:.85rem;margin-bottom:10px">Aerobic Engine</div>
+    ${labelValue('VO₂max Category', ae.vo2max_category)}
+    ${ae.vo2max_interpretation ? `<div style="font-size:.82rem;color:var(--text-2);margin-bottom:10px">${escHtml(ae.vo2max_interpretation)}</div>` : ''}
+    ${labelValue('Threshold Quality', ae.threshold_quality)}
+    ${labelValue('Cardiac Efficiency', ae.cardiac_efficiency)}
+    ${ae.threshold_pct_of_vo2max != null ? labelValue('Threshold % of VO₂max', ae.threshold_pct_of_vo2max.toFixed(0) + '%') : ''}
+    ${ae.aerobic_decoupling_pct != null ? labelValue('Aerobic Decoupling', ae.aerobic_decoupling_pct.toFixed(1) + '%') : ''}
+  </div>`;
+
+  if (ae.aerobic_ratio != null) {
+    const aeroW = Math.round(ae.aerobic_ratio * 100);
+    html += `<div class="card">
+      <div style="font-weight:600;font-size:.85rem;margin-bottom:8px">Training Distribution</div>
+      <div class="gauge-row">
+        <span style="font-size:.75rem;color:var(--sky);width:50px">Aerobic</span>
+        <div class="gauge-bar"><div class="gauge-fill" style="width:${aeroW}%;background:var(--sky)"></div></div>
+        <span style="font-family:var(--font-m);font-size:.75rem;width:36px;text-align:right">${aeroW}%</span>
+      </div>
+      <div class="gauge-row">
+        <span style="font-size:.75rem;color:var(--rose);width:50px">Anaero</span>
+        <div class="gauge-bar"><div class="gauge-fill" style="width:${100-aeroW}%;background:var(--rose)"></div></div>
+        <span style="font-family:var(--font-m);font-size:.75rem;width:36px;text-align:right">${100-aeroW}%</span>
+      </div>
+    </div>`;
+  }
+  return html;
+}
+
+function renderEconomy(a) {
+  const e = a.economy || {};
+  const gradeColors = { Excellent: 'var(--emerald)', Optimal: 'var(--emerald)', Good: 'var(--sky)', Average: 'var(--amber)', 'Slightly Low': 'var(--amber)', Low: 'var(--rose)', High: 'var(--amber)', 'Needs Work': 'var(--rose)' };
+
+  function econRow(label, value, unit, grade) {
+    const gc = gradeColors[grade] || 'var(--text-2)';
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div><div style="font-size:.85rem;font-weight:500">${label}</div><div style="font-size:.75rem;color:var(--text-3)">${unit}</div></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-family:var(--font-m);font-size:.9rem">${value ?? '—'}</span>
+        ${grade ? `<span class="grade-badge" style="background:${gc}22;color:${gc}">${grade}</span>` : ''}
+      </div>
+    </div>`;
+  }
+
+  let html = `<div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <span style="font-weight:600;font-size:.85rem">Running Economy</span>
+      ${e.overall_grade ? `<span style="font-family:var(--font-m);font-size:1.1rem;font-weight:700;color:var(--emerald)">${e.overall_grade}</span>` : ''}
+    </div>
+    ${econRow('Cadence', e.cadence_avg != null ? Math.round(e.cadence_avg) : null, 'spm', e.cadence_grade)}
+    ${econRow('Stride Length', e.stride_length_avg != null ? e.stride_length_avg.toFixed(2) : null, 'm', e.stride_grade)}
+    ${econRow('Ground Contact', e.gct_avg != null ? Math.round(e.gct_avg) : null, 'ms', e.gct_grade)}
+    ${econRow('Vert Oscillation', e.vert_osc_avg != null ? e.vert_osc_avg.toFixed(1) : null, 'cm', e.vert_osc_grade)}
+    ${e.vert_ratio_avg != null ? econRow('Vert Ratio', e.vert_ratio_avg.toFixed(1), '%', null) : ''}
+  </div>`;
+
+  if (e.inefficiencies && e.inefficiencies.length) {
+    html += `<div class="card">
+      <div style="font-weight:600;font-size:.85rem;margin-bottom:8px;color:var(--amber)">Inefficiencies</div>
+      ${e.inefficiencies.map(x => `<div style="font-size:.82rem;color:var(--text-2);padding:3px 0">• ${escHtml(x)}</div>`).join('')}
+    </div>`;
+  }
+  return html;
+}
+
+function renderLoadRecovery(a) {
+  const lr = a.load_recovery || {};
+
+  function gaugeCard(label, value, max, color, sub) {
+    const pct = value != null ? Math.min(100, Math.round((value / max) * 100)) : 0;
+    return `<div style="text-align:center;padding:12px">
+      <div style="font-size:.7rem;color:var(--text-3);text-transform:uppercase;margin-bottom:6px">${label}</div>
+      <div style="font-family:var(--font-m);font-size:1.4rem;font-weight:700;color:${color}">${value ?? '—'}</div>
+      <div class="gauge-bar" style="margin-top:6px"><div class="gauge-fill" style="width:${pct}%;background:${color}"></div></div>
+      ${sub ? `<div style="font-size:.72rem;color:var(--text-2);margin-top:4px">${sub}</div>` : ''}
+    </div>`;
+  }
+
+  let html = `<div class="card">
+    <div style="font-weight:600;font-size:.85rem;margin-bottom:12px">Load & Recovery</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border-radius:var(--r-sm);overflow:hidden">
+      <div style="background:var(--card)">${gaugeCard('Body Battery', lr.body_battery, 100, 'var(--emerald)', '')}</div>
+      <div style="background:var(--card)">${gaugeCard('Sleep', lr.sleep_score, 100, 'var(--sky)', lr.sleep_quality || '')}</div>
+    </div>
+  </div>`;
+
+  html += `<div class="card">
+    ${labelValue('Load Status', lr.load_status)}
+    ${labelValue('Training Load (7d)', lr.training_load_7day != null ? lr.training_load_7day.toFixed(0) : '—')}
+    ${labelValue('Load Focus', lr.load_focus || '—')}
+    ${labelValue('HRV', lr.hrv_assessment)}
+    ${labelValue('Stress', lr.stress_level)}
+    ${labelValue('Fatigue Risk', lr.fatigue_risk)}
+  </div>`;
+
+  if (lr.recovery_tips && lr.recovery_tips.length) {
+    html += `<div class="card">
+      <div style="font-weight:600;font-size:.85rem;margin-bottom:8px">Recovery Tips</div>
+      ${lr.recovery_tips.map(t => `<div style="font-size:.82rem;color:var(--text-2);padding:3px 0">• ${escHtml(t)}</div>`).join('')}
+    </div>`;
+  }
+  return html;
+}
+
+function renderRaces(a) {
+  const rp = a.race_predictions || {};
+  let html = '';
+
+  if (rp.predictions && rp.predictions.length) {
+    html += `<div class="card">
+      <div style="font-weight:600;font-size:.85rem;margin-bottom:10px">Race Predictions</div>`;
+    for (const p of rp.predictions) {
+      const time = formatSeconds(p.predicted_seconds);
+      const pace = formatPace(p.pace_sec_per_km);
+      const confColor = p.confidence === 'High' ? 'var(--emerald)' : p.confidence === 'Moderate' ? 'var(--amber)' : 'var(--text-3)';
+      html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-weight:500;font-size:.88rem">${p.distance}</div>
+          <div style="font-size:.75rem;color:var(--text-3)">${pace}/km</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-family:var(--font-m);font-size:.9rem;color:var(--emerald)">${time}</div>
+          <div style="font-size:.65rem;color:${confColor}">${p.confidence || ''}</div>
+        </div>
+      </div>`;
+    }
+    html += `</div>`;
+  }
+
+  html += `<div class="card">
+    ${labelValue('Fatigue Resistance', rp.fatigue_resistance != null ? rp.fatigue_resistance.toFixed(2) : '—')}
+    ${labelValue('Distance Bias', rp.distance_bias || '—')}
+    ${labelValue('Optimal Distance', rp.optimal_distance || '—')}
+  </div>`;
+
+  if (rp.equivalent_performances && rp.equivalent_performances.length) {
+    html += `<div class="card">
+      <div style="font-weight:600;font-size:.85rem;margin-bottom:8px">Equivalent Performances</div>`;
+    for (const ep of rp.equivalent_performances) {
+      html += `<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:.82rem">
+        <span>${ep.distance}</span>
+        <span style="font-family:var(--font-m);color:var(--text-2)">${ep.time} (${ep.pace}/km)</span>
+      </div>`;
+    }
+    html += `</div>`;
+  }
+
+  if (rp.consistency_notes && rp.consistency_notes.length) {
+    html += `<div class="card">
+      <div style="font-weight:600;font-size:.85rem;margin-bottom:8px">Notes</div>
+      ${rp.consistency_notes.map(n => `<div style="font-size:.82rem;color:var(--text-2);padding:3px 0">• ${escHtml(n)}</div>`).join('')}
+    </div>`;
+  }
+  return html;
+}
+
+function renderTraining(a) {
+  const rec = a.recommendations || {};
+  let html = '';
+
+  if (rec.split_pct) {
+    const sp = rec.split_pct;
+    html += `<div class="card">
+      <div style="font-weight:600;font-size:.85rem;margin-bottom:10px">Training Split</div>`;
+    const splits = [
+      ['Aerobic', sp.aerobic, 'var(--sky)'],
+      ['Threshold', sp.threshold, 'var(--amber)'],
+      ['High Intensity', sp.high_intensity, 'var(--rose)'],
+      ['Strength/HYROX', sp.strength_hyrox, 'var(--violet)'],
+    ];
+    for (const [label, pct, color] of splits) {
+      if (pct == null) continue;
+      html += `<div class="gauge-row">
+        <span style="font-size:.75rem;color:var(--text-2);width:90px">${label}</span>
+        <div class="gauge-bar"><div class="gauge-fill" style="width:${pct}%;background:${color}"></div></div>
+        <span style="font-family:var(--font-m);font-size:.75rem;width:36px;text-align:right">${pct.toFixed(0)}%</span>
+      </div>`;
+    }
+    html += `</div>`;
+  }
+
+  if (rec.key_sessions && rec.key_sessions.length) {
+    html += `<div class="card">
+      <div style="font-weight:600;font-size:.85rem;margin-bottom:10px">Key Sessions</div>`;
+    for (const ks of rec.key_sessions) {
+      html += `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="font-weight:600;font-size:.85rem">${escHtml(ks.name)}</div>
+        <div style="font-size:.82rem;color:var(--text-2);margin-top:2px">${escHtml(ks.description)}</div>
+        <div style="font-size:.78rem;color:var(--text-3);margin-top:4px">
+          ${ks.pace_target ? 'Pace: ' + ks.pace_target : ''} ${ks.hr_target ? '· HR: ' + ks.hr_target : ''}
+        </div>
+      </div>`;
+    }
+    html += `</div>`;
+  }
+
+  if (rec.benchmarks && rec.benchmarks.length) {
+    html += `<div class="card">
+      <div style="font-weight:600;font-size:.85rem;margin-bottom:10px">Benchmarks</div>`;
+    for (const b of rec.benchmarks) {
+      html += `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="font-weight:500;font-size:.85rem;margin-bottom:4px">${escHtml(b.metric)}</div>
+        <div style="display:flex;gap:8px;font-size:.75rem">
+          <span style="color:var(--text-2)">Now: <b style="color:var(--text)">${b.current}</b></span>
+          <span style="color:var(--text-3)">4w: ${b.target_4wk}</span>
+          <span style="color:var(--text-3)">8w: ${b.target_8wk}</span>
+          <span style="color:var(--emerald)">12w: ${b.target_12wk}</span>
+        </div>
+      </div>`;
+    }
+    html += `</div>`;
+  }
+
+  if (rec.recovery_optimization && rec.recovery_optimization.length) {
+    html += `<div class="card">
+      <div style="font-weight:600;font-size:.85rem;margin-bottom:8px">Recovery Optimization</div>
+      ${rec.recovery_optimization.map(r => `<div style="font-size:.82rem;color:var(--text-2);padding:3px 0">• ${escHtml(r)}</div>`).join('')}
+    </div>`;
+  }
+  return html;
+}
+
+function renderHyroxProfile(a) {
+  const h = a.hyrox || {};
+  let html = `<div class="card">
+    <div style="font-weight:600;font-size:.85rem;margin-bottom:10px">HYROX Predictions</div>
+    ${labelValue('Sustainable 1km Pace', h.sustainable_1km_pace != null ? formatPace(h.sustainable_1km_pace) + '/km' : '—')}
+    ${labelValue('Total Running Time', h.total_running_time != null ? formatSeconds(h.total_running_time) : '—')}
+    ${labelValue('Pace Fade', h.pace_fade_pct != null ? h.pace_fade_pct.toFixed(1) + '%' : '—')}
+    ${labelValue('Fade Pattern', h.fade_pattern || '—')}
+    ${labelValue('Compromised Running', h.compromised_running_class || '—')}
+  </div>`;
+
+  if (h.race_1km_splits && h.race_1km_splits.length) {
+    html += `<div class="card">
+      <div style="font-weight:600;font-size:.85rem;margin-bottom:8px">Predicted 1km Splits</div>`;
+    const maxSplit = Math.max(...h.race_1km_splits);
+    h.race_1km_splits.forEach((s, i) => {
+      const pct = Math.round((s / maxSplit) * 100);
+      html += `<div class="gauge-row">
+        <span style="font-size:.75rem;color:var(--text-3);width:30px">R${i + 1}</span>
+        <div class="gauge-bar"><div class="gauge-fill" style="width:${pct}%;background:var(--emerald)"></div></div>
+        <span style="font-family:var(--font-m);font-size:.75rem;width:44px;text-align:right">${formatPace(s)}</span>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  if (h.energy_system_pct) {
+    const esp = h.energy_system_pct;
+    html += `<div class="card">
+      <div style="font-weight:600;font-size:.85rem;margin-bottom:8px">Energy Systems</div>`;
+    const systems = [
+      ['Aerobic', esp.aerobic, 'var(--sky)'],
+      ['Threshold', esp.threshold, 'var(--amber)'],
+      ['Anaerobic', esp.anaerobic, 'var(--rose)'],
+      ['Muscular', esp.muscular_endurance, 'var(--violet)'],
+    ];
+    for (const [label, pct, color] of systems) {
+      if (pct == null) continue;
+      html += `<div class="gauge-row">
+        <span style="font-size:.75rem;color:var(--text-2);width:70px">${label}</span>
+        <div class="gauge-bar"><div class="gauge-fill" style="width:${pct}%;background:${color}"></div></div>
+        <span style="font-family:var(--font-m);font-size:.75rem;width:36px;text-align:right">${pct.toFixed(0)}%</span>
+      </div>`;
+    }
+    html += `</div>`;
+  }
+
+  if (h.top_limiters && h.top_limiters.length) {
+    html += `<div class="card">
+      <div style="font-weight:600;font-size:.85rem;margin-bottom:8px;color:var(--amber)">Top Limiters</div>
+      ${h.top_limiters.map(l => `<div style="font-size:.82rem;color:var(--text-2);padding:3px 0">• ${escHtml(l)}</div>`).join('')}
+    </div>`;
+  }
+  return html;
+}
+
+// ═══════════════════════════════════════════════════════
+// TAB: PLAN (Full details)
 // ═══════════════════════════════════════════════════════
 async function renderPlan(page) {
   const plans = await cached('plans', () => apiJson('/plans').catch(() => []));
@@ -716,64 +1173,131 @@ async function renderPlan(page) {
     if (wDates.some(d => d >= today)) currentWeek = currentWeek || i;
   });
 
-  function renderWeek(wi) {
-    const w = weeks[wi];
-    if (!w) return '';
-    let html = '';
-    for (const wo of w.workouts || []) {
-      const typeColors = { easy_run: 'var(--emerald)', tempo: 'var(--amber)', long_run: 'var(--sky)', speed: 'var(--rose)', rest: 'var(--text-3)' };
-      const color = typeColors[wo.workout_type] || 'var(--text-2)';
-      const dist = wo.estimated_distance_meters ? (wo.estimated_distance_meters / 1000).toFixed(1) + ' km' : '';
-      const badge = wo.completed ? `<span class="wo-badge" style="background:var(--emerald-d);color:var(--emerald)">Done</span>` : '';
-      html += `<div class="workout-card" data-wo='${JSON.stringify(wo).replace(/'/g, "&#39;")}'>
-        <div class="wo-bar" style="background:${color}"></div>
-        <div class="wo-info">
-          <div class="wo-name">${wo.name || 'Workout'}</div>
-          <div class="wo-meta">${wo.scheduled_date || ''} ${dist ? '· ' + dist : ''}</div>
-        </div>
-        ${badge}
-      </div>`;
-    }
-    return html;
+  // Plan header with full details
+  let html = `<div class="fade-in">
+    <div class="plan-header">
+      <div class="plan-title">${escHtml(active.name || 'Training Plan')}</div>
+      <div class="plan-meta">
+        ${active.goal_type || ''} ${active.target_date ? '· Target: ' + active.target_date : ''}
+        ${active.target_time_seconds ? '· Goal: ' + formatSeconds(active.target_time_seconds) : ''}
+        ${active.total_weeks ? '· ' + active.total_weeks + ' weeks' : ''}
+      </div>
+      ${active.created_at ? `<div style="font-size:.75rem;color:var(--text-3)">Created ${active.created_at}${active.pace_source ? ' · Paces from ' + active.pace_source : ''}</div>` : ''}
+      ${active.vdot ? `<div style="font-size:.78rem;color:var(--text-2);margin-top:6px">VDOT: <span style="font-family:var(--font-m);color:var(--emerald)">${active.vdot.toFixed(1)}</span></div>` : ''}
+
+      <div class="pace-grid">
+        ${paceItem('Easy', active.easy_pace)}
+        ${paceItem('Marathon', active.marathon_pace)}
+        ${paceItem('Threshold', active.threshold_pace)}
+        ${paceItem('Interval', active.interval_pace)}
+        ${paceItem('Repetition', active.repetition_pace)}
+      </div>
+    </div>`;
+
+  // Rationale
+  if (active.rationale) {
+    html += `<div class="card">
+      <div style="font-weight:600;font-size:.85rem;margin-bottom:6px">Plan Rationale</div>
+      <div style="font-size:.82rem;color:var(--text-2);line-height:1.5">${escHtml(active.rationale)}</div>
+    </div>`;
   }
 
-  let html = `<div class="fade-in">
-    <div class="section-title">Training Plan</div>
-    <div style="font-size:.82rem;color:var(--text-2);margin-bottom:12px">
-      ${active.goal_type || ''} ${active.target_date ? '· Target: ' + active.target_date : ''}
-    </div>
-    <div class="week-nav" id="week-nav">
-      ${weeks.map((w, i) => `<button class="week-btn ${i === currentWeek ? 'active' : ''}" data-week="${i}">W${i + 1}</button>`).join('')}
-    </div>
-    <div id="week-content">${renderWeek(currentWeek)}</div>
+  // Tips
+  if (active.tips && active.tips.length) {
+    html += `<div class="card">
+      <div style="font-weight:600;font-size:.85rem;margin-bottom:6px">Tips</div>
+      ${active.tips.map(t => `<div style="font-size:.82rem;color:var(--text-2);padding:3px 0">• ${escHtml(t)}</div>`).join('')}
+    </div>`;
+  }
+
+  // Athlete summary
+  if (active.athlete_summary) {
+    html += `<div class="card">
+      <div style="font-weight:600;font-size:.85rem;margin-bottom:6px">Athlete Summary</div>
+      <div style="font-size:.82rem;color:var(--text-2);line-height:1.5">${escHtml(active.athlete_summary)}</div>
+    </div>`;
+  }
+
+  // Week selector
+  html += `<div class="week-nav" id="week-nav">
+    ${weeks.map((w, i) => {
+      const phaseLabel = w.phase ? ` · ${w.phase}` : '';
+      return `<button class="week-btn ${i === currentWeek ? 'active' : ''}" data-week="${i}" title="${w.focus || ''}">W${i + 1}${phaseLabel}</button>`;
+    }).join('')}
+  </div>
+  <div id="week-info"></div>
+  <div id="week-content"></div>
   </div>`;
 
   page.innerHTML = html;
 
-  // Scroll to current week button
+  function renderWeekContent(wi) {
+    const w = weeks[wi];
+    if (!w) return;
+
+    // Week info
+    const infoEl = document.getElementById('week-info');
+    if (infoEl) {
+      let info = '';
+      if (w.phase || w.focus || w.total_distance_km) {
+        info = `<div class="card" style="padding:12px">
+          <div style="font-size:.82rem;color:var(--text-2)">
+            ${w.phase ? `<b>${w.phase}</b>` : ''} ${w.focus ? '· ' + escHtml(w.focus) : ''}
+            ${w.total_distance_km ? ` · ${w.total_distance_km.toFixed(0)} km total` : ''}
+          </div>
+        </div>`;
+      }
+      infoEl.innerHTML = info;
+    }
+
+    // Workouts
+    const contentEl = document.getElementById('week-content');
+    if (!contentEl) return;
+    let whtml = '';
+    for (const wo of w.workouts || []) {
+      const typeColors = { easy_run: 'var(--emerald)', tempo: 'var(--amber)', long_run: 'var(--sky)', intervals: 'var(--rose)', speed: 'var(--rose)', threshold: 'var(--amber)', recovery_run: 'var(--text-3)', rest: 'var(--text-3)', race_pace: 'var(--violet)', fartlek: 'var(--sky)', hyrox_mixed: 'var(--violet)', cross_training: 'var(--text-2)' };
+      const color = typeColors[wo.workout_type] || 'var(--text-2)';
+      const dist = wo.estimated_distance_meters ? (wo.estimated_distance_meters / 1000).toFixed(1) + ' km' : '';
+      const dur = wo.estimated_duration_seconds ? Math.round(wo.estimated_duration_seconds / 60) + ' min' : '';
+      const badge = wo.completed ? `<span class="wo-badge" style="background:var(--emerald-d);color:var(--emerald)">Done</span>` : '';
+      whtml += `<div class="workout-card" data-wo='${JSON.stringify(wo).replace(/'/g, "&#39;")}'>
+        <div class="wo-bar" style="background:${color}"></div>
+        <div class="wo-info">
+          <div class="wo-name">${escHtml(wo.name || 'Workout')}</div>
+          <div class="wo-meta">${wo.scheduled_date || ''} ${dist ? '· ' + dist : ''} ${dur ? '· ~' + dur : ''}</div>
+          ${wo.purpose ? `<div class="wo-meta" style="color:var(--text-3)">${wo.purpose.replace(/_/g, ' ')}</div>` : ''}
+        </div>
+        ${badge}
+      </div>`;
+    }
+    contentEl.innerHTML = whtml;
+    bindWorkoutCards();
+  }
+
+  // Scroll to active week
   const activeBtn = page.querySelector('.week-btn.active');
   if (activeBtn) activeBtn.scrollIntoView({ inline: 'center', block: 'nearest' });
 
-  // Week nav
   page.querySelectorAll('.week-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       page.querySelectorAll('.week-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      document.getElementById('week-content').innerHTML = renderWeek(+btn.dataset.week);
-      bindWorkoutCards();
+      renderWeekContent(+btn.dataset.week);
     });
   });
 
-  bindWorkoutCards();
+  renderWeekContent(currentWeek);
+}
+
+function paceItem(label, secPerKm) {
+  if (!secPerKm) return '';
+  return `<div class="pace-item"><span class="pace-label">${label}</span><span class="pace-val">${formatPace(secPerKm)}/km</span></div>`;
 }
 
 function bindWorkoutCards() {
   document.querySelectorAll('.workout-card[data-wo]').forEach(card => {
     card.addEventListener('click', () => {
-      try {
-        const wo = JSON.parse(card.dataset.wo);
-        showWorkoutSheet(wo);
-      } catch {}
+      try { showWorkoutSheet(JSON.parse(card.dataset.wo)); } catch {}
     });
   });
 }
@@ -781,71 +1305,86 @@ function bindWorkoutCards() {
 function showWorkoutSheet(wo) {
   const dist = wo.estimated_distance_meters ? (wo.estimated_distance_meters / 1000).toFixed(1) + ' km' : '';
   const dur = wo.estimated_duration_seconds ? Math.round(wo.estimated_duration_seconds / 60) + ' min' : '';
+
   let stepsHtml = '';
   if (wo.steps && wo.steps.length) {
     stepsHtml = `<div style="margin-top:12px"><div style="font-weight:600;font-size:.85rem;margin-bottom:8px">Steps</div>`;
     for (const s of wo.steps) {
       stepsHtml += `<div style="padding:8px 12px;background:var(--elevated);border-radius:var(--r-sm);margin-bottom:6px;font-size:.82rem">
-        <div style="font-weight:500">${s.description || s.type || 'Step'}</div>
+        <div style="font-weight:500">${escHtml(s.description || s.type || 'Step')}</div>
         ${s.duration ? `<div style="color:var(--text-2);margin-top:2px">${s.duration}</div>` : ''}
         ${s.target_pace ? `<div style="color:var(--emerald);margin-top:2px">Pace: ${s.target_pace}</div>` : ''}
+        ${s.target_hr ? `<div style="color:var(--sky);margin-top:2px">HR: ${s.target_hr}</div>` : ''}
       </div>`;
     }
     stepsHtml += '</div>';
   }
 
+  // Completion metrics
+  let metricsHtml = '';
+  if (wo.completed && wo.completion_metrics) {
+    const cm = wo.completion_metrics;
+    metricsHtml = `<div style="margin-top:12px">
+      <div style="font-weight:600;font-size:.85rem;margin-bottom:8px">Completion Data</div>
+      <div class="detail-grid">
+        ${detailItem(cm.distance_meters ? (cm.distance_meters / 1000).toFixed(2) : '—', 'Distance')}
+        ${detailItem(cm.duration_seconds ? formatSeconds(cm.duration_seconds) : '—', 'Duration')}
+        ${detailItem(cm.avg_pace_sec_per_km ? formatPace(cm.avg_pace_sec_per_km) : '—', 'Pace')}
+        ${detailItem(cm.avg_hr || '—', 'Avg HR')}
+        ${detailItem(cm.max_hr || '—', 'Max HR')}
+        ${detailItem(cm.calories || '—', 'Calories')}
+      </div>
+    </div>`;
+  }
+
+  let analysisHtml = '';
+  if (wo.completion_analysis) {
+    analysisHtml = `<div style="margin-top:8px;font-size:.82rem;color:var(--text-2);line-height:1.4">${escHtml(wo.completion_analysis)}</div>`;
+  }
+
   openSheet(`
-    <h3 style="font-family:var(--font-d);font-weight:700;font-size:1.1rem;margin-bottom:4px">${wo.name || 'Workout'}</h3>
-    <div style="font-size:.82rem;color:var(--text-2);margin-bottom:12px">
+    <h3 style="font-family:var(--font-d);font-weight:700;font-size:1.1rem;margin-bottom:4px">${escHtml(wo.name || 'Workout')}</h3>
+    <div style="font-size:.82rem;color:var(--text-2);margin-bottom:8px">
       ${wo.workout_type?.replace(/_/g, ' ') || ''} ${dist ? '· ' + dist : ''} ${dur ? '· ~' + dur : ''}
     </div>
-    ${wo.purpose ? `<div style="font-size:.85rem;color:var(--text-2);margin-bottom:12px">${wo.purpose}</div>` : ''}
+    ${wo.description ? `<div style="font-size:.85rem;color:var(--text-2);margin-bottom:8px;line-height:1.4">${escHtml(wo.description)}</div>` : ''}
+    ${wo.notes ? `<div style="font-size:.82rem;color:var(--text-3);margin-bottom:8px">${escHtml(wo.notes)}</div>` : ''}
     ${stepsHtml}
-    ${wo.completed ? `<div style="margin-top:12px;font-size:.85rem;color:var(--emerald);font-weight:600">✓ Completed</div>` : ''}
+    ${metricsHtml}
+    ${analysisHtml}
+    ${wo.completed ? `<div style="margin-top:12px;font-size:.85rem;color:var(--emerald);font-weight:600">Completed</div>` : ''}
   `);
 }
 
 // ═══════════════════════════════════════════════════════
-// TAB: CALENDAR
+// TAB: CALENDAR (Improved with activity drill-down)
 // ═══════════════════════════════════════════════════════
 async function renderCalendar(page) {
   const now = new Date();
   let viewYear = now.getFullYear(), viewMonth = now.getMonth();
   const calEntries = {};
+  const activityMap = {};
 
-  // Load data in parallel
   const [plans, activities] = await Promise.all([
     cached('plans', () => apiJson('/plans').catch(() => [])),
     cached('activities', () => apiJson('/activities?days=240').catch(() => [])),
   ]);
-  let scheduled = [];
-  try { scheduled = await cached('scheduled', () => apiJson('/garmin/scheduled-workouts').catch(() => [])); } catch {}
 
-  // Build matched IDs set
-  const matchedIds = new Set();
-  for (const plan of plans || []) {
-    if (!plan.accepted) continue;
-    for (const w of plan.weeks || []) {
-      for (const wo of w.workouts || []) {
-        if (wo.matched_activity_id) matchedIds.add(String(wo.matched_activity_id));
-      }
-    }
-  }
-
-  // Activities
+  // Build activity map by date
   for (const act of activities || []) {
-    const d = (act.startTimeLocal || '').slice(0, 10);
-    if (!d || matchedIds.has(String(act.activityId))) continue;
-    const isRun = (act.activityType?.typeKey || '').toLowerCase().includes('running');
-    const distKm = act.distance ? (act.distance / 1000).toFixed(1) : null;
-    const name = act.activityName || act.activityType?.typeKey || 'Activity';
+    const d = (act.start_time || '').slice(0, 10);
+    if (!d) continue;
+    const distKm = act.distance_meters ? (act.distance_meters / 1000).toFixed(1) : null;
+    const name = act.name || act.activity_type || 'Activity';
+    const isRun = (act.activity_type || '').toLowerCase().includes('running');
     let sub = '';
-    if (isRun && distKm && act.duration) {
-      const ps = act.duration / (act.distance / 1000);
-      sub = `${distKm} km · ${Math.floor(ps/60)}:${String(Math.round(ps%60)).padStart(2,'0')}/km`;
+    if (isRun && distKm && act.duration_seconds) {
+      const ps = act.duration_seconds / (act.distance_meters / 1000);
+      sub = `${distKm} km · ${formatPace(ps)}/km`;
     } else if (distKm) { sub = `${distKm} km`; }
     if (!calEntries[d]) calEntries[d] = [];
-    calEntries[d].push({ type: 'activity', title: '✓ ' + name, sub, color: isRun ? 'var(--emerald)' : 'var(--violet)' });
+    calEntries[d].push({ type: 'activity', title: name, sub, color: isRun ? 'var(--emerald)' : 'var(--violet)', activity: act });
+    activityMap[act.activity_id] = act;
   }
 
   // Plan workouts
@@ -860,18 +1399,10 @@ async function renderCalendar(page) {
         calEntries[d].push({
           type: 'planned', title: (wo.completed ? '✓ ' : '○ ') + (wo.name || 'Workout'),
           sub: [wo.workout_type?.replace(/_/g, ' '), distKm].filter(Boolean).join(' · '),
-          color: wo.completed ? 'var(--emerald)' : 'var(--sky)', data: wo
+          color: wo.completed ? 'var(--emerald)' : 'var(--sky)', wo
         });
       }
     }
-  }
-
-  // Scheduled
-  for (const sw of scheduled || []) {
-    const d = (sw.date || '').slice(0, 10);
-    if (!d) continue;
-    if (!calEntries[d]) calEntries[d] = [];
-    calEntries[d].push({ type: 'scheduled', title: '📅 ' + (sw.workoutName || 'Scheduled'), sub: '', color: 'var(--sky)' });
   }
 
   function drawMonth() {
@@ -882,7 +1413,6 @@ async function renderCalendar(page) {
 
     let grid = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => `<div class="cal-day-label">${d}</div>`).join('');
 
-    // Prev month fill
     const prevLast = new Date(viewYear, viewMonth, 0).getDate();
     for (let i = startDay - 1; i >= 0; i--) {
       grid += `<div class="cal-day other-month">${prevLast - i}</div>`;
@@ -899,7 +1429,6 @@ async function renderCalendar(page) {
       </div>`;
     }
 
-    // Next month fill
     const totalCells = startDay + last.getDate();
     const remaining = (7 - totalCells % 7) % 7;
     for (let i = 1; i <= remaining; i++) {
@@ -929,15 +1458,23 @@ async function renderCalendar(page) {
         const details = document.getElementById('cal-details');
         if (!entries.length) { details.innerHTML = '<div class="empty" style="padding:16px 0">No activities</div>'; return; }
         details.innerHTML = entries.map(e => `
-          <div class="cal-entry" ${e.data ? `data-wo='${JSON.stringify(e.data).replace(/'/g, "&#39;")}'` : ''} style="cursor:${e.data ? 'pointer' : 'default'}">
+          <div class="cal-entry" data-entry-type="${e.type}" data-entry='${JSON.stringify(e.activity || e.wo || {}).replace(/'/g, "&#39;")}'>
             <div class="cal-entry-bar" style="background:${e.color}"></div>
             <div class="cal-entry-info">
-              <div class="cal-entry-title">${e.title}</div>
+              <div class="cal-entry-title">${escHtml(e.title)}</div>
               ${e.sub ? `<div class="cal-entry-sub">${e.sub}</div>` : ''}
             </div>
           </div>`).join('');
-        details.querySelectorAll('[data-wo]').forEach(c => {
-          c.addEventListener('click', () => { try { showWorkoutSheet(JSON.parse(c.dataset.wo)); } catch {} });
+
+        details.querySelectorAll('.cal-entry').forEach(c => {
+          c.addEventListener('click', () => {
+            try {
+              const type = c.dataset.entryType;
+              const data = JSON.parse(c.dataset.entry);
+              if (type === 'activity' && data.activity_id) showActivitySheet(data);
+              else if (type === 'planned' && data.name) showWorkoutSheet(data);
+            } catch {}
+          });
         });
       });
     });
@@ -948,102 +1485,58 @@ async function renderCalendar(page) {
   reDraw();
 }
 
-// ═══════════════════════════════════════════════════════
-// TAB: FEED
-// ═══════════════════════════════════════════════════════
-async function renderFeed(page) {
-  const events = await cached('feed', () => apiJson('/feed?limit=30').catch(() => []), 30000);
-  if (!events || !events.length) {
-    page.innerHTML = '<div class="fade-in"><div class="section-title">Feed</div><div class="empty">No activity yet.</div></div>';
-    return;
+function showActivitySheet(act) {
+  const distKm = act.distance_meters ? (act.distance_meters / 1000).toFixed(2) : '—';
+  const duration = act.duration_seconds ? formatSeconds(act.duration_seconds) : '—';
+  const pace = act.avg_pace_sec_per_km ? formatPace(act.avg_pace_sec_per_km) + '/km' : '—';
+
+  let metricsHtml = `<div class="detail-grid">
+    ${detailItem(distKm, 'Distance km')}
+    ${detailItem(duration, 'Duration')}
+    ${detailItem(pace, 'Avg Pace')}
+    ${detailItem(act.avg_hr || '—', 'Avg HR')}
+    ${detailItem(act.max_hr || '—', 'Max HR')}
+    ${detailItem(act.calories || '—', 'Calories')}
+    ${detailItem(act.avg_running_cadence ? Math.round(act.avg_running_cadence) : '—', 'Cadence')}
+    ${detailItem(act.avg_stride_length ? act.avg_stride_length.toFixed(2) + 'm' : '—', 'Stride')}
+    ${detailItem(act.avg_ground_contact_time ? Math.round(act.avg_ground_contact_time) + 'ms' : '—', 'GCT')}
+    ${detailItem(act.avg_vertical_oscillation ? act.avg_vertical_oscillation.toFixed(1) + 'cm' : '—', 'Vert Osc')}
+    ${detailItem(act.avg_power ? Math.round(act.avg_power) + 'W' : '—', 'Power')}
+    ${detailItem(act.elevation_gain ? Math.round(act.elevation_gain) + 'm' : '—', 'Elevation')}
+  </div>`;
+
+  // Training effects
+  let teHtml = '';
+  if (act.training_effect_aerobic || act.training_effect_anaerobic) {
+    teHtml = `<div style="margin-top:8px">
+      <div style="font-weight:600;font-size:.82rem;margin-bottom:6px">Training Effect</div>`;
+    if (act.training_effect_aerobic) {
+      const pct = Math.min(100, Math.round((act.training_effect_aerobic / 5) * 100));
+      teHtml += `<div class="te-bar">
+        <span class="te-label">Aerobic</span>
+        <div class="te-track"><div class="te-fill" style="width:${pct}%;background:var(--sky)"></div></div>
+        <span class="te-val">${act.training_effect_aerobic.toFixed(1)}</span>
+      </div>`;
+    }
+    if (act.training_effect_anaerobic) {
+      const pct = Math.min(100, Math.round((act.training_effect_anaerobic / 5) * 100));
+      teHtml += `<div class="te-bar">
+        <span class="te-label">Anaerobic</span>
+        <div class="te-track"><div class="te-fill" style="width:${pct}%;background:var(--rose)"></div></div>
+        <span class="te-val">${act.training_effect_anaerobic.toFixed(1)}</span>
+      </div>`;
+    }
+    teHtml += '</div>';
   }
 
-  // Get current user likes
-  let userLikes = {};
-  try {
-    const profile = await cached('profile', () => apiJson('/auth/profile'));
-    // We'll track likes in memory after toggle
-  } catch {}
-
-  let html = '<div class="fade-in"><div class="section-title">Feed</div>';
-  for (const ev of events) {
-    const initials = (ev.user_name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-    const timeAgo = formatTimeAgo(ev.created_at);
-    const likeCount = ev.like_count || 0;
-    const commentCount = ev.comment_count || 0;
-    const isLiked = ev.user_liked;
-
-    html += `<div class="feed-item" id="feed-${ev.id}">
-      <div class="feed-header">
-        <div class="feed-avatar">${initials}</div>
-        <div>
-          <div class="feed-user">${ev.user_name || 'User'}</div>
-          <div class="feed-time">${timeAgo}</div>
-        </div>
-      </div>
-      <div class="feed-body"><b>${ev.title}</b>${ev.body ? '<br>' + ev.body : ''}</div>
-      <div class="feed-actions">
-        <button class="${isLiked ? 'liked' : ''}" data-like="${ev.id}">${icons.heart} <span>${likeCount}</span></button>
-        <button data-comments="${ev.id}">${icons.comment} <span>${commentCount}</span></button>
-      </div>
-      <div id="comments-${ev.id}"></div>
-    </div>`;
-  }
-  html += '</div>';
-  page.innerHTML = html;
-
-  // Like buttons
-  page.querySelectorAll('[data-like]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const id = btn.dataset.like;
-      try {
-        const res = await apiJson(`/feed/${id}/like`, { method: 'POST' });
-        const span = btn.querySelector('span');
-        if (res.liked) { btn.classList.add('liked'); span.textContent = +span.textContent + 1; }
-        else { btn.classList.remove('liked'); span.textContent = Math.max(0, +span.textContent - 1); }
-      } catch {}
-    });
-  });
-
-  // Comment toggle
-  page.querySelectorAll('[data-comments]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const id = btn.dataset.comments;
-      const container = document.getElementById(`comments-${id}`);
-      if (container.innerHTML) { container.innerHTML = ''; return; }
-      try {
-        const comments = await apiJson(`/feed/${id}/comments`);
-        let ch = '<div class="comment-list">';
-        for (const c of comments || []) {
-          ch += `<div class="comment"><b>${c.user_name || 'User'}:</b> ${escHtml(c.body)}</div>`;
-        }
-        ch += `<div class="comment-input">
-          <input placeholder="Add a comment..." id="ci-${id}">
-          <button data-send-comment="${id}">Send</button>
-        </div></div>`;
-        container.innerHTML = ch;
-        const sendBtn = container.querySelector(`[data-send-comment="${id}"]`);
-        sendBtn?.addEventListener('click', async () => {
-          const input = document.getElementById(`ci-${id}`);
-          const body = input.value.trim();
-          if (!body) return;
-          await apiJson(`/feed/${id}/comment`, { method: 'POST', body: JSON.stringify({ body }) });
-          input.value = '';
-          clearCache('feed');
-          const count = btn.querySelector('span');
-          count.textContent = +count.textContent + 1;
-          // Re-fetch comments
-          const updated = await apiJson(`/feed/${id}/comments`);
-          const list = container.querySelector('.comment-list');
-          let uch = '';
-          for (const c of updated || []) { uch += `<div class="comment"><b>${c.user_name || 'User'}:</b> ${escHtml(c.body)}</div>`; }
-          // Keep the input
-          const inputHtml = `<div class="comment-input"><input placeholder="Add a comment..." id="ci-${id}"><button data-send-comment="${id}">Send</button></div>`;
-          container.innerHTML = `<div class="comment-list">${uch}${inputHtml}</div>`;
-        });
-      } catch {}
-    });
-  });
+  openSheet(`
+    <h3 style="font-family:var(--font-d);font-weight:700;font-size:1.1rem;margin-bottom:4px">${escHtml(act.name || 'Activity')}</h3>
+    <div style="font-size:.82rem;color:var(--text-2);margin-bottom:12px">
+      ${act.activity_type || ''} · ${act.start_time ? new Date(act.start_time).toLocaleString() : ''}
+    </div>
+    ${metricsHtml}
+    ${teHtml}
+  `);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1097,7 +1590,7 @@ function renderCoach(page) {
       scrollToBottom();
     } catch (e) {
       document.getElementById('coach-typing')?.remove();
-      msgs.innerHTML += `<div class="chat-msg assistant"><div class="chat-bubble" style="color:var(--rose)">Error: ${e.message}</div></div>`;
+      msgs.innerHTML += `<div class="chat-msg assistant"><div class="chat-bubble" style="color:var(--rose)">Error: ${escHtml(e.message)}</div></div>`;
       scrollToBottom();
     }
   };
@@ -1107,22 +1600,9 @@ function renderCoach(page) {
 }
 
 // ═══════════════════════════════════════════════════════
-// EXTRAS: Profile, HYROX, Admin (loaded via quick links)
+// SETTINGS PAGE (via icon on Home)
 // ═══════════════════════════════════════════════════════
-
-// These load into the same page area when accessed via Snapshot links
-
-// ── Profile tab (invoked from snapshot quick link)
-const origLoadTab = loadTab;
-loadTab = async function(tab) {
-  if (tab === 'profile') return renderProfilePage();
-  if (tab === 'hyrox') return renderHyroxPage();
-  if (tab === 'admin') return renderAdminPage();
-  return origLoadTab(tab);
-};
-
-async function renderProfilePage() {
-  const page = document.getElementById('page-content');
+async function renderSettings(page) {
   page.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
   try {
     const profile = await apiJson('/auth/profile');
@@ -1135,26 +1615,29 @@ async function renderProfilePage() {
     page.innerHTML = `<div class="fade-in">
       <div class="profile-header">
         <div class="profile-avatar">${(profile.name || '?')[0].toUpperCase()}</div>
-        <div class="profile-name">${profile.name}</div>
-        <div class="profile-email">${profile.email}</div>
+        <div class="profile-name">${escHtml(profile.name)}</div>
+        <div class="profile-email">${escHtml(profile.email)}</div>
       </div>
       <div class="card">
         <div class="settings-row"><span class="settings-label">Role</span><span class="settings-value">${profile.role}</span></div>
         <div class="settings-row"><span class="settings-label">Status</span><span class="settings-value">${profile.status}</span></div>
         <div class="settings-row"><span class="settings-label">Garmin</span><span class="settings-value">${garminStatus}</span></div>
-        ${profile.garmin_email ? `<div class="settings-row"><span class="settings-label">Garmin Email</span><span class="settings-value" style="font-size:.78rem">${profile.garmin_email}</span></div>` : ''}
+        ${profile.garmin_email ? `<div class="settings-row"><span class="settings-label">Garmin Email</span><span class="settings-value" style="font-size:.78rem">${escHtml(profile.garmin_email)}</span></div>` : ''}
         <div class="settings-row"><span class="settings-label">Registered</span><span class="settings-value">${(profile.created_at || '').slice(0, 10)}</span></div>
       </div>
+      <button class="btn btn-ghost" onclick="state.tab='hyrox';loadTab('hyrox')">HYROX Race Results</button>
       <button class="btn btn-ghost" style="margin-top:8px;color:var(--rose);border-color:var(--rose-d)" id="logout-btn">Sign Out</button>
-      <button class="btn-link" style="margin-top:12px" onclick="state.tab='snapshot';document.querySelectorAll('.tab-bar button')[0].click()">← Back</button>
+      <button class="btn-link" style="margin-top:12px" onclick="state.tab='home';document.querySelectorAll('.tab-bar button')[0].click()">← Back</button>
     </div>`;
 
     on('logout-btn', 'click', logout);
-  } catch (e) { page.innerHTML = `<div class="empty">Failed: ${e.message}</div>`; }
+  } catch (e) { page.innerHTML = `<div class="empty">Failed: ${escHtml(e.message)}</div>`; }
 }
 
-async function renderHyroxPage() {
-  const page = document.getElementById('page-content');
+// ═══════════════════════════════════════════════════════
+// HYROX RESULTS PAGE
+// ═══════════════════════════════════════════════════════
+async function renderHyroxPage(page) {
   page.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
   try {
     const results = await apiJson('/hyrox/results').catch(() => []);
@@ -1164,22 +1647,24 @@ async function renderHyroxPage() {
     } else {
       for (const race of results) {
         html += `<div class="card">
-          <div style="font-weight:600;margin-bottom:8px">${race.race_name || 'Race'} — ${race.overall_time || ''}</div>`;
+          <div style="font-weight:600;margin-bottom:8px">${escHtml(race.race_name || 'Race')} — ${race.overall_time || ''}</div>`;
         if (race.stations && race.stations.length) {
           for (const s of race.stations) {
-            html += `<div class="hyrox-station"><span class="hyrox-name">${s.name || s.station}</span><span class="hyrox-time">${s.time || ''}</span></div>`;
+            html += `<div class="hyrox-station"><span class="hyrox-name">${escHtml(s.name || s.station)}</span><span class="hyrox-time">${s.time || ''}</span></div>`;
           }
         }
         html += '</div>';
       }
     }
-    html += '<button class="btn-link" style="margin-top:12px" onclick="state.tab=\'snapshot\';document.querySelectorAll(\'.tab-bar button\')[0].click()">← Back</button></div>';
+    html += '<button class="btn-link" style="margin-top:12px" onclick="state.tab=\'settings\';loadTab(\'settings\')">← Back</button></div>';
     page.innerHTML = html;
-  } catch (e) { page.innerHTML = `<div class="empty">Failed: ${e.message}</div>`; }
+  } catch (e) { page.innerHTML = `<div class="empty">Failed: ${escHtml(e.message)}</div>`; }
 }
 
-async function renderAdminPage() {
-  const page = document.getElementById('page-content');
+// ═══════════════════════════════════════════════════════
+// ADMIN PAGE
+// ═══════════════════════════════════════════════════════
+async function renderAdminPage(page) {
   if (state.user?.role !== 'admin') { page.innerHTML = '<div class="empty">Admin access required</div>'; return; }
   page.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
   try {
@@ -1195,10 +1680,10 @@ async function renderAdminPage() {
       const badgeLabel = u.role === 'admin' ? 'ADMIN' : u.status.toUpperCase();
       const lastLogin = u.last_login ? u.last_login.slice(0, 16).replace('T', ' ') : 'Never';
       html += `<div class="admin-user">
-        <div class="admin-name">${u.name} <span class="admin-badge ${badgeCls}">${badgeLabel}</span></div>
-        <div class="admin-meta">${u.email}${u.garmin_email ? ' · Garmin: ' + u.garmin_email : ''}</div>
+        <div class="admin-name">${escHtml(u.name)} <span class="admin-badge ${badgeCls}">${badgeLabel}</span></div>
+        <div class="admin-meta">${escHtml(u.email)}${u.garmin_email ? ' · Garmin: ' + escHtml(u.garmin_email) : ''}</div>
         <div class="admin-meta">Registered: ${(u.created_at || '').slice(0, 10)} · Last login: ${lastLogin}</div>
-        ${u.reason ? `<div class="admin-meta">Reason: ${u.reason}</div>` : ''}
+        ${u.reason ? `<div class="admin-meta">Reason: ${escHtml(u.reason)}</div>` : ''}
         <div class="admin-actions">
           ${u.status === 'pending' ? `
             <button style="background:var(--emerald);color:#0F1117" data-approve="${u.id}">Approve</button>
@@ -1210,24 +1695,24 @@ async function renderAdminPage() {
         </div>
       </div>`;
     }
-    html += '<button class="btn-link" style="margin-top:12px" onclick="state.tab=\'snapshot\';document.querySelectorAll(\'.tab-bar button\')[0].click()">← Back</button></div>';
+    html += '<button class="btn-link" style="margin-top:12px" onclick="state.tab=\'home\';document.querySelectorAll(\'.tab-bar button\')[0].click()">← Back</button></div>';
     page.innerHTML = html;
 
     page.querySelectorAll('[data-approve]').forEach(btn => {
       btn.addEventListener('click', async () => {
         await apiJson(`/admin/users/${btn.dataset.approve}`, { method: 'PATCH', body: JSON.stringify({ status: 'approved' }) });
         clearCache('');
-        renderAdminPage();
+        renderAdminPage(page);
       });
     });
     page.querySelectorAll('[data-reject]').forEach(btn => {
       btn.addEventListener('click', async () => {
         await apiJson(`/admin/users/${btn.dataset.reject}`, { method: 'PATCH', body: JSON.stringify({ status: 'rejected' }) });
         clearCache('');
-        renderAdminPage();
+        renderAdminPage(page);
       });
     });
-  } catch (e) { page.innerHTML = `<div class="empty">Failed: ${e.message}</div>`; }
+  } catch (e) { page.innerHTML = `<div class="empty">Failed: ${escHtml(e.message)}</div>`; }
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1238,6 +1723,38 @@ function val(id) { return (document.getElementById(id)?.value || '').trim(); }
 function disableBtn(id) { const b = document.getElementById(id); if (b) { b.disabled = true; b.textContent = '...'; } }
 function enableBtn(id, text) { const b = document.getElementById(id); if (b) { b.disabled = false; b.textContent = text; } }
 function escHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function metricCard(label, value, sub) {
+  return `<div class="metric"><div class="metric-label">${label}</div><div class="metric-value">${value}</div>${sub ? `<div class="metric-sub">${sub}</div>` : ''}</div>`;
+}
+
+function labelValue(label, value) {
+  if (!value) return '';
+  return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:.85rem">
+    <span style="color:var(--text-2)">${label}</span>
+    <span style="font-weight:500">${value}</span>
+  </div>`;
+}
+
+function detailItem(value, label) {
+  return `<div class="detail-item"><div class="d-val">${value}</div><div class="d-lbl">${label}</div></div>`;
+}
+
+function formatPace(secPerKm) {
+  if (!secPerKm || secPerKm <= 0) return '—';
+  const m = Math.floor(secPerKm / 60);
+  const s = Math.round(secPerKm % 60);
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function formatSeconds(totalSec) {
+  if (!totalSec || totalSec <= 0) return '—';
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = Math.round(totalSec % 60);
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
 
 function formatTimeAgo(iso) {
   if (!iso) return '';
