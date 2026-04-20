@@ -2342,40 +2342,72 @@ with tab_feed:
                         f'{_purpose_badge}{_ev_desc}</div>'
                     )
 
-                # Per-km splits visualization
+                # Per-km splits visualization — pace over time line chart (SVG)
                 _splits_html = ""
                 _ev_splits = _ev_meta.get("splits") if _ev_meta else None
                 if _ev_splits and isinstance(_ev_splits, list) and len(_ev_splits) > 1:
                     _split_paces = [s.get("pace_sec") for s in _ev_splits if s.get("pace_sec")]
-                    if _split_paces:
+                    if len(_split_paces) > 1:
                         _sp_min = min(_split_paces)
                         _sp_max = max(_split_paces)
                         _sp_avg = sum(_split_paces) / len(_split_paces)
-                        _sp_rows = ""
+                        _sp_range = _sp_max - _sp_min or 1
+                        # SVG dimensions
+                        _sw, _sh = 460, 100
+                        _pad_l, _pad_r, _pad_t, _pad_b = 42, 10, 8, 22
+                        _pw = _sw - _pad_l - _pad_r
+                        _ph = _sh - _pad_t - _pad_b
+                        # Build points — X = elapsed time, Y = pace (inverted: faster=higher)
+                        _total_elapsed = sum(s.get("duration_sec", 0) for s in _ev_splits)
+                        _total_elapsed = _total_elapsed or len(_ev_splits)
+                        _points = []
                         for s in _ev_splits:
-                            _sp = s.get("pace_sec")
-                            if not _sp:
+                            if not s.get("pace_sec"):
                                 continue
-                            _sp_m, _sp_s = divmod(int(_sp), 60)
-                            _sp_hr = f' <span style="color:#8B95AD;font-size:.7rem">{int(s["avg_hr"])} bpm</span>' if s.get("avg_hr") else ""
-                            _bar_pct = ((_sp - _sp_min) / (_sp_max - _sp_min) * 60 + 40) if _sp_max > _sp_min else 70
-                            _bar_color = "#10B981" if _sp <= _sp_avg else "#F43F5E"
-                            _sp_rows += (
-                                f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">'
-                                f'<span style="width:28px;text-align:right;font-size:.72rem;color:#8B95AD;">{s["km"]}</span>'
-                                f'<div style="flex:1;height:14px;background:#252A35;border-radius:3px;overflow:hidden;">'
-                                f'<div style="width:{_bar_pct:.0f}%;height:100%;background:{_bar_color};'
-                                f'border-radius:3px;"></div></div>'
-                                f'<span style="font-family:monospace;font-size:.78rem;color:#E8ECF4;'
-                                f'width:48px;">{_sp_m}:{_sp_s:02d}</span>{_sp_hr}'
-                                f'</div>'
+                            elapsed = s.get("elapsed_min", (s["km"] - 1))
+                            x = _pad_l + (elapsed / (_total_elapsed / 60 or 1)) * _pw if _total_elapsed > 0 else _pad_l + (s["km"] - 1) / max(len(_ev_splits) - 1, 1) * _pw
+                            y = _pad_t + (s["pace_sec"] - _sp_min) / _sp_range * _ph
+                            _points.append((x, y, s["pace_sec"], s.get("avg_hr"), s["km"]))
+                        if len(_points) > 1:
+                            # Polyline
+                            _poly = " ".join(f"{p[0]:.1f},{p[1]:.1f}" for p in _points)
+                            # Gradient fill
+                            _fill_pts = _poly + f" {_points[-1][0]:.1f},{_pad_t + _ph} {_points[0][0]:.1f},{_pad_t + _ph}"
+                            # Average pace line
+                            _avg_y = _pad_t + (_sp_avg - _sp_min) / _sp_range * _ph
+                            _avg_m, _avg_s = divmod(int(_sp_avg), 60)
+                            # Y axis labels (3 ticks: fastest, avg, slowest)
+                            _fast_m, _fast_s = divmod(int(_sp_min), 60)
+                            _slow_m, _slow_s = divmod(int(_sp_max), 60)
+                            # X axis labels
+                            _total_min = _total_elapsed / 60
+                            _x_labels = ""
+                            for t_min in range(0, int(_total_min) + 1, max(1, int(_total_min / 4))):
+                                _tx = _pad_l + (t_min / _total_min) * _pw if _total_min > 0 else _pad_l
+                                _x_labels += f'<text x="{_tx:.0f}" y="{_sh - 2}" fill="#8B95AD" font-size="8" text-anchor="middle">{t_min}\'</text>'
+                            # Dots with colors
+                            _dots = ""
+                            for px, py, pp, phr, pk in _points:
+                                _dc = "#10B981" if pp <= _sp_avg else "#F43F5E"
+                                _dots += f'<circle cx="{px:.1f}" cy="{py:.1f}" r="3" fill="{_dc}" stroke="#161821" stroke-width="1"/>'
+                            _splits_html = (
+                                f'<div style="margin-top:6px;margin-bottom:4px;">'
+                                f'<div style="font-size:.75rem;color:#8B95AD;margin-bottom:4px;text-transform:uppercase;font-weight:600;">Pace Over Time</div>'
+                                f'<svg viewBox="0 0 {_sw} {_sh}" style="width:100%;height:auto;font-family:monospace;">'
+                                f'<polygon points="{_fill_pts}" fill="url(#splitGrad)" opacity="0.15"/>'
+                                f'<defs><linearGradient id="splitGrad" x1="0" y1="0" x2="0" y2="1">'
+                                f'<stop offset="0%" stop-color="#10B981"/><stop offset="100%" stop-color="#10B98100"/>'
+                                f'</linearGradient></defs>'
+                                f'<line x1="{_pad_l}" y1="{_avg_y:.1f}" x2="{_sw - _pad_r}" y2="{_avg_y:.1f}" '
+                                f'stroke="#8B95AD" stroke-width="0.5" stroke-dasharray="3,3"/>'
+                                f'<text x="{_pad_l - 4}" y="{_avg_y + 3:.1f}" fill="#8B95AD" font-size="8" text-anchor="end">{_avg_m}:{_avg_s:02d}</text>'
+                                f'<text x="{_pad_l - 4}" y="{_pad_t + 6}" fill="#10B981" font-size="8" text-anchor="end">{_fast_m}:{_fast_s:02d}</text>'
+                                f'<text x="{_pad_l - 4}" y="{_pad_t + _ph + 2}" fill="#F43F5E" font-size="8" text-anchor="end">{_slow_m}:{_slow_s:02d}</text>'
+                                f'{_x_labels}'
+                                f'<polyline points="{_poly}" fill="none" stroke="#10B981" stroke-width="1.5" stroke-linejoin="round"/>'
+                                f'{_dots}'
+                                f'</svg></div>'
                             )
-                        _splits_html = (
-                            f'<div style="margin-top:6px;margin-bottom:4px;">'
-                            f'<div style="font-size:.75rem;color:#8B95AD;margin-bottom:4px;'
-                            f'text-transform:uppercase;font-weight:600;">Splits</div>'
-                            f'{_sp_rows}</div>'
-                        )
 
                 # User name is clickable to view profile
                 _name_click_html = (
@@ -2395,8 +2427,6 @@ with tab_feed:
                     f'</div>'
                     f'<div style="font-size:1.05rem;color:#E8ECF4;margin-bottom:0.3rem;">'
                     f'{icon} {ev.get("title", "")}</div>'
-                    + (f'<div style="color:#B0B7C3;font-size:0.9rem;margin-bottom:0.5rem;">{ev.get("body")}</div>'
-                       if ev.get("body") else '')
                     + _desc_html
                     + _rich_metrics_html
                     + _splits_html

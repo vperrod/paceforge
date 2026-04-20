@@ -709,16 +709,33 @@ function renderFeedItem(ev) {
   let splitsHtml = '';
   if (ev.metadata) {
     const m = ev.metadata;
-    const parts = [];
-    if (m.distance_km) parts.push(m.distance_km.toFixed(1) + ' km');
-    else if (m.distance_meters) parts.push((m.distance_meters / 1000).toFixed(1) + ' km');
-    if (m.pace) parts.push(m.pace);
-    else if (m.avg_pace_sec_per_km) parts.push(formatPace(m.avg_pace_sec_per_km) + '/km');
-    if (m.avg_hr) parts.push(Math.round(m.avg_hr) + ' bpm');
-    if (m.calories) parts.push(Math.round(m.calories) + ' cal');
-    if (m.elevation_gain && m.elevation_gain > 0) parts.push(Math.round(m.elevation_gain) + 'm ↑');
-    if (m.training_effect_aerobic) parts.push('TE ' + m.training_effect_aerobic.toFixed(1));
-    if (parts.length) metaHtml = `<div style="font-size:.78rem;color:var(--text-3);margin-top:4px;font-family:var(--font-m)">${parts.join(' · ')}</div>`;
+
+    // Metrics cards strip (compact)
+    const cards = [];
+    if (m.distance_km || m.distance_meters) {
+      const d = m.distance_km || (m.distance_meters / 1000);
+      cards.push(['Distance', d.toFixed(1), 'km']);
+    }
+    if (m.duration_seconds) {
+      const dm = Math.floor(m.duration_seconds / 60);
+      const ds = Math.round(m.duration_seconds % 60);
+      cards.push(['Duration', `${dm}:${String(ds).padStart(2,'0')}`, '']);
+    }
+    if (m.pace || m.avg_pace_sec_per_km) {
+      const p = m.avg_pace_sec_per_km || 0;
+      cards.push(['Pace', p ? formatPace(p) : m.pace.replace('/km',''), '/km']);
+    }
+    if (m.avg_hr) cards.push(['Avg HR', Math.round(m.avg_hr), 'bpm']);
+    if (m.calories) cards.push(['Calories', Math.round(m.calories), '']);
+    if (m.elevation_gain && m.elevation_gain > 0) cards.push(['Elevation', Math.round(m.elevation_gain) + 'm', '']);
+    if (m.training_effect_aerobic) cards.push(['Aerobic TE', m.training_effect_aerobic.toFixed(1), '']);
+    if (cards.length) {
+      metaHtml = `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">${cards.map(([l,v,u]) =>
+        `<div style="flex:1;min-width:70px;text-align:center;padding:6px 4px;background:var(--elevated);border-radius:6px">
+          <div style="font-family:var(--font-m);font-size:.82rem;font-weight:600">${v}<span style="font-size:.65rem;color:var(--text-3);font-weight:400">${u}</span></div>
+          <div style="font-size:.6rem;color:var(--text-3);text-transform:uppercase;margin-top:1px">${l}</div>
+        </div>`).join('')}</div>`;
+    }
 
     // Planned workout description
     if (m.description) {
@@ -728,30 +745,60 @@ function renderFeedItem(ev) {
       descHtml = `<div style="color:var(--text-3);font-size:.78rem;font-style:italic;margin-top:6px;padding:6px 8px;background:var(--elevated);border-radius:6px;border-left:2px solid var(--emerald-a)">${purposeBadge}${escHtml(m.description)}</div>`;
     }
 
-    // Per-km splits visualization
+    // Pace over time SVG chart
     if (m.splits && m.splits.length > 1) {
-      const paces = m.splits.filter(s => s.pace_sec).map(s => s.pace_sec);
-      if (paces.length > 1) {
+      const valid = m.splits.filter(s => s.pace_sec);
+      if (valid.length > 1) {
+        const paces = valid.map(s => s.pace_sec);
         const minP = Math.min(...paces);
         const maxP = Math.max(...paces);
         const avgP = paces.reduce((a,b) => a+b, 0) / paces.length;
-        let rows = '';
-        for (const s of m.splits) {
-          if (!s.pace_sec) continue;
-          const pm = Math.floor(s.pace_sec / 60);
-          const ps = Math.round(s.pace_sec % 60);
-          const barPct = maxP > minP ? ((s.pace_sec - minP) / (maxP - minP) * 60 + 40) : 70;
-          const barColor = s.pace_sec <= avgP ? 'var(--emerald)' : 'var(--rose)';
-          const hrBit = s.avg_hr ? ` <span style="color:var(--text-3);font-size:.65rem">${s.avg_hr}</span>` : '';
-          rows += `<div style="display:flex;align-items:center;gap:4px;margin-bottom:1px">
-            <span style="width:20px;text-align:right;font-size:.65rem;color:var(--text-3)">${s.km}</span>
-            <div style="flex:1;height:12px;background:var(--elevated);border-radius:2px;overflow:hidden">
-              <div style="width:${barPct.toFixed(0)}%;height:100%;background:${barColor};border-radius:2px"></div>
-            </div>
-            <span style="font-family:var(--font-m);font-size:.72rem;width:38px">${pm}:${String(ps).padStart(2,'0')}</span>${hrBit}
-          </div>`;
+        const range = maxP - minP || 1;
+        const W = 320, H = 80;
+        const pl = 34, pr = 6, pt = 6, pb = 16;
+        const pw = W - pl - pr, ph = H - pt - pb;
+        const totalElapsed = valid.reduce((s, v) => s + (v.duration_sec || 0), 0);
+        const totalMin = totalElapsed / 60;
+        const points = valid.map(s => {
+          const elapsed = s.elapsed_min != null ? s.elapsed_min : (s.km - 1);
+          const x = pl + (totalMin > 0 ? (elapsed / totalMin) * pw : ((s.km - 1) / Math.max(valid.length - 1, 1)) * pw);
+          const y = pt + ((s.pace_sec - minP) / range) * ph;
+          return { x, y, pace: s.pace_sec, hr: s.avg_hr, km: s.km };
+        });
+        const poly = points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+        const fill = poly + ` ${points[points.length-1].x.toFixed(1)},${pt+ph} ${points[0].x.toFixed(1)},${pt+ph}`;
+        const avgY = pt + ((avgP - minP) / range) * ph;
+        const fmt = sec => { const m = Math.floor(sec/60); const s = Math.round(sec%60); return `${m}:${String(s).padStart(2,'0')}`; };
+        let dots = '';
+        points.forEach(p => {
+          const c = p.pace <= avgP ? 'var(--emerald)' : 'var(--rose)';
+          dots += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.5" fill="${c}" stroke="var(--bg)" stroke-width="0.8"/>`;
+        });
+        let xLabels = '';
+        if (totalMin > 0) {
+          const step = Math.max(1, Math.round(totalMin / 4));
+          for (let t = 0; t <= totalMin; t += step) {
+            const tx = pl + (t / totalMin) * pw;
+            xLabels += `<text x="${tx.toFixed(0)}" y="${H-1}" fill="var(--text-3)" font-size="7" text-anchor="middle">${t}'</text>`;
+          }
         }
-        splitsHtml = `<div style="margin-top:6px"><div style="font-size:.65rem;color:var(--text-3);text-transform:uppercase;font-weight:600;margin-bottom:3px">Splits</div>${rows}</div>`;
+        splitsHtml = `<div style="margin-top:8px">
+          <div style="font-size:.65rem;color:var(--text-3);text-transform:uppercase;font-weight:600;margin-bottom:3px">Pace Over Time</div>
+          <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;font-family:var(--font-m)">
+            <defs><linearGradient id="sg-${ev.id}" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="var(--emerald)" stop-opacity="0.2"/>
+              <stop offset="100%" stop-color="var(--emerald)" stop-opacity="0"/>
+            </linearGradient></defs>
+            <polygon points="${fill}" fill="url(#sg-${ev.id})"/>
+            <line x1="${pl}" y1="${avgY.toFixed(1)}" x2="${W-pr}" y2="${avgY.toFixed(1)}" stroke="var(--text-3)" stroke-width="0.4" stroke-dasharray="2,2"/>
+            <text x="${pl-3}" y="${avgY+2.5}" fill="var(--text-3)" font-size="7" text-anchor="end">${fmt(avgP)}</text>
+            <text x="${pl-3}" y="${pt+5}" fill="var(--emerald)" font-size="7" text-anchor="end">${fmt(minP)}</text>
+            <text x="${pl-3}" y="${pt+ph+1}" fill="var(--rose)" font-size="7" text-anchor="end">${fmt(maxP)}</text>
+            ${xLabels}
+            <polyline points="${poly}" fill="none" stroke="var(--emerald)" stroke-width="1.5" stroke-linejoin="round"/>
+            ${dots}
+          </svg>
+        </div>`;
       }
     }
   }
@@ -764,7 +811,7 @@ function renderFeedItem(ev) {
         <div class="feed-time">${timeAgo}</div>
       </div>
     </div>
-    <div class="feed-body"><b>${escHtml(ev.title)}</b>${ev.body ? '<br>' + escHtml(ev.body) : ''}${descHtml}${metaHtml}${splitsHtml}</div>
+    <div class="feed-body"><b>${escHtml(ev.title)}</b>${descHtml}${metaHtml}${splitsHtml}</div>
     <div class="feed-actions">
       <button class="${isLiked ? 'liked' : ''}" data-like="${ev.id}">${icons.heart} <span>${likeCount}</span></button>
       <button data-comments="${ev.id}">${icons.comment} <span>${commentCount}</span></button>

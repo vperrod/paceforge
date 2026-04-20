@@ -856,33 +856,36 @@ def _get_or_create_coach(uid: str) -> Coach:
 
 
 def _extract_compact_splits(completion_metrics: dict | None) -> list[dict] | None:
-    """Extract compact per-km split data from Garmin split_summaries.
+    """Extract compact per-lap split data from Garmin activity detail.
 
-    Returns a list of {km, pace_sec, avg_hr} dicts, or None if unavailable.
+    Returns a list of {km, pace_sec, avg_hr, duration_sec} dicts, or None if unavailable.
+    Uses lapDTOs from the splits endpoint (reliable per-km data).
     """
     if not completion_metrics:
         return None
     detail = completion_metrics.get("detail")
     if not detail:
         return None
-    summaries = detail.get("split_summaries")
-    if not summaries:
+    splits_data = detail.get("splits")
+    if not splits_data:
         return None
-    # Garmin split_summaries can be a dict with a list or a list directly
-    splits_list = summaries
-    if isinstance(summaries, dict):
-        splits_list = summaries.get("splitSummaries") or summaries.get("splits") or []
-    if not isinstance(splits_list, list):
+    laps = splits_data.get("lapDTOs") if isinstance(splits_data, dict) else None
+    if not laps or not isinstance(laps, list):
         return None
     compact = []
-    for i, s in enumerate(splits_list, 1):
-        speed = s.get("averageSpeed") or s.get("avgSpeed") or 0
+    cumulative_sec = 0.0
+    for i, lap in enumerate(laps, 1):
+        speed = lap.get("averageSpeed") or 0
         pace_sec = round(1000 / speed) if speed > 0 else None
+        dur = lap.get("duration") or 0
         compact.append({
             "km": i,
             "pace_sec": pace_sec,
-            "avg_hr": round(s["averageHR"]) if s.get("averageHR") else None,
+            "avg_hr": round(lap["averageHR"]) if lap.get("averageHR") else None,
+            "duration_sec": round(dur, 1),
+            "elapsed_min": round(cumulative_sec / 60, 2),
         })
+        cumulative_sec += dur
     return compact or None
 
 
@@ -1027,17 +1030,12 @@ def _auto_match_activities(uid: str, activities: list[RecentActivity]) -> None:
         metrics = wo.completion_metrics or {}
         splits = _extract_compact_splits(metrics)
         meta = _build_feed_metadata(wo, metrics, splits)
-        dist_km = meta.get("distance_km")
-        dur_min = round(metrics.get("duration_seconds", 0) / 60, 1) if metrics.get("duration_seconds") else None
-        pace_str = meta.get("pace")
-        parts = [f"{dist_km} km" if dist_km else None, f"{dur_min} min" if dur_min else None, pace_str]
-        body_str = " · ".join(p for p in parts if p) or None
         try:
             create_feed_event(
                 settings.db_path, uid,
                 event_type="activity",
                 title=f"Completed: {wo.name}",
-                body=body_str,
+                body=None,
                 metadata=meta,
             )
         except Exception:
@@ -1952,17 +1950,12 @@ def _backfill_feed_events(uid: str) -> None:
 
                 if title not in existing_by_title:
                     # Create new event
-                    dist_km = meta.get("distance_km")
-                    dur_min = round(metrics.get("duration_seconds", 0) / 60, 1) if metrics.get("duration_seconds") else None
-                    pace_str = meta.get("pace")
-                    parts = [f"{dist_km} km" if dist_km else None, f"{dur_min} min" if dur_min else None, pace_str]
-                    body_str = " · ".join(p for p in parts if p) or None
                     try:
                         create_feed_event(
                             settings.db_path, uid,
                             event_type="activity",
                             title=title,
-                            body=body_str,
+                            body=None,
                             metadata=meta,
                         )
                         created += 1
@@ -1979,8 +1972,9 @@ def _backfill_feed_events(uid: str) -> None:
                         except (json.JSONDecodeError, TypeError):
                             ev_meta = {}
                     needs_update = not ev_meta.get("description") and meta.get("description")
-                    needs_update = needs_update or (not ev_meta.get("splits") and meta.get("splits"))
                     needs_update = needs_update or (not ev_meta.get("purpose") and meta.get("purpose"))
+                    # Always re-update splits (fixes bad data from old split_summaries source)
+                    needs_update = needs_update or (meta.get("splits") and ev_meta.get("splits") != meta.get("splits"))
                     if needs_update:
                         ev_meta.update(meta)
                         try:
