@@ -745,7 +745,7 @@ function renderFeedItem(ev) {
       descHtml = `<div style="color:var(--text-3);font-size:.78rem;font-style:italic;margin-top:6px;padding:6px 8px;background:var(--elevated);border-radius:6px;border-left:2px solid var(--emerald-a)">${purposeBadge}${escHtml(m.description)}</div>`;
     }
 
-    // Pace over time SVG chart
+    // Pace analysis — Garmin-style smooth bezier area chart
     if (m.splits && m.splits.length > 1) {
       const valid = m.splits.filter(s => s.pace_sec);
       if (valid.length > 1) {
@@ -754,49 +754,52 @@ function renderFeedItem(ev) {
         const maxP = Math.max(...paces);
         const avgP = paces.reduce((a,b) => a+b, 0) / paces.length;
         const range = maxP - minP || 1;
-        const W = 320, H = 80;
-        const pl = 34, pr = 6, pt = 6, pb = 16;
+        const W = 340, H = 95;
+        const pl = 6, pr = 68, pt = 8, pb = 16;
         const pw = W - pl - pr, ph = H - pt - pb;
-        const totalElapsed = valid.reduce((s, v) => s + (v.duration_sec || 0), 0);
-        const totalMin = totalElapsed / 60;
-        const points = valid.map(s => {
-          const elapsed = s.elapsed_min != null ? s.elapsed_min : (s.km - 1);
-          const x = pl + (totalMin > 0 ? (elapsed / totalMin) * pw : ((s.km - 1) / Math.max(valid.length - 1, 1)) * pw);
+        const n = valid.length;
+        const points = valid.map((s, i) => {
+          const x = pl + (i / Math.max(n - 1, 1)) * pw;
           const y = pt + ((s.pace_sec - minP) / range) * ph;
-          return { x, y, pace: s.pace_sec, hr: s.avg_hr, km: s.km };
+          return { x, y, pace: s.pace_sec, km: s.km };
         });
-        const poly = points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
-        const fill = poly + ` ${points[points.length-1].x.toFixed(1)},${pt+ph} ${points[0].x.toFixed(1)},${pt+ph}`;
-        const avgY = pt + ((avgP - minP) / range) * ph;
-        const fmt = sec => { const m = Math.floor(sec/60); const s = Math.round(sec%60); return `${m}:${String(s).padStart(2,'0')}`; };
-        let dots = '';
-        points.forEach(p => {
-          const c = p.pace <= avgP ? 'var(--emerald)' : 'var(--rose)';
-          dots += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.5" fill="${c}" stroke="var(--bg)" stroke-width="0.8"/>`;
-        });
-        let xLabels = '';
-        if (totalMin > 0) {
-          const step = Math.max(1, Math.round(totalMin / 4));
-          for (let t = 0; t <= totalMin; t += step) {
-            const tx = pl + (t / totalMin) * pw;
-            xLabels += `<text x="${tx.toFixed(0)}" y="${H-1}" fill="var(--text-3)" font-size="7" text-anchor="middle">${t}'</text>`;
-          }
+        // Cubic bezier path
+        let path = `M${points[0].x.toFixed(1)},${points[0].y.toFixed(1)}`;
+        for (let i = 1; i < points.length; i++) {
+          const mx = (points[i-1].x + points[i].x) / 2;
+          path += ` C${mx.toFixed(1)},${points[i-1].y.toFixed(1)} ${mx.toFixed(1)},${points[i].y.toFixed(1)} ${points[i].x.toFixed(1)},${points[i].y.toFixed(1)}`;
         }
+        const area = path + ` L${points[points.length-1].x.toFixed(1)},${pt+ph} L${points[0].x.toFixed(1)},${pt+ph} Z`;
+        const avgY = pt + ((avgP - minP) / range) * ph;
+        const fastY = pt, slowY = pt + ph;
+        const rx = W - pr + 6;
+        const fmt = sec => { const m = Math.floor(sec/60); const s = Math.round(sec%60); return `${m}:${String(s).padStart(2,'0')}`; };
+        // X-axis km labels
+        let xLabels = '';
+        const kmStep = Math.max(1, Math.floor(n / 5));
+        points.forEach((p, i) => {
+          if (i % kmStep === 0 || i === points.length - 1)
+            xLabels += `<text x="${p.x.toFixed(0)}" y="${H-1}" fill="var(--text-3)" font-size="7" text-anchor="middle">${p.km}</text>`;
+        });
         splitsHtml = `<div style="margin-top:8px">
-          <div style="font-size:.65rem;color:var(--text-3);text-transform:uppercase;font-weight:600;margin-bottom:3px">Pace Over Time</div>
+          <div style="font-size:.65rem;color:var(--text-3);text-transform:uppercase;font-weight:600;margin-bottom:3px">Pace Analysis</div>
           <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;font-family:var(--font-m)">
-            <defs><linearGradient id="sg-${ev.id}" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="var(--emerald)" stop-opacity="0.2"/>
-              <stop offset="100%" stop-color="var(--emerald)" stop-opacity="0"/>
+            <defs><linearGradient id="pg-${ev.id}" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="var(--sky)" stop-opacity="0.35"/>
+              <stop offset="100%" stop-color="var(--sky)" stop-opacity="0.03"/>
             </linearGradient></defs>
-            <polygon points="${fill}" fill="url(#sg-${ev.id})"/>
-            <line x1="${pl}" y1="${avgY.toFixed(1)}" x2="${W-pr}" y2="${avgY.toFixed(1)}" stroke="var(--text-3)" stroke-width="0.4" stroke-dasharray="2,2"/>
-            <text x="${pl-3}" y="${avgY+2.5}" fill="var(--text-3)" font-size="7" text-anchor="end">${fmt(avgP)}</text>
-            <text x="${pl-3}" y="${pt+5}" fill="var(--emerald)" font-size="7" text-anchor="end">${fmt(minP)}</text>
-            <text x="${pl-3}" y="${pt+ph+1}" fill="var(--rose)" font-size="7" text-anchor="end">${fmt(maxP)}</text>
+            <line x1="${pl}" y1="${fastY}" x2="${W-pr}" y2="${fastY}" stroke="var(--border)" stroke-width="0.5"/>
+            <line x1="${pl}" y1="${slowY}" x2="${W-pr}" y2="${slowY}" stroke="var(--border)" stroke-width="0.5"/>
+            <line x1="${pl}" y1="${avgY.toFixed(1)}" x2="${W-pr}" y2="${avgY.toFixed(1)}" stroke="var(--text-3)" stroke-width="0.5" stroke-dasharray="3,3"/>
+            <path d="${area}" fill="url(#pg-${ev.id})"/>
+            <path d="${path}" fill="none" stroke="var(--sky)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             ${xLabels}
-            <polyline points="${poly}" fill="none" stroke="var(--emerald)" stroke-width="1.5" stroke-linejoin="round"/>
-            ${dots}
+            <text x="${rx}" y="${fastY+4}" fill="var(--sky)" font-size="7.5" font-weight="600">${fmt(minP)}</text>
+            <text x="${rx}" y="${fastY+12}" fill="var(--text-3)" font-size="6">Fastest</text>
+            <text x="${rx}" y="${avgY+2}" fill="var(--text-2)" font-size="7.5">${fmt(avgP)}</text>
+            <text x="${rx}" y="${avgY+10}" fill="var(--text-3)" font-size="6">Average</text>
+            <text x="${rx}" y="${slowY-2}" fill="var(--rose)" font-size="7.5" font-weight="600">${fmt(maxP)}</text>
+            <text x="${rx}" y="${slowY+6}" fill="var(--text-3)" font-size="6">Slowest</text>
           </svg>
         </div>`;
       }

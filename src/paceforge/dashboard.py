@@ -2342,7 +2342,7 @@ with tab_feed:
                         f'{_purpose_badge}{_ev_desc}</div>'
                     )
 
-                # Per-km splits visualization — pace over time line chart (SVG)
+                # Per-km splits visualization — Garmin-style smooth bezier area chart
                 _splits_html = ""
                 _ev_splits = _ev_meta.get("splits") if _ev_meta else None
                 if _ev_splits and isinstance(_ev_splits, list) and len(_ev_splits) > 1:
@@ -2353,59 +2353,66 @@ with tab_feed:
                         _sp_avg = sum(_split_paces) / len(_split_paces)
                         _sp_range = _sp_max - _sp_min or 1
                         # SVG dimensions
-                        _sw, _sh = 460, 100
-                        _pad_l, _pad_r, _pad_t, _pad_b = 42, 10, 8, 22
+                        _sw, _sh = 480, 120
+                        _pad_l, _pad_r, _pad_t, _pad_b = 6, 80, 10, 18
                         _pw = _sw - _pad_l - _pad_r
                         _ph = _sh - _pad_t - _pad_b
-                        # Build points — X = elapsed time, Y = pace (inverted: faster=higher)
-                        _total_elapsed = sum(s.get("duration_sec", 0) for s in _ev_splits)
-                        _total_elapsed = _total_elapsed or len(_ev_splits)
+                        # Build points — X = distance (km), Y = pace (faster=higher)
+                        _n = len(_split_paces)
                         _points = []
+                        _ki = 0
                         for s in _ev_splits:
                             if not s.get("pace_sec"):
                                 continue
-                            elapsed = s.get("elapsed_min", (s["km"] - 1))
-                            x = _pad_l + (elapsed / (_total_elapsed / 60 or 1)) * _pw if _total_elapsed > 0 else _pad_l + (s["km"] - 1) / max(len(_ev_splits) - 1, 1) * _pw
+                            x = _pad_l + (_ki / max(_n - 1, 1)) * _pw
                             y = _pad_t + (s["pace_sec"] - _sp_min) / _sp_range * _ph
                             _points.append((x, y, s["pace_sec"], s.get("avg_hr"), s["km"]))
+                            _ki += 1
                         if len(_points) > 1:
-                            # Polyline
-                            _poly = " ".join(f"{p[0]:.1f},{p[1]:.1f}" for p in _points)
-                            # Gradient fill
-                            _fill_pts = _poly + f" {_points[-1][0]:.1f},{_pad_t + _ph} {_points[0][0]:.1f},{_pad_t + _ph}"
-                            # Average pace line
+                            # Cubic bezier path
+                            _path = f"M{_points[0][0]:.1f},{_points[0][1]:.1f}"
+                            for _i in range(1, len(_points)):
+                                _mx = (_points[_i - 1][0] + _points[_i][0]) / 2
+                                _path += f" C{_mx:.1f},{_points[_i - 1][1]:.1f} {_mx:.1f},{_points[_i][1]:.1f} {_points[_i][0]:.1f},{_points[_i][1]:.1f}"
+                            # Area fill path (close to bottom)
+                            _area = _path + f" L{_points[-1][0]:.1f},{_pad_t + _ph} L{_points[0][0]:.1f},{_pad_t + _ph} Z"
+                            # Average / grid lines
                             _avg_y = _pad_t + (_sp_avg - _sp_min) / _sp_range * _ph
-                            _avg_m, _avg_s = divmod(int(_sp_avg), 60)
-                            # Y axis labels (3 ticks: fastest, avg, slowest)
-                            _fast_m, _fast_s = divmod(int(_sp_min), 60)
-                            _slow_m, _slow_s = divmod(int(_sp_max), 60)
-                            # X axis labels
-                            _total_min = _total_elapsed / 60
+                            _fast_y = _pad_t
+                            _slow_y = _pad_t + _ph
+                            # Format pace helper
+                            def _fmt_p(sec):
+                                _m, _s = divmod(int(sec), 60)
+                                return f"{_m}:{_s:02d}"
+                            # Right-side labels x pos
+                            _rx = _sw - _pad_r + 8
+                            # X-axis km labels
                             _x_labels = ""
-                            for t_min in range(0, int(_total_min) + 1, max(1, int(_total_min / 4))):
-                                _tx = _pad_l + (t_min / _total_min) * _pw if _total_min > 0 else _pad_l
-                                _x_labels += f'<text x="{_tx:.0f}" y="{_sh - 2}" fill="#8B95AD" font-size="8" text-anchor="middle">{t_min}\'</text>'
-                            # Dots with colors
-                            _dots = ""
-                            for px, py, pp, phr, pk in _points:
-                                _dc = "#10B981" if pp <= _sp_avg else "#F43F5E"
-                                _dots += f'<circle cx="{px:.1f}" cy="{py:.1f}" r="3" fill="{_dc}" stroke="#161821" stroke-width="1"/>'
+                            _km_step = max(1, len(_points) // 5)
+                            for _ki2, _pt in enumerate(_points):
+                                if _ki2 % _km_step == 0 or _ki2 == len(_points) - 1:
+                                    _x_labels += f'<text x="{_pt[0]:.0f}" y="{_sh - 2}" fill="#5C6478" font-size="8" text-anchor="middle">{_pt[4]}</text>'
                             _splits_html = (
                                 f'<div style="margin-top:6px;margin-bottom:4px;">'
-                                f'<div style="font-size:.75rem;color:#8B95AD;margin-bottom:4px;text-transform:uppercase;font-weight:600;">Pace Over Time</div>'
+                                f'<div style="font-size:.75rem;color:#8B95AD;margin-bottom:4px;text-transform:uppercase;font-weight:600;">Pace Analysis</div>'
                                 f'<svg viewBox="0 0 {_sw} {_sh}" style="width:100%;height:auto;font-family:monospace;">'
-                                f'<polygon points="{_fill_pts}" fill="url(#splitGrad)" opacity="0.15"/>'
                                 f'<defs><linearGradient id="splitGrad" x1="0" y1="0" x2="0" y2="1">'
-                                f'<stop offset="0%" stop-color="#10B981"/><stop offset="100%" stop-color="#10B98100"/>'
+                                f'<stop offset="0%" stop-color="#0EA5E9" stop-opacity="0.35"/>'
+                                f'<stop offset="100%" stop-color="#0EA5E9" stop-opacity="0.03"/>'
                                 f'</linearGradient></defs>'
+                                f'<line x1="{_pad_l}" y1="{_fast_y}" x2="{_sw - _pad_r}" y2="{_fast_y}" stroke="#252A35" stroke-width="0.5"/>'
+                                f'<line x1="{_pad_l}" y1="{_slow_y}" x2="{_sw - _pad_r}" y2="{_slow_y}" stroke="#252A35" stroke-width="0.5"/>'
                                 f'<line x1="{_pad_l}" y1="{_avg_y:.1f}" x2="{_sw - _pad_r}" y2="{_avg_y:.1f}" '
-                                f'stroke="#8B95AD" stroke-width="0.5" stroke-dasharray="3,3"/>'
-                                f'<text x="{_pad_l - 4}" y="{_avg_y + 3:.1f}" fill="#8B95AD" font-size="8" text-anchor="end">{_avg_m}:{_avg_s:02d}</text>'
-                                f'<text x="{_pad_l - 4}" y="{_pad_t + 6}" fill="#10B981" font-size="8" text-anchor="end">{_fast_m}:{_fast_s:02d}</text>'
-                                f'<text x="{_pad_l - 4}" y="{_pad_t + _ph + 2}" fill="#F43F5E" font-size="8" text-anchor="end">{_slow_m}:{_slow_s:02d}</text>'
+                                f'stroke="#5C6478" stroke-width="0.6" stroke-dasharray="3,3"/>'
+                                f'<path d="{_area}" fill="url(#splitGrad)"/>'
+                                f'<path d="{_path}" fill="none" stroke="#0EA5E9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
                                 f'{_x_labels}'
-                                f'<polyline points="{_poly}" fill="none" stroke="#10B981" stroke-width="1.5" stroke-linejoin="round"/>'
-                                f'{_dots}'
+                                f'<text x="{_rx}" y="{_fast_y + 4}" fill="#0EA5E9" font-size="8" font-weight="600">{_fmt_p(_sp_min)}</text>'
+                                f'<text x="{_rx}" y="{_fast_y + 13}" fill="#5C6478" font-size="6.5">Fastest</text>'
+                                f'<text x="{_rx}" y="{_avg_y + 2:.1f}" fill="#8B95AD" font-size="8">{_fmt_p(_sp_avg)}</text>'
+                                f'<text x="{_rx}" y="{_avg_y + 11:.1f}" fill="#5C6478" font-size="6.5">Average</text>'
+                                f'<text x="{_rx}" y="{_slow_y - 2}" fill="#F43F5E" font-size="8" font-weight="600">{_fmt_p(_sp_max)}</text>'
+                                f'<text x="{_rx}" y="{_slow_y + 7}" fill="#5C6478" font-size="6.5">Slowest</text>'
                                 f'</svg></div>'
                             )
 
