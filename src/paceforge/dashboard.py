@@ -2325,6 +2325,58 @@ with tab_feed:
                     if _m_items:
                         _rich_metrics_html = _metrics_strip(_m_items)
 
+                # Planned workout description
+                _desc_html = ""
+                _ev_desc = _ev_meta.get("description", "") if _ev_meta else ""
+                _ev_purpose = _ev_meta.get("purpose", "") if _ev_meta else ""
+                if _ev_desc:
+                    _purpose_badge = (
+                        f'<span style="display:inline-block;background:#10B98122;color:#10B981;'
+                        f'font-size:0.7rem;padding:2px 8px;border-radius:10px;margin-right:6px;'
+                        f'text-transform:uppercase;font-weight:600;">{_ev_purpose.replace("_", " ")}</span>'
+                    ) if _ev_purpose else ""
+                    _desc_html = (
+                        f'<div style="color:#8B95AD;font-size:0.85rem;font-style:italic;'
+                        f'margin-bottom:0.5rem;padding:8px 10px;background:#1E2130;'
+                        f'border-radius:8px;border-left:2px solid #10B98144;">'
+                        f'{_purpose_badge}{_ev_desc}</div>'
+                    )
+
+                # Per-km splits visualization
+                _splits_html = ""
+                _ev_splits = _ev_meta.get("splits") if _ev_meta else None
+                if _ev_splits and isinstance(_ev_splits, list) and len(_ev_splits) > 1:
+                    _split_paces = [s.get("pace_sec") for s in _ev_splits if s.get("pace_sec")]
+                    if _split_paces:
+                        _sp_min = min(_split_paces)
+                        _sp_max = max(_split_paces)
+                        _sp_avg = sum(_split_paces) / len(_split_paces)
+                        _sp_rows = ""
+                        for s in _ev_splits:
+                            _sp = s.get("pace_sec")
+                            if not _sp:
+                                continue
+                            _sp_m, _sp_s = divmod(int(_sp), 60)
+                            _sp_hr = f' <span style="color:#8B95AD;font-size:.7rem">{int(s["avg_hr"])} bpm</span>' if s.get("avg_hr") else ""
+                            _bar_pct = ((_sp - _sp_min) / (_sp_max - _sp_min) * 60 + 40) if _sp_max > _sp_min else 70
+                            _bar_color = "#10B981" if _sp <= _sp_avg else "#F43F5E"
+                            _sp_rows += (
+                                f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">'
+                                f'<span style="width:28px;text-align:right;font-size:.72rem;color:#8B95AD;">{s["km"]}</span>'
+                                f'<div style="flex:1;height:14px;background:#252A35;border-radius:3px;overflow:hidden;">'
+                                f'<div style="width:{_bar_pct:.0f}%;height:100%;background:{_bar_color};'
+                                f'border-radius:3px;"></div></div>'
+                                f'<span style="font-family:monospace;font-size:.78rem;color:#E8ECF4;'
+                                f'width:48px;">{_sp_m}:{_sp_s:02d}</span>{_sp_hr}'
+                                f'</div>'
+                            )
+                        _splits_html = (
+                            f'<div style="margin-top:6px;margin-bottom:4px;">'
+                            f'<div style="font-size:.75rem;color:#8B95AD;margin-bottom:4px;'
+                            f'text-transform:uppercase;font-weight:600;">Splits</div>'
+                            f'{_sp_rows}</div>'
+                        )
+
                 # User name is clickable to view profile
                 _name_click_html = (
                     f'<span style="color:#E8ECF4;font-weight:600;cursor:pointer;'
@@ -2345,7 +2397,9 @@ with tab_feed:
                     f'{icon} {ev.get("title", "")}</div>'
                     + (f'<div style="color:#B0B7C3;font-size:0.9rem;margin-bottom:0.5rem;">{ev.get("body")}</div>'
                        if ev.get("body") else '')
+                    + _desc_html
                     + _rich_metrics_html
+                    + _splits_html
                     + f'<div style="color:#8B95AD;font-size:0.85rem;margin-top:0.4rem;">'
                     f'{heart} {like_count}  ·  {comment_count}</div>'
                     f'</div>',

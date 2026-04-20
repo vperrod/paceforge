@@ -590,6 +590,16 @@ def create_feed_event(
     return dict(row)
 
 
+def update_feed_event_metadata(db_path: str, event_id: str, metadata: dict) -> None:
+    """Update the metadata JSON of an existing feed event."""
+    import json as _json
+    meta_str = _json.dumps(metadata)
+    with _lock:
+        conn = _get_conn(db_path)
+        conn.execute("UPDATE feed_events SET metadata = ? WHERE id = ?", (meta_str, event_id))
+        conn.commit()
+
+
 def get_feed(db_path: str, user_ids: list[str], *, limit: int = 20, offset: int = 0) -> list[dict]:
     """Get feed events for a list of user IDs, with like/comment counts and user info."""
     if not user_ids:

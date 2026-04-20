@@ -47,6 +47,7 @@ from paceforge.auth.database import (
     send_friend_request,
     store_refresh_token,
     toggle_like,
+    update_feed_event_metadata,
     update_garmin_email,
     update_last_login,
     update_user_profile,
@@ -854,6 +855,65 @@ def _get_or_create_coach(uid: str) -> Coach:
     return _user_coach[uid]
 
 
+def _extract_compact_splits(completion_metrics: dict | None) -> list[dict] | None:
+    """Extract compact per-km split data from Garmin split_summaries.
+
+    Returns a list of {km, pace_sec, avg_hr} dicts, or None if unavailable.
+    """
+    if not completion_metrics:
+        return None
+    detail = completion_metrics.get("detail")
+    if not detail:
+        return None
+    summaries = detail.get("split_summaries")
+    if not summaries:
+        return None
+    # Garmin split_summaries can be a dict with a list or a list directly
+    splits_list = summaries
+    if isinstance(summaries, dict):
+        splits_list = summaries.get("splitSummaries") or summaries.get("splits") or []
+    if not isinstance(splits_list, list):
+        return None
+    compact = []
+    for i, s in enumerate(splits_list, 1):
+        speed = s.get("averageSpeed") or s.get("avgSpeed") or 0
+        pace_sec = round(1000 / speed) if speed > 0 else None
+        compact.append({
+            "km": i,
+            "pace_sec": pace_sec,
+            "avg_hr": round(s["averageHR"]) if s.get("averageHR") else None,
+        })
+    return compact or None
+
+
+def _build_feed_metadata(wo, metrics: dict, splits: list[dict] | None = None) -> dict:
+    """Build enriched feed event metadata from a completed workout."""
+    dist_km = round(metrics.get("distance_meters", 0) / 1000, 2) if metrics.get("distance_meters") else None
+    pace = metrics.get("avg_pace_sec_per_km")
+    pace_str = f"{int(pace // 60)}:{int(pace % 60):02d}/km" if pace else None
+    meta = {
+        "workout_type": wo.workout_type.value,
+        "distance_km": dist_km,
+        "pace": pace_str,
+        "distance_meters": metrics.get("distance_meters"),
+        "duration_seconds": metrics.get("duration_seconds"),
+        "avg_pace_sec_per_km": pace,
+        "avg_hr": metrics.get("avg_hr"),
+        "max_hr": metrics.get("max_hr"),
+        "calories": metrics.get("calories"),
+        "elevation_gain": metrics.get("elevation_gain"),
+        "training_effect_aerobic": metrics.get("training_effect_aerobic"),
+        "activity_type": metrics.get("activity_type", "running"),
+    }
+    if wo.description:
+        meta["description"] = wo.description
+    if wo.purpose:
+        meta["purpose"] = wo.purpose.value
+    if splits:
+        meta["splits"] = splits
+    return meta
+
+
 def _auto_match_activities(uid: str, activities: list[RecentActivity]) -> None:
     """Auto-match Garmin activities to planned workouts by date.
 
@@ -965,10 +1025,11 @@ def _auto_match_activities(uid: str, activities: list[RecentActivity]) -> None:
     # Post feed events for newly completed workouts
     for plan, wo in newly_matched:
         metrics = wo.completion_metrics or {}
-        dist_km = round(metrics.get("distance_meters", 0) / 1000, 2) if metrics.get("distance_meters") else None
+        splits = _extract_compact_splits(metrics)
+        meta = _build_feed_metadata(wo, metrics, splits)
+        dist_km = meta.get("distance_km")
         dur_min = round(metrics.get("duration_seconds", 0) / 60, 1) if metrics.get("duration_seconds") else None
-        pace = metrics.get("avg_pace_sec_per_km")
-        pace_str = f"{int(pace // 60)}:{int(pace % 60):02d}/km" if pace else None
+        pace_str = meta.get("pace")
         parts = [f"{dist_km} km" if dist_km else None, f"{dur_min} min" if dur_min else None, pace_str]
         body_str = " · ".join(p for p in parts if p) or None
         try:
@@ -977,7 +1038,7 @@ def _auto_match_activities(uid: str, activities: list[RecentActivity]) -> None:
                 event_type="activity",
                 title=f"Completed: {wo.name}",
                 body=body_str,
-                metadata={"workout_type": wo.workout_type.value, "distance_km": dist_km, "pace": pace_str},
+                metadata=meta,
             )
         except Exception:
             logger.debug("Failed to post feed event for %s", wo.name)
@@ -1858,7 +1919,8 @@ _backfilled_users: set[str] = set()
 
 
 def _backfill_feed_events(uid: str) -> None:
-    """Create feed events for completed workouts that don't have one yet."""
+    """Create feed events for completed workouts that don't have one yet,
+    and retroactively enrich existing events with description/splits."""
     if uid in _backfilled_users:
         return
     _backfilled_users.add(uid)
@@ -1870,9 +1932,12 @@ def _backfill_feed_events(uid: str) -> None:
         return
 
     existing = get_feed(settings.db_path, [uid], limit=500)
-    existing_titles = {e.get("title", "") for e in existing}
+    existing_by_title: dict[str, dict] = {}
+    for e in existing:
+        existing_by_title[e.get("title", "")] = e
 
     created = 0
+    updated = 0
     for plan in plans:
         if not plan.accepted:
             continue
@@ -1881,42 +1946,52 @@ def _backfill_feed_events(uid: str) -> None:
                 if not wo.completed or wo.workout_type.value == "rest":
                     continue
                 title = f"Completed: {wo.name}"
-                if title in existing_titles:
-                    continue
                 metrics = wo.completion_metrics or {}
-                dist_km = round(metrics.get("distance_meters", 0) / 1000, 2) if metrics.get("distance_meters") else None
-                dur_min = round(metrics.get("duration_seconds", 0) / 60, 1) if metrics.get("duration_seconds") else None
-                pace = metrics.get("avg_pace_sec_per_km")
-                pace_str = f"{int(pace // 60)}:{int(pace % 60):02d}/km" if pace else None
-                parts = [f"{dist_km} km" if dist_km else None, f"{dur_min} min" if dur_min else None, pace_str]
-                body_str = " · ".join(p for p in parts if p) or None
-                meta = {
-                    "workout_type": wo.workout_type.value,
-                    "distance_km": dist_km,
-                    "pace": pace_str,
-                    "distance_meters": metrics.get("distance_meters"),
-                    "duration_seconds": metrics.get("duration_seconds"),
-                    "avg_pace_sec_per_km": pace,
-                    "avg_hr": metrics.get("avg_hr"),
-                    "max_hr": metrics.get("max_hr"),
-                    "calories": metrics.get("calories"),
-                    "elevation_gain": metrics.get("elevation_gain"),
-                    "training_effect_aerobic": metrics.get("training_effect_aerobic"),
-                    "activity_type": metrics.get("activity_type", "running"),
-                }
-                try:
-                    create_feed_event(
-                        settings.db_path, uid,
-                        event_type="activity",
-                        title=title,
-                        body=body_str,
-                        metadata=meta,
-                    )
-                    created += 1
-                except Exception:
-                    pass
+                splits = _extract_compact_splits(metrics)
+                meta = _build_feed_metadata(wo, metrics, splits)
+
+                if title not in existing_by_title:
+                    # Create new event
+                    dist_km = meta.get("distance_km")
+                    dur_min = round(metrics.get("duration_seconds", 0) / 60, 1) if metrics.get("duration_seconds") else None
+                    pace_str = meta.get("pace")
+                    parts = [f"{dist_km} km" if dist_km else None, f"{dur_min} min" if dur_min else None, pace_str]
+                    body_str = " · ".join(p for p in parts if p) or None
+                    try:
+                        create_feed_event(
+                            settings.db_path, uid,
+                            event_type="activity",
+                            title=title,
+                            body=body_str,
+                            metadata=meta,
+                        )
+                        created += 1
+                    except Exception:
+                        pass
+                else:
+                    # Retroactively enrich existing event if missing new fields
+                    ev = existing_by_title[title]
+                    ev_meta_raw = ev.get("metadata")
+                    ev_meta = {}
+                    if ev_meta_raw:
+                        try:
+                            ev_meta = json.loads(ev_meta_raw) if isinstance(ev_meta_raw, str) else (ev_meta_raw or {})
+                        except (json.JSONDecodeError, TypeError):
+                            ev_meta = {}
+                    needs_update = not ev_meta.get("description") and meta.get("description")
+                    needs_update = needs_update or (not ev_meta.get("splits") and meta.get("splits"))
+                    needs_update = needs_update or (not ev_meta.get("purpose") and meta.get("purpose"))
+                    if needs_update:
+                        ev_meta.update(meta)
+                        try:
+                            update_feed_event_metadata(settings.db_path, ev["id"], ev_meta)
+                            updated += 1
+                        except Exception:
+                            pass
     if created:
         logger.info("Backfilled %d feed events for user %s", created, uid)
+    if updated:
+        logger.info("Retroactively enriched %d feed events for user %s", updated, uid)
 
 
 @app.get("/feed")

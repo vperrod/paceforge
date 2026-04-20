@@ -705,15 +705,55 @@ function renderFeedItem(ev) {
 
   // Show metadata for activity events
   let metaHtml = '';
+  let descHtml = '';
+  let splitsHtml = '';
   if (ev.metadata) {
     const m = ev.metadata;
     const parts = [];
     if (m.distance_km) parts.push(m.distance_km.toFixed(1) + ' km');
     else if (m.distance_meters) parts.push((m.distance_meters / 1000).toFixed(1) + ' km');
-    if (m.pace) parts.push(m.pace + '/km');
+    if (m.pace) parts.push(m.pace);
     else if (m.avg_pace_sec_per_km) parts.push(formatPace(m.avg_pace_sec_per_km) + '/km');
-    if (m.avg_hr) parts.push(m.avg_hr + ' bpm');
+    if (m.avg_hr) parts.push(Math.round(m.avg_hr) + ' bpm');
+    if (m.calories) parts.push(Math.round(m.calories) + ' cal');
+    if (m.elevation_gain && m.elevation_gain > 0) parts.push(Math.round(m.elevation_gain) + 'm ↑');
+    if (m.training_effect_aerobic) parts.push('TE ' + m.training_effect_aerobic.toFixed(1));
     if (parts.length) metaHtml = `<div style="font-size:.78rem;color:var(--text-3);margin-top:4px;font-family:var(--font-m)">${parts.join(' · ')}</div>`;
+
+    // Planned workout description
+    if (m.description) {
+      const purposeBadge = m.purpose
+        ? `<span style="display:inline-block;background:var(--emerald-a);color:var(--emerald);font-size:.65rem;padding:1px 6px;border-radius:8px;margin-right:5px;text-transform:uppercase;font-weight:600">${m.purpose.replace(/_/g,' ')}</span>`
+        : '';
+      descHtml = `<div style="color:var(--text-3);font-size:.78rem;font-style:italic;margin-top:6px;padding:6px 8px;background:var(--elevated);border-radius:6px;border-left:2px solid var(--emerald-a)">${purposeBadge}${escHtml(m.description)}</div>`;
+    }
+
+    // Per-km splits visualization
+    if (m.splits && m.splits.length > 1) {
+      const paces = m.splits.filter(s => s.pace_sec).map(s => s.pace_sec);
+      if (paces.length > 1) {
+        const minP = Math.min(...paces);
+        const maxP = Math.max(...paces);
+        const avgP = paces.reduce((a,b) => a+b, 0) / paces.length;
+        let rows = '';
+        for (const s of m.splits) {
+          if (!s.pace_sec) continue;
+          const pm = Math.floor(s.pace_sec / 60);
+          const ps = Math.round(s.pace_sec % 60);
+          const barPct = maxP > minP ? ((s.pace_sec - minP) / (maxP - minP) * 60 + 40) : 70;
+          const barColor = s.pace_sec <= avgP ? 'var(--emerald)' : 'var(--rose)';
+          const hrBit = s.avg_hr ? ` <span style="color:var(--text-3);font-size:.65rem">${s.avg_hr}</span>` : '';
+          rows += `<div style="display:flex;align-items:center;gap:4px;margin-bottom:1px">
+            <span style="width:20px;text-align:right;font-size:.65rem;color:var(--text-3)">${s.km}</span>
+            <div style="flex:1;height:12px;background:var(--elevated);border-radius:2px;overflow:hidden">
+              <div style="width:${barPct.toFixed(0)}%;height:100%;background:${barColor};border-radius:2px"></div>
+            </div>
+            <span style="font-family:var(--font-m);font-size:.72rem;width:38px">${pm}:${String(ps).padStart(2,'0')}</span>${hrBit}
+          </div>`;
+        }
+        splitsHtml = `<div style="margin-top:6px"><div style="font-size:.65rem;color:var(--text-3);text-transform:uppercase;font-weight:600;margin-bottom:3px">Splits</div>${rows}</div>`;
+      }
+    }
   }
 
   return `<div class="feed-item" id="feed-${ev.id}">
@@ -724,7 +764,7 @@ function renderFeedItem(ev) {
         <div class="feed-time">${timeAgo}</div>
       </div>
     </div>
-    <div class="feed-body"><b>${escHtml(ev.title)}</b>${ev.body ? '<br>' + escHtml(ev.body) : ''}${metaHtml}</div>
+    <div class="feed-body"><b>${escHtml(ev.title)}</b>${ev.body ? '<br>' + escHtml(ev.body) : ''}${descHtml}${metaHtml}${splitsHtml}</div>
     <div class="feed-actions">
       <button class="${isLiked ? 'liked' : ''}" data-like="${ev.id}">${icons.heart} <span>${likeCount}</span></button>
       <button data-comments="${ev.id}">${icons.comment} <span>${commentCount}</span></button>
