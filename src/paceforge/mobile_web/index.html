@@ -1200,7 +1200,13 @@ async function renderPlan(page) {
   if (!active) {
     page.innerHTML = `<div class="fade-in">
       <div class="section-title">Training Plan</div>
-      <div class="empty">No active plan. Generate one from the desktop app.</div>
+      <div style="margin:16px 0;padding:14px 16px;background:#F59E0B18;border:1px solid #F59E0B44;border-radius:10px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:1.3rem">💻</span>
+        <div>
+          <div style="font-weight:600;font-size:.88rem;color:var(--text-1)">No plan created yet</div>
+          <div style="font-size:.78rem;color:var(--text-2);margin-top:2px">Plan creation is available on the desktop website. Head there to generate your training plan!</div>
+        </div>
+      </div>
     </div>`;
     return;
   }
