@@ -1043,6 +1043,33 @@ def _auto_match_activities(uid: str, activities: list[RecentActivity]) -> None:
 
     _save_plans(uid)
 
+    # Auto-push to Strava if enabled
+    try:
+        strava_data = _load_strava_data(uid)
+        if strava_data:
+            cached = load_user_data(settings.db_path, uid)
+            prefs: dict = {}
+            if cached and cached.get("preferences_json"):
+                try:
+                    prefs = json.loads(cached["preferences_json"])
+                except (json.JSONDecodeError, TypeError):
+                    prefs = {}
+            if prefs.get("strava_auto_update"):
+                sent = prefs.get("strava_sent_activities", [])
+                for _plan, _wo in newly_matched:
+                    aid = _wo.matched_activity_id
+                    if aid and aid not in sent:
+                        try:
+                            result = _do_strava_push(uid, aid, raise_on_error=False)
+                            if result.get("error"):
+                                logger.warning("Auto Strava push failed for %s: %s", aid, result["error"])
+                            else:
+                                logger.info("Auto Strava push succeeded for activity %s", aid)
+                        except Exception:
+                            logger.warning("Auto Strava push error for activity %s", aid, exc_info=True)
+    except Exception:
+        logger.warning("Auto Strava push check failed", exc_info=True)
+
 
 @app.post("/plan/generate", response_model=TrainingPlan)
 async def generate(req: GeneratePlanRequest, user: dict = Depends(get_current_user)):
@@ -2135,14 +2162,42 @@ async def strava_callback(code: str = "", state: str = "", error: str = ""):
 @app.get("/strava/status")
 async def strava_status(user: dict = Depends(get_current_user)):
     """Return Strava connection status."""
-    data = _load_strava_data(user["id"])
+    uid = user["id"]
+    data = _load_strava_data(uid)
     if not data:
-        return {"connected": False}
+        return {"connected": False, "auto_update": False}
+    # Read auto_update preference
+    auto_update = False
+    cached = load_user_data(settings.db_path, uid)
+    if cached and cached.get("preferences_json"):
+        try:
+            prefs = json.loads(cached["preferences_json"])
+            auto_update = bool(prefs.get("strava_auto_update", False))
+        except (json.JSONDecodeError, TypeError):
+            pass
     return {
         "connected": True,
         "athlete_name": data.get("athlete_name", ""),
         "athlete_id": data.get("athlete_id"),
+        "auto_update": auto_update,
     }
+
+
+@app.post("/strava/auto-update")
+async def strava_auto_update(body: dict, user: dict = Depends(get_current_user)):
+    """Toggle automatic Strava updates on Garmin sync."""
+    uid = user["id"]
+    enabled = bool(body.get("enabled", False))
+    cached = load_user_data(settings.db_path, uid)
+    prefs: dict = {}
+    if cached and cached.get("preferences_json"):
+        try:
+            prefs = json.loads(cached["preferences_json"])
+        except (json.JSONDecodeError, TypeError):
+            prefs = {}
+    prefs["strava_auto_update"] = enabled
+    save_user_data(settings.db_path, uid, preferences_json=json.dumps(prefs))
+    return {"auto_update": enabled}
 
 
 @app.delete("/strava/disconnect")
@@ -2227,17 +2282,19 @@ def _build_strava_description(
     return "\n".join(parts)
 
 
-@app.post("/strava/push/{activity_id}")
-async def strava_push(activity_id: int, user: dict = Depends(get_current_user)):
-    """Push a completed activity to Strava."""
-    uid = user["id"]
+def _do_strava_push(uid: str, activity_id: int, *, raise_on_error: bool = True) -> dict:
+    """Core logic for pushing a single activity to Strava.
 
-    # 1. Check Strava connection
+    Used by both the /strava/push endpoint and the auto-push hook.
+    When *raise_on_error* is False (auto-push), errors return an error dict
+    instead of raising HTTPException.
+    """
     strava_data = _load_strava_data(uid)
     if not strava_data:
-        raise HTTPException(400, "Strava not connected")
+        if raise_on_error:
+            raise HTTPException(400, "Strava not connected")
+        return {"error": "Strava not connected"}
 
-    # 2. Check duplicate
     cached = load_user_data(settings.db_path, uid)
     prefs: dict = {}
     if cached and cached.get("preferences_json"):
@@ -2247,7 +2304,7 @@ async def strava_push(activity_id: int, user: dict = Depends(get_current_user)):
             prefs = {}
     sent: list = prefs.get("strava_sent_activities", [])
 
-    # 3. Find activity in cached data
+    # Find activity in cached data
     act_dict: dict | None = None
     if cached and cached.get("activities_json"):
         for a in json.loads(cached["activities_json"]):
@@ -2255,9 +2312,11 @@ async def strava_push(activity_id: int, user: dict = Depends(get_current_user)):
                 act_dict = a
                 break
     if not act_dict:
-        raise HTTPException(404, "Activity not found in cached data")
+        if raise_on_error:
+            raise HTTPException(404, "Activity not found in cached data")
+        return {"error": "Activity not found"}
 
-    # 4. Find matched planned workout (for description)
+    # Find matched planned workout (for description)
     workout_description: str | None = None
     if uid not in _user_plans:
         _user_plans[uid] = _load_plans(uid)
@@ -2274,11 +2333,10 @@ async def strava_push(activity_id: int, user: dict = Depends(get_current_user)):
         if workout_description:
             break
 
-    # 5. Load or generate AI analysis
+    # Load or generate AI analysis
     analyses: dict = prefs.get("activity_analyses", {})
     ai_analysis: str | None = analyses.get(str(activity_id))
     if not ai_analysis:
-        # Trigger analysis on-the-fly
         try:
             garmin = _ensure_garmin(uid)
             if garmin:
@@ -2296,15 +2354,15 @@ async def strava_push(activity_id: int, user: dict = Depends(get_current_user)):
         except Exception as e:
             logger.warning("On-the-fly AI analysis failed for Strava push: %s", e)
 
-    # 6. Build description
+    # Build description
     description = _build_strava_description(act_dict, workout_description, ai_analysis)
 
-    # 7. Map activity type to Strava sport_type
+    # Map activity type to Strava sport_type
     act_type = act_dict.get("activity_type", "running")
     sport_type = _STRAVA_SPORT_TYPE_MAP.get(act_type, "Workout")
     is_trainer = act_type in _STRAVA_TRAINER_TYPES
 
-    # 8. Build PaceForge-branded title
+    # Build PaceForge-branded title
     strava_title = act_dict.get("name", "PaceForge Activity")
     if workout_description:
         first_line = workout_description.split("\n")[0].strip()
@@ -2313,22 +2371,23 @@ async def strava_push(activity_id: int, user: dict = Depends(get_current_user)):
     elif "PaceForge" not in strava_title:
         strava_title = f"{strava_title} / PaceForge"
 
-    # 9. Parse start_time for matching
+    # Parse start_time for matching
     start_time = act_dict.get("start_time", "")
     if hasattr(start_time, "isoformat"):
         start_time = start_time.isoformat()
 
-    # 10. Ensure valid token
-    client = _get_strava_client()
+    # Ensure valid token
     try:
+        client = _get_strava_client()
         access_token, strava_data = client.ensure_valid_token(strava_data)
         _save_strava_data(uid, strava_data)
     except Exception as e:
         logger.error("Strava token refresh failed: %s", e)
-        raise HTTPException(502, "Failed to refresh Strava token — please reconnect")
+        if raise_on_error:
+            raise HTTPException(502, "Failed to refresh Strava token — please reconnect")
+        return {"error": f"Token refresh failed: {e}"}
 
-    # 11. Try update-first: find the Garmin-synced activity on Strava and
-    #     enhance it with PaceForge data (title, description).
+    # Parse epoch for activity matching
     start_epoch: float | None = None
     try:
         from datetime import datetime as _dt
@@ -2371,7 +2430,7 @@ async def strava_push(activity_id: int, user: dict = Depends(get_current_user)):
         except Exception as e:
             logger.warning("Strava find/update failed, falling back to create: %s", e)
 
-    # 12. Fallback: create new activity if no match found
+    # Fallback: create new activity if no match found
     if not updated:
         try:
             result = client.create_activity(
@@ -2386,7 +2445,6 @@ async def strava_push(activity_id: int, user: dict = Depends(get_current_user)):
             )
             strava_id = result.get("id", "")
         except DuplicateActivityError:
-            # Strava rejected create (409) — try to find and update instead
             if start_epoch:
                 try:
                     existing = client.find_matching_activity(
@@ -2416,9 +2474,11 @@ async def strava_push(activity_id: int, user: dict = Depends(get_current_user)):
                 }
         except Exception as e:
             logger.error("Strava create activity failed: %s", e)
-            raise HTTPException(502, f"Strava API error: {e}")
+            if raise_on_error:
+                raise HTTPException(502, f"Strava API error: {e}")
+            return {"error": f"Strava API error: {e}"}
 
-    # 13. Record that we sent this activity
+    # Record that we sent this activity
     if activity_id not in sent:
         sent.append(activity_id)
         prefs["strava_sent_activities"] = sent
@@ -2429,6 +2489,12 @@ async def strava_push(activity_id: int, user: dict = Depends(get_current_user)):
         "url": f"https://www.strava.com/activities/{strava_id}",
         "updated": updated,
     }
+
+
+@app.post("/strava/push/{activity_id}")
+async def strava_push(activity_id: int, user: dict = Depends(get_current_user)):
+    """Push a completed activity to Strava."""
+    return _do_strava_push(user["id"], activity_id, raise_on_error=True)
 
 
 # ── Health Data (Apple Health / Google Health Connect) ───────────────

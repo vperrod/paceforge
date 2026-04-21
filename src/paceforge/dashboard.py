@@ -6258,6 +6258,26 @@ with tab_user_settings:
                     f'</div>',
                     unsafe_allow_html=True,
                 )
+                # Auto-update toggle
+                _strava_auto = _strava_status.get("auto_update", False)
+                _new_auto = st.toggle(
+                    "Auto-update Strava activities",
+                    value=_strava_auto,
+                    key="strava_auto_toggle",
+                    help="Automatically update Strava with AI analysis when Garmin activities sync",
+                )
+                if _new_auto != _strava_auto:
+                    try:
+                        requests.post(
+                            f"{API_BASE}/strava/auto-update",
+                            headers=_auth_headers(),
+                            json={"enabled": _new_auto},
+                            timeout=10,
+                        )
+                        st.rerun()
+                    except Exception as _se:
+                        st.error(f"Failed to update setting: {_se}")
+
                 if st.button("Disconnect Strava", key="strava_disconnect", use_container_width=True):
                     try:
                         requests.delete(f"{API_BASE}/strava/disconnect", headers=_auth_headers(), timeout=10)

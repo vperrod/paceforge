@@ -1708,6 +1708,11 @@ async function renderSettings(page) {
     let garminStatus = 'Unknown';
     try { const gs = await apiJson('/garmin/status'); garminStatus = gs.connected ? 'Connected' : 'Not connected'; } catch { garminStatus = 'Not connected'; }
 
+    let stravaStatus = null;
+    try { stravaStatus = await apiJson('/strava/status'); } catch {}
+    const stravaConnected = stravaStatus && stravaStatus.connected;
+    const stravaAuto = stravaStatus ? !!stravaStatus.auto_update : false;
+
     page.innerHTML = `<div class="fade-in">
       <div class="profile-header">
         <div class="profile-avatar">${(profile.name || '?')[0].toUpperCase()}</div>
@@ -1721,12 +1726,43 @@ async function renderSettings(page) {
         ${profile.garmin_email ? `<div class="settings-row"><span class="settings-label">Garmin Email</span><span class="settings-value" style="font-size:.78rem">${escHtml(profile.garmin_email)}</span></div>` : ''}
         <div class="settings-row"><span class="settings-label">Registered</span><span class="settings-value">${(profile.created_at || '').slice(0, 10)}</span></div>
       </div>
+      ${stravaConnected ? `<div class="card">
+        <div class="settings-row">
+          <span class="settings-label" style="color:#FC4C02;font-weight:600">Strava</span>
+          <span class="settings-value" style="color:var(--emerald)">${escHtml(stravaStatus.athlete_name || 'Connected')}</span>
+        </div>
+        <div class="settings-row" style="border-bottom:none">
+          <div>
+            <span class="settings-label">Auto-update activities</span>
+            <div style="font-size:.72rem;color:var(--text-3);margin-top:2px">Push AI analysis to Strava on sync</div>
+          </div>
+          <label style="position:relative;width:44px;height:24px;flex-shrink:0">
+            <input type="checkbox" id="strava-auto-toggle" ${stravaAuto ? 'checked' : ''}
+              style="opacity:0;width:0;height:0;position:absolute">
+            <span style="position:absolute;inset:0;border-radius:12px;cursor:pointer;transition:background .2s;
+              background:${stravaAuto ? 'var(--emerald)' : 'var(--elevated)'}"></span>
+            <span style="position:absolute;top:2px;left:${stravaAuto ? '22px' : '2px'};width:20px;height:20px;
+              border-radius:50%;background:#fff;transition:left .2s;pointer-events:none"></span>
+          </label>
+        </div>
+      </div>` : ''}
       <button class="btn btn-ghost" onclick="state.tab='hyrox';loadTab('hyrox')">HYROX Race Results</button>
       <button class="btn btn-ghost" style="margin-top:8px;color:var(--rose);border-color:var(--rose-d)" id="logout-btn">Sign Out</button>
       <button class="btn-link" style="margin-top:12px" onclick="state.tab='home';document.querySelectorAll('.tab-bar button')[0].click()">← Back</button>
     </div>`;
 
     on('logout-btn', 'click', logout);
+
+    // Strava auto-update toggle
+    const autoToggle = document.getElementById('strava-auto-toggle');
+    if (autoToggle) {
+      autoToggle.addEventListener('change', async () => {
+        try {
+          await apiJson('/strava/auto-update', { method: 'POST', body: JSON.stringify({ enabled: autoToggle.checked }) });
+          renderSettings(page);
+        } catch {}
+      });
+    }
   } catch (e) { page.innerHTML = `<div class="empty">Failed: ${escHtml(e.message)}</div>`; }
 }
 
