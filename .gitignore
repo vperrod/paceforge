@@ -36,7 +36,7 @@ htmlcov/
 coverage.xml
 
 # SQLite database (contains credentials)
-paceforge.db
+*.db
 *.db-journal
 
 # Downloaded logs / artifacts
