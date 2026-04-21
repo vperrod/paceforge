@@ -187,6 +187,15 @@ async def lifespan(app: FastAPI):
             "UPDATE feed_events SET body = ? WHERE event_type = 'welcome'",
             (_WELCOME_BODY,),
         )
+        # One-time cleanup: delete junk feed events created by broken code
+        # Keeps: plan events, hyrox events, welcome events, and legitimate
+        # "Completed:" workout events from auto-match.
+        deleted = conn.execute(
+            "DELETE FROM feed_events WHERE event_type = 'activity' "
+            "AND title NOT LIKE 'Completed:%'"
+        ).rowcount
+        if deleted:
+            logger.info("Cleaned up %d junk feed events from broken code", deleted)
         conn.commit()
     yield
 
