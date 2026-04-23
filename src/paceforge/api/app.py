@@ -1319,6 +1319,110 @@ async def coach_chat(req: ChatRequest, user: dict = Depends(get_current_user)):
     return ChatResponse(reply=result.reply)
 
 
+# ── Weekly Overview ──────────────────────────────────────────────────
+
+
+def _get_weekly_overview(uid: str, *, force: bool = False) -> dict:
+    """Generate or return cached AI weekly overview for the current week."""
+    today = date.today()
+    monday = today - timedelta(days=today.weekday())
+
+    # Check cache
+    if not force:
+        cached = load_user_data(settings.db_path, uid)
+        if cached and cached.get("weekly_overview_json"):
+            try:
+                overview = json.loads(cached["weekly_overview_json"])
+                cached_monday = overview.get("week_start")
+                cached_date = overview.get("generated_at", "")[:10]
+                if cached_monday == monday.isoformat() and cached_date == today.isoformat():
+                    return overview
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+    # Resolve LLM
+    if settings.llm_provider == "anthropic" and settings.anthropic_api_key:
+        coach_key, coach_model, coach_provider = settings.anthropic_api_key, settings.anthropic_model, "anthropic"
+    elif settings.llm_provider == "openai" and settings.openai_api_key:
+        coach_key, coach_model, coach_provider = settings.openai_api_key, settings.openai_model, "openai"
+    elif settings.anthropic_api_key:
+        coach_key, coach_model, coach_provider = settings.anthropic_api_key, settings.anthropic_model, "anthropic"
+    elif settings.openai_api_key:
+        coach_key, coach_model, coach_provider = settings.openai_api_key, settings.openai_model, "openai"
+    else:
+        raise HTTPException(503, "AI not configured. Set PACEFORGE_ANTHROPIC_API_KEY or PACEFORGE_OPENAI_API_KEY.")
+
+    coach = Coach(api_key=coach_key, model=coach_model, provider=coach_provider)
+
+    # Load profile
+    profile = _user_profile.get(uid)
+    if not profile:
+        cached_data = load_user_data(settings.db_path, uid)
+        if cached_data and cached_data.get("profile_json"):
+            profile = UserFitnessProfile.model_validate_json(cached_data["profile_json"])
+            _user_profile[uid] = profile
+
+    # Load activities and filter to this week
+    week_activities: list[dict] = []
+    cached_data = load_user_data(settings.db_path, uid)
+    if cached_data and cached_data.get("activities_json"):
+        try:
+            all_acts = json.loads(cached_data["activities_json"])
+            sunday = monday + timedelta(days=6)
+            for act in all_acts:
+                start = act.get("start_time") or act.get("start_time_local", "")
+                if start:
+                    act_date_str = start[:10]
+                    if monday.isoformat() <= act_date_str <= sunday.isoformat():
+                        week_activities.append(act)
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    # Load plan
+    if uid not in _user_plans:
+        _user_plans[uid] = _load_plans(uid)
+    plans = _user_plans.get(uid, [])
+    plan = plans[-1] if plans else None
+
+    # Load health data
+    health_data: dict | None = None
+    if cached_data and cached_data.get("health_json"):
+        try:
+            health_data = json.loads(cached_data["health_json"])
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    # Generate analysis
+    sections = coach.analyze_week(
+        profile=profile,
+        activities=week_activities,
+        plan=plan,
+        health_data=health_data,
+    )
+
+    overview = {
+        "week_start": monday.isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
+        "content": sections,
+    }
+
+    # Cache
+    save_user_data(settings.db_path, uid, weekly_overview_json=json.dumps(overview))
+    return overview
+
+
+@app.get("/weekly-overview")
+async def get_weekly_overview(user: dict = Depends(get_current_user)):
+    """Return AI-generated weekly overview (cached per day)."""
+    return _get_weekly_overview(user["id"])
+
+
+@app.post("/weekly-overview/regenerate")
+async def regenerate_weekly_overview(user: dict = Depends(get_current_user)):
+    """Force-regenerate the weekly overview (bypass cache)."""
+    return _get_weekly_overview(user["id"], force=True)
+
+
 @app.post("/plan/adapt", response_model=TrainingPlan)
 async def adapt_current_plan(plan_id: str | None = None, user: dict = Depends(get_current_user)):
     uid = user["id"]

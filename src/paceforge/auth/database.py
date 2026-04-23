@@ -118,6 +118,8 @@ _MIGRATIONS = [
     "ALTER TABLE user_data ADD COLUMN health_json TEXT",
     # Add activity_details_json for cached per-activity splits/HR zones
     "ALTER TABLE user_data ADD COLUMN activity_details_json TEXT",
+    # Add weekly_overview_json for AI weekly analysis cache
+    "ALTER TABLE user_data ADD COLUMN weekly_overview_json TEXT",
     # Add last_login column to users table
     "ALTER TABLE users ADD COLUMN last_login TEXT",
     # Create password_reset_tokens table
@@ -370,8 +372,9 @@ def save_user_data(
     preferences_json: str | None = None,
     health_json: str | None = None,
     activity_details_json: str | None = None,
+    weekly_overview_json: str | None = None,
 ) -> None:
-    """Upsert cached user data (plan, activities, profile, hyrox, preferences, health, activity details)."""
+    """Upsert cached user data (plan, activities, profile, hyrox, preferences, health, activity details, weekly overview)."""
     now = datetime.now(UTC).isoformat()
     with _lock:
         conn = _get_conn(db_path)
@@ -402,6 +405,9 @@ def save_user_data(
             if activity_details_json is not None:
                 sets.append("activity_details_json = ?")
                 vals.append(activity_details_json)
+            if weekly_overview_json is not None:
+                sets.append("weekly_overview_json = ?")
+                vals.append(weekly_overview_json)
             vals.append(user_id)
             conn.execute(
                 f"UPDATE user_data SET {', '.join(sets)} WHERE user_id = ?",

@@ -381,6 +381,196 @@ class Coach:
         self._conversation = saved
         return reply
 
+    def analyze_week(
+        self,
+        profile: UserFitnessProfile | None,
+        activities: list[dict],
+        plan: TrainingPlan | None = None,
+        health_data: dict | None = None,
+    ) -> dict:
+        """Analyze the current week: activities vs plan, recovery, performance.
+
+        Returns a dict with structured sections: summary, plan_adherence,
+        performance, recovery, concerns, tips.
+        """
+        from datetime import date as dt_date
+
+        today = dt_date.today()
+        monday = today - __import__("datetime").timedelta(days=today.weekday())
+        sunday = monday + __import__("datetime").timedelta(days=6)
+
+        lines: list[str] = []
+        lines.append(f"## Weekly Overview: {monday.isoformat()} to {sunday.isoformat()}\n")
+
+        # Activities this week
+        if activities:
+            lines.append(f"### Activities This Week ({len(activities)} total)")
+            total_dist = 0.0
+            total_dur = 0
+            for act in activities:
+                name = act.get("name", "Activity")
+                dist = act.get("distance_meters", 0)
+                dur = act.get("duration_seconds", 0)
+                total_dist += dist
+                total_dur += dur
+                dist_km = dist / 1000 if dist else 0
+                pace = act.get("avg_pace_sec_per_km")
+                pace_str = ""
+                if pace:
+                    pm, ps = divmod(int(pace), 60)
+                    pace_str = f" @ {pm}:{ps:02d}/km"
+                hr_str = f" | HR {act['avg_hr']}bpm" if act.get("avg_hr") else ""
+                te_str = ""
+                if act.get("training_effect_aerobic"):
+                    te_str = f" | TE {act['training_effect_aerobic']}"
+                lines.append(f"- {act.get('start_time', '')}: {name} — {dist_km:.1f}km{pace_str}{hr_str}{te_str}")
+            lines.append(f"\nWeekly totals: {total_dist/1000:.1f} km, {total_dur//60} min")
+        else:
+            lines.append("### No activities recorded this week yet.")
+
+        # Plan adherence
+        if plan:
+            lines.append("\n### Planned Workouts This Week")
+            for week in plan.weeks:
+                for wo in week.workouts:
+                    if wo.scheduled_date and monday <= wo.scheduled_date <= sunday:
+                        planned_dist = round((wo.estimated_distance_meters or 0) / 1000, 1)
+                        status = "✅ Completed" if wo.matched_activity_id else ("⏳ Upcoming" if wo.scheduled_date >= today else "❌ Missed")
+                        lines.append(f"- {wo.scheduled_date}: {wo.name} ({planned_dist}km) — {status}")
+                        if wo.completion_analysis:
+                            lines.append(f"  Analysis: {wo.completion_analysis[:150]}")
+
+        # Recovery & wellness
+        if profile:
+            lines.append("\n### Recovery & Wellness Metrics")
+            if profile.training_readiness is not None:
+                lines.append(f"- Training Readiness: {profile.training_readiness}/100")
+            if profile.hrv_status:
+                lines.append(f"- HRV Status: {profile.hrv_status}")
+            if profile.hrv_last_night:
+                lines.append(f"- HRV Last Night: {profile.hrv_last_night}")
+
+        if health_data:
+            if health_data.get("sleep_score"):
+                lines.append(f"- Sleep Score: {health_data['sleep_score']}")
+            if health_data.get("stress_level"):
+                lines.append(f"- Stress Level: {health_data['stress_level']}")
+            if health_data.get("body_battery_current"):
+                lines.append(f"- Body Battery: {health_data['body_battery_current']}/100")
+
+        # Fitness snapshot
+        if profile:
+            lines.append("\n### Fitness Snapshot")
+            if profile.vo2_max:
+                lines.append(f"- VO2max: {profile.vo2_max}")
+            if profile.weekly_mileage_km:
+                lines.append(f"- Recent weekly mileage: {profile.weekly_mileage_km} km")
+
+        lines.append(
+            "\n---\n"
+            "Provide a structured weekly analysis with these exact section headers "
+            "(use ## for each):\n"
+            "## Summary\nA 2-3 sentence overview of how the week is going.\n"
+            "## Plan Adherence\nHow well the athlete followed the training plan "
+            "(skip if no plan).\n"
+            "## Performance Highlights\nKey metrics, pacing observations, "
+            "notable achievements.\n"
+            "## Recovery & Wellness\nSleep, HRV, stress, body battery assessment "
+            "and what it means.\n"
+            "## Concerns\nAny red flags, overtraining signs, or things to watch. "
+            "Write 'None' if everything looks good.\n"
+            "## Tips\n2-3 actionable recommendations for the rest of the week.\n"
+            "\nBe specific with numbers. Be encouraging but honest."
+        )
+
+        # Use a fresh conversation
+        saved = self._conversation
+        self._conversation = [
+            {"role": "system", "content": SYSTEM_PROMPT},
+        ]
+        if profile:
+            ctx = self._build_context(profile, plan)
+            self._conversation.append({"role": "system", "content": f"Athlete data:\n{ctx}"})
+
+        self._conversation.append({"role": "user", "content": "\n".join(lines)})
+
+        try:
+            if self._provider == "anthropic":
+                reply = self._chat_anthropic()
+            else:
+                # Temporarily increase max_tokens for weekly analysis
+                reply = self._chat_openai_extended()
+        except Exception as e:
+            logger.error("Weekly analysis failed: %s", e, exc_info=True)
+            reply = f"Could not generate weekly analysis: {e}"
+
+        self._conversation = saved
+
+        # Parse sections from reply
+        sections = self._parse_weekly_sections(reply)
+        return sections
+
+    def _chat_openai_extended(self) -> str:
+        """OpenAI chat with extended token limit for weekly analysis."""
+        from openai import OpenAI
+
+        kwargs: dict = {"api_key": self._api_key}
+        if self._base_url:
+            kwargs["base_url"] = self._base_url
+        client = OpenAI(**kwargs)
+        response = client.chat.completions.create(
+            model=self._model,
+            messages=self._conversation,
+            temperature=0.7,
+            max_tokens=1500,
+        )
+        return response.choices[0].message.content or "I couldn't generate a response."
+
+    @staticmethod
+    def _parse_weekly_sections(text: str) -> dict:
+        """Parse the AI response into structured sections."""
+        import re
+
+        section_map = {
+            "summary": "",
+            "plan_adherence": "",
+            "performance": "",
+            "recovery": "",
+            "concerns": "",
+            "tips": "",
+        }
+        # Map heading text → key
+        heading_keys = {
+            "summary": "summary",
+            "plan adherence": "plan_adherence",
+            "performance highlights": "performance",
+            "performance": "performance",
+            "recovery & wellness": "recovery",
+            "recovery": "recovery",
+            "concerns": "concerns",
+            "tips": "tips",
+        }
+        # Split by ## headings
+        parts = re.split(r"##\s+", text)
+        for part in parts:
+            if not part.strip():
+                continue
+            first_line_end = part.find("\n")
+            if first_line_end == -1:
+                heading = part.strip().lower()
+                body = ""
+            else:
+                heading = part[:first_line_end].strip().lower()
+                body = part[first_line_end:].strip()
+            for h_text, key in heading_keys.items():
+                if h_text in heading:
+                    section_map[key] = body
+                    break
+        # If parsing failed, put everything in summary
+        if not any(section_map.values()):
+            section_map["summary"] = text
+        return section_map
+
     def analyze_activity(
         self,
         activity: dict,

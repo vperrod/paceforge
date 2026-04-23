@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator,
+  TouchableOpacity,
 } from 'react-native';
 import { colors, spacing, fontSize } from '../theme';
 import api from '../api/client';
@@ -36,6 +37,13 @@ export default function FitnessProfileScreen() {
   const [analytics, setAnalytics] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
+  const [activeTab, setActiveTab] = React.useState<'fitness' | 'weekly'>('fitness');
+
+  // Weekly overview state
+  const [weeklyData, setWeeklyData] = React.useState<any>(null);
+  const [weeklyLoading, setWeeklyLoading] = React.useState(false);
+  const [weeklyError, setWeeklyError] = React.useState<string | null>(null);
+  const [regenerating, setRegenerating] = React.useState(false);
 
   const loadData = async () => {
     try {
@@ -50,11 +58,48 @@ export default function FitnessProfileScreen() {
     }
   };
 
+  const loadWeekly = async () => {
+    setWeeklyLoading(true);
+    setWeeklyError(null);
+    try {
+      const { data } = await api.get('/weekly-overview');
+      setWeeklyData(data);
+    } catch (e: any) {
+      setWeeklyError(e?.response?.data?.detail || 'Failed to load weekly overview');
+    } finally {
+      setWeeklyLoading(false);
+    }
+  };
+
+  const regenerateWeekly = async () => {
+    setRegenerating(true);
+    setWeeklyError(null);
+    try {
+      const { data } = await api.post('/weekly-overview/regenerate');
+      setWeeklyData(data);
+    } catch (e: any) {
+      setWeeklyError(e?.response?.data?.detail || 'Failed to regenerate');
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
   React.useEffect(() => { loadData(); }, []);
+
+  // Load weekly data when switching to the weekly tab
+  React.useEffect(() => {
+    if (activeTab === 'weekly' && !weeklyData && !weeklyLoading) {
+      loadWeekly();
+    }
+  }, [activeTab]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadData();
+    if (activeTab === 'fitness') {
+      await loadData();
+    } else {
+      await regenerateWeekly();
+    }
     setRefreshing(false);
   };
 
@@ -90,6 +135,35 @@ export default function FitnessProfileScreen() {
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
     >
+      {/* Segment Switcher */}
+      <View style={styles.segmentRow}>
+        <TouchableOpacity
+          style={[styles.segmentBtn, activeTab === 'fitness' && styles.segmentBtnActive]}
+          onPress={() => setActiveTab('fitness')}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.segmentText, activeTab === 'fitness' && styles.segmentTextActive]}>Fitness</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.segmentBtn, activeTab === 'weekly' && styles.segmentBtnActive]}
+          onPress={() => setActiveTab('weekly')}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.segmentText, activeTab === 'weekly' && styles.segmentTextActive]}>Weekly</Text>
+        </TouchableOpacity>
+      </View>
+
+      {activeTab === 'weekly' ? (
+        <WeeklyOverview
+          data={weeklyData}
+          loading={weeklyLoading}
+          error={weeklyError}
+          regenerating={regenerating}
+          onRegenerate={regenerateWeekly}
+          onRetry={loadWeekly}
+        />
+      ) : (
+      <>
       {/* Athlete Level + VDOT */}
       <View style={styles.levelCard}>
         <View style={styles.levelRow}>
@@ -203,7 +277,102 @@ export default function FitnessProfileScreen() {
           ))}
         </View>
       )}
+      </>
+      )}
     </ScrollView>
+  );
+}
+
+function WeeklyOverview({ data, loading, error, regenerating, onRegenerate, onRetry }: {
+  data: any; loading: boolean; error: string | null; regenerating: boolean;
+  onRegenerate: () => void; onRetry: () => void;
+}) {
+  if (loading) {
+    return (
+      <View style={styles.weeklyCenter}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={styles.weeklyLoadingText}>Analyzing your week...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.weeklyCenter}>
+        <Text style={styles.weeklyErrorIcon}>⚠️</Text>
+        <Text style={styles.weeklyErrorText}>{error}</Text>
+        <TouchableOpacity style={styles.retryBtn} onPress={onRetry} activeOpacity={0.7}>
+          <Text style={styles.retryBtnText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (!data?.content) {
+    return (
+      <View style={styles.weeklyCenter}>
+        <Text style={styles.emptyIcon}>📊</Text>
+        <Text style={styles.emptyText}>No weekly data yet</Text>
+      </View>
+    );
+  }
+
+  const { content, week_start, generated_at } = data;
+  const monday = new Date(week_start + 'T00:00:00');
+  const sunday = new Date(monday);
+  sunday.setDate(sunday.getDate() + 6);
+  const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const updatedAt = generated_at ? new Date(generated_at).toLocaleString('en-US', {
+    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+  }) : '';
+
+  const sections: { key: string; title: string; icon: string; color: string }[] = [
+    { key: 'summary', title: 'Summary', icon: '📝', color: colors.primary },
+    { key: 'plan_adherence', title: 'Plan Adherence', icon: '✅', color: colors.sky },
+    { key: 'performance', title: 'Performance', icon: '⚡', color: colors.amber },
+    { key: 'recovery', title: 'Recovery & Wellness', icon: '💤', color: colors.violet },
+    { key: 'concerns', title: 'Concerns', icon: '⚠️', color: colors.danger },
+    { key: 'tips', title: 'Tips', icon: '💡', color: colors.primary },
+  ];
+
+  return (
+    <>
+      {/* Week Header */}
+      <View style={styles.weekHeader}>
+        <Text style={styles.weekRange}>{fmt(monday)} – {fmt(sunday)}</Text>
+        {updatedAt ? <Text style={styles.weekUpdated}>Updated {updatedAt}</Text> : null}
+      </View>
+
+      {/* Sections */}
+      {sections.map(({ key, title, icon, color }) => {
+        const text = content[key];
+        if (!text || text.toLowerCase() === 'none') return null;
+        const isConcern = key === 'concerns';
+        return (
+          <View key={key} style={[styles.section, isConcern && styles.concernSection]}>
+            <View style={styles.weeklySectionHeader}>
+              <Text style={styles.weeklySectionIcon}>{icon}</Text>
+              <Text style={[styles.sectionTitle, { color, marginBottom: 0 }]}>{title}</Text>
+            </View>
+            <Text style={styles.weeklyText}>{text}</Text>
+          </View>
+        );
+      })}
+
+      {/* Regenerate Button */}
+      <TouchableOpacity
+        style={[styles.regenerateBtn, regenerating && styles.regenerateBtnDisabled]}
+        onPress={onRegenerate}
+        disabled={regenerating}
+        activeOpacity={0.7}
+      >
+        {regenerating ? (
+          <ActivityIndicator size="small" color={colors.text} />
+        ) : (
+          <Text style={styles.regenerateBtnText}>🔄 Regenerate Analysis</Text>
+        )}
+      </TouchableOpacity>
+    </>
   );
 }
 
@@ -295,4 +464,69 @@ const styles = StyleSheet.create({
   predTime: { fontSize: fontSize.md, fontWeight: '700', color: colors.text, marginTop: 2 },
 
   bulletItem: { fontSize: fontSize.sm, color: colors.text, marginBottom: spacing.xs, lineHeight: 20 },
+
+  // Segment switcher
+  segmentRow: {
+    flexDirection: 'row', backgroundColor: colors.card, borderRadius: 10,
+    padding: 3, marginBottom: spacing.md, borderWidth: 1, borderColor: colors.borderSubtle,
+  },
+  segmentBtn: {
+    flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center',
+  },
+  segmentBtnActive: {
+    backgroundColor: colors.primary + '20',
+  },
+  segmentText: {
+    fontSize: fontSize.sm, fontWeight: '600', color: colors.textSecondary,
+  },
+  segmentTextActive: {
+    color: colors.primary,
+  },
+
+  // Weekly overview
+  weeklyCenter: {
+    alignItems: 'center', paddingVertical: spacing.xl * 2,
+  },
+  weeklyLoadingText: {
+    fontSize: fontSize.sm, color: colors.textSecondary, marginTop: spacing.md,
+  },
+  weeklyErrorIcon: { fontSize: 40, marginBottom: spacing.sm },
+  weeklyErrorText: {
+    fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center',
+    paddingHorizontal: spacing.xl, marginBottom: spacing.md,
+  },
+  retryBtn: {
+    backgroundColor: colors.primary + '20', paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm, borderRadius: 8,
+  },
+  retryBtnText: { color: colors.primary, fontWeight: '600', fontSize: fontSize.sm },
+  weekHeader: {
+    marginBottom: spacing.md, alignItems: 'center',
+  },
+  weekRange: {
+    fontSize: fontSize.lg, fontWeight: '700', color: colors.text,
+  },
+  weekUpdated: {
+    fontSize: fontSize.xs, color: colors.textTertiary, marginTop: 2,
+  },
+  weeklySectionHeader: {
+    flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm,
+  },
+  weeklySectionIcon: { fontSize: 16, marginRight: spacing.xs },
+  weeklyText: {
+    fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 22,
+  },
+  concernSection: {
+    borderColor: colors.amber + '40', borderWidth: 1,
+    backgroundColor: colors.amber + '08',
+  },
+  regenerateBtn: {
+    backgroundColor: colors.card, borderRadius: 12, padding: spacing.md,
+    alignItems: 'center', borderWidth: 1, borderColor: colors.borderSubtle,
+    marginBottom: spacing.md,
+  },
+  regenerateBtnDisabled: { opacity: 0.5 },
+  regenerateBtnText: {
+    fontSize: fontSize.sm, fontWeight: '600', color: colors.text,
+  },
 });
