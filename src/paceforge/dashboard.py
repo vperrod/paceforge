@@ -2632,15 +2632,108 @@ with tab_profile:
 
         # ── Sub-tabs ──
         prof_tabs = st.tabs([
-            "Snapshot", "Aerobic Engine", "Running Economy",
+            "Weekly Overview", "Snapshot", "Aerobic Engine", "Running Economy",
             "Load & Recovery", "Race Predictions",
             "Recommendations", "Trends",
         ])
 
         # ═════════════════════════════════════════════════════════════
-        # SUB-TAB 1: ATHLETE SNAPSHOT
+        # SUB-TAB 0: WEEKLY OVERVIEW
         # ═════════════════════════════════════════════════════════════
         with prof_tabs[0]:
+            _wo_col1, _wo_col2 = st.columns([3, 1])
+            with _wo_col2:
+                _regen = st.button("🔄 Regenerate", key="btn_weekly_regen", use_container_width=True)
+
+            if _regen:
+                with st.spinner("Regenerating weekly analysis…"):
+                    try:
+                        _wr = requests.post(
+                            f"{API_BASE}/weekly-overview/regenerate",
+                            headers=_auth_headers(), timeout=60,
+                        )
+                        if _wr.status_code == 200:
+                            st.session_state._weekly_overview = _wr.json()
+                        else:
+                            st.error(f"Failed: {_wr.json().get('detail', _wr.text)}")
+                    except Exception as _we:
+                        st.error(f"Error: {_we}")
+
+            # Fetch or use cached
+            if "_weekly_overview" not in st.session_state:
+                with st.spinner("Analyzing your week…"):
+                    try:
+                        _wr = requests.get(
+                            f"{API_BASE}/weekly-overview",
+                            headers=_auth_headers(), timeout=60,
+                        )
+                        if _wr.status_code == 200:
+                            st.session_state._weekly_overview = _wr.json()
+                        else:
+                            st.session_state._weekly_overview = None
+                            st.warning(_wr.json().get("detail", "Could not load weekly overview."))
+                    except Exception as _we:
+                        st.session_state._weekly_overview = None
+                        st.error(f"Error loading weekly overview: {_we}")
+
+            _wo_data = st.session_state.get("_weekly_overview")
+            if _wo_data and _wo_data.get("content"):
+                from datetime import datetime as _dt_cls
+
+                _ws = _wo_data.get("week_start", "")
+                _gen = _wo_data.get("generated_at", "")
+                try:
+                    _mon = _dt_cls.fromisoformat(_ws)
+                    _sun = _mon + timedelta(days=6)
+                    _range_str = f"{_mon.strftime('%b %d')} – {_sun.strftime('%b %d')}"
+                except Exception:
+                    _range_str = _ws
+                try:
+                    _gen_str = _dt_cls.fromisoformat(_gen.replace("Z", "+00:00")).strftime("%b %d, %H:%M")
+                except Exception:
+                    _gen_str = ""
+
+                st.markdown(
+                    f'<div style="text-align:center;margin-bottom:1.2rem;">'
+                    f'<div style="font-family:var(--font-display);font-size:1.2rem;font-weight:700;color:#E8ECF4;">'
+                    f'{_range_str}</div>'
+                    f'{f"<div style=\'font-size:0.75rem;color:#5C6478;margin-top:2px;\'>Updated {_gen_str}</div>" if _gen_str else ""}'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+
+                _wo_sections = [
+                    ("summary", "Summary", "📝", "#10B981"),
+                    ("plan_adherence", "Plan Adherence", "✅", "#0EA5E9"),
+                    ("performance", "Performance Highlights", "⚡", "#F59E0B"),
+                    ("recovery", "Recovery & Wellness", "💤", "#8B5CF6"),
+                    ("concerns", "Concerns", "⚠️", "#F43F5E"),
+                    ("tips", "Tips", "💡", "#10B981"),
+                ]
+                _content = _wo_data["content"]
+                for _key, _title, _icon, _color in _wo_sections:
+                    _text = _content.get(_key, "")
+                    if not _text or _text.strip().lower() == "none":
+                        continue
+                    _border_extra = "border-color:#F59E0B44;background:rgba(245,158,11,0.03);" if _key == "concerns" else ""
+                    st.markdown(
+                        f'<div style="background:#1A1D2B;border:1px solid rgba(148,163,194,0.12);'
+                        f'border-radius:12px;padding:16px;margin-bottom:12px;{_border_extra}">'
+                        f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
+                        f'<span style="font-size:1rem;">{_icon}</span>'
+                        f'<span style="font-weight:700;font-size:0.82rem;text-transform:uppercase;'
+                        f'letter-spacing:0.04em;color:{_color};">{_title}</span></div>'
+                        f'<div style="font-size:0.85rem;color:#8B95AD;line-height:1.65;'
+                        f'white-space:pre-line;">{_text}</div></div>',
+                        unsafe_allow_html=True,
+                    )
+            elif _wo_data is None:
+                pass  # Error already shown above
+
+        # ═════════════════════════════════════════════════════════════
+        # SUB-TAB 1: ATHLETE SNAPSHOT
+        # ═════════════════════════════════════════════════════════════
+        with prof_tabs[1]:
             snap = (analytics or {}).get("snapshot", {})
             level = snap.get("fitness_level", "—")
             level_colors = {"Beginner": "#F59E0B", "Intermediate": "#0EA5E9", "Advanced": "#10B981", "Elite": "#FBBF24"}
@@ -2775,7 +2868,7 @@ with tab_profile:
         # ═════════════════════════════════════════════════════════════
         # SUB-TAB 2: AEROBIC ENGINE
         # ═════════════════════════════════════════════════════════════
-        with prof_tabs[1]:
+        with prof_tabs[2]:
             aero = (analytics or {}).get("aerobic", {})
 
             # VO2max gauge + interpretation
@@ -2898,7 +2991,7 @@ with tab_profile:
         # ═════════════════════════════════════════════════════════════
         # SUB-TAB 3: RUNNING ECONOMY
         # ═════════════════════════════════════════════════════════════
-        with prof_tabs[2]:
+        with prof_tabs[3]:
             econ = (analytics or {}).get("economy", {})
             grade = econ.get("overall_grade", "—")
             grade_colors = {"A": "#10B981", "B": "#0EA5E9", "C": "#F59E0B", "D": "#F43F5E", "—": "#8B95AD"}
@@ -3140,7 +3233,7 @@ with tab_profile:
         # ═════════════════════════════════════════════════════════════
         # SUB-TAB 4: LOAD & RECOVERY
         # ═════════════════════════════════════════════════════════════
-        with prof_tabs[3]:
+        with prof_tabs[4]:
             lr = (analytics or {}).get("load_recovery", {})
 
             # Top row: Body Battery + Sleep Score + Stress
@@ -3254,7 +3347,7 @@ with tab_profile:
         # ═════════════════════════════════════════════════════════════
         # SUB-TAB 5: RACE PREDICTIONS
         # ═════════════════════════════════════════════════════════════
-        with prof_tabs[4]:
+        with prof_tabs[5]:
             rp = (analytics or {}).get("race_predictions", {})
             rp_vdot = rp.get("vdot")
             preds = rp.get("predictions", [])
@@ -3372,7 +3465,7 @@ with tab_profile:
         # ═════════════════════════════════════════════════════════════
         # SUB-TAB 6: TRAINING RECOMMENDATIONS
         # ═════════════════════════════════════════════════════════════
-        with prof_tabs[5]:
+        with prof_tabs[6]:
             rec = (analytics or {}).get("recommendations", {})
 
             # Training split pie
@@ -3477,7 +3570,7 @@ with tab_profile:
         # ═════════════════════════════════════════════════════════════
         # SUB-TAB 7: TRENDS
         # ═════════════════════════════════════════════════════════════
-        with prof_tabs[6]:
+        with prof_tabs[7]:
             acts = p.get("recent_activities", [])
             if acts and len(acts) >= 2:
                 sorted_acts = sorted(acts, key=lambda a: a.get("start_time", ""))
