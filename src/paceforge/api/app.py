@@ -1387,10 +1387,8 @@ def _get_weekly_overview(uid: str, *, force: bool = False) -> dict:
     # Load health data
     health_data: dict | None = None
     if cached_data and cached_data.get("health_json"):
-        try:
+        with __import__("contextlib").suppress(json.JSONDecodeError, TypeError):
             health_data = json.loads(cached_data["health_json"])
-        except (json.JSONDecodeError, TypeError):
-            pass
 
     # Generate analysis
     sections = coach.analyze_week(
