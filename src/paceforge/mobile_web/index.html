@@ -883,6 +883,7 @@ async function renderFitness(page) {
   }
 
   const subTabs = [
+    ['weekly', 'Weekly'],
     ['snapshot', 'Snapshot'],
     ['aerobic', 'Aerobic'],
     ['economy', 'Economy'],
@@ -892,7 +893,7 @@ async function renderFitness(page) {
     ['hyrox_p', 'HYROX'],
   ];
 
-  let activeSub = 'snapshot';
+  let activeSub = 'weekly';
 
   function drawFitness() {
     let html = `<div class="fade-in">
@@ -918,6 +919,7 @@ async function renderFitness(page) {
     const el = document.getElementById('fitness-content');
     if (!el) return;
     switch (activeSub) {
+      case 'weekly': renderWeeklyOverview(el); break;
       case 'snapshot': el.innerHTML = renderSnapshot(analytics); break;
       case 'aerobic': el.innerHTML = renderAerobic(analytics); break;
       case 'economy': el.innerHTML = renderEconomy(analytics); break;
@@ -929,6 +931,87 @@ async function renderFitness(page) {
   }
 
   drawFitness();
+}
+
+function renderWeeklyOverview(el) {
+  el.innerHTML = '<div class="loading"><div class="spinner"></div></div><div style="text-align:center;color:var(--text-3);font-size:.85rem;margin-top:8px">Analyzing your week…</div>';
+
+  apiJson('/weekly-overview').then(data => {
+    if (!data || !data.content) {
+      el.innerHTML = '<div class="empty">No weekly overview available yet.</div>';
+      return;
+    }
+    drawWeeklyContent(el, data, false);
+  }).catch(err => {
+    el.innerHTML = `<div class="card" style="text-align:center">
+      <div style="font-size:1.5rem;margin-bottom:8px">⚠️</div>
+      <div style="font-size:.85rem;color:var(--text-2);margin-bottom:12px">${escHtml(err.message || 'Failed to load weekly overview')}</div>
+      <button class="btn btn-ghost" style="width:auto;padding:8px 20px;display:inline-block" id="weekly-retry">Retry</button>
+    </div>`;
+    document.getElementById('weekly-retry')?.addEventListener('click', () => renderWeeklyOverview(el));
+  });
+}
+
+function drawWeeklyContent(el, data, isRegenerating) {
+  const { content, week_start, generated_at } = data;
+  const monday = new Date(week_start + 'T00:00:00');
+  const sunday = new Date(monday);
+  sunday.setDate(sunday.getDate() + 6);
+  const fmt = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const updatedAt = generated_at ? new Date(generated_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+
+  const sections = [
+    { key: 'summary', title: 'Summary', icon: '📝', color: 'var(--emerald)' },
+    { key: 'plan_adherence', title: 'Plan Adherence', icon: '✅', color: 'var(--sky)' },
+    { key: 'performance', title: 'Performance', icon: '⚡', color: 'var(--amber)' },
+    { key: 'recovery', title: 'Recovery & Wellness', icon: '💤', color: 'var(--violet)' },
+    { key: 'concerns', title: 'Concerns', icon: '⚠️', color: 'var(--rose)' },
+    { key: 'tips', title: 'Tips', icon: '💡', color: 'var(--emerald)' },
+  ];
+
+  let html = `<div class="fade-in">
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-family:var(--font-d);font-size:1.1rem;font-weight:700">${fmt(monday)} – ${fmt(sunday)}</div>
+      ${updatedAt ? `<div style="font-size:.72rem;color:var(--text-3);margin-top:2px">Updated ${updatedAt}</div>` : ''}
+    </div>`;
+
+  for (const { key, title, icon, color } of sections) {
+    const text = content[key];
+    if (!text || text.toLowerCase().trim() === 'none') continue;
+    const isConcern = key === 'concerns';
+    const borderStyle = isConcern ? 'border-color:var(--amber);background:rgba(245,158,11,.04)' : '';
+    html += `<div class="card" style="${borderStyle}">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-size:.9rem">${icon}</span>
+        <span style="font-weight:700;font-size:.82rem;text-transform:uppercase;letter-spacing:.04em;color:${color}">${title}</span>
+      </div>
+      <div style="font-size:.85rem;color:var(--text-2);line-height:1.6;white-space:pre-line">${escHtml(text)}</div>
+    </div>`;
+  }
+
+  html += `<button class="btn btn-ghost" id="weekly-regen" style="margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px">
+    <span id="regen-icon">🔄</span> Regenerate Analysis
+  </button></div>`;
+
+  el.innerHTML = html;
+
+  document.getElementById('weekly-regen')?.addEventListener('click', () => {
+    const btn = document.getElementById('weekly-regen');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<div class="spinner" style="width:18px;height:18px;border-width:2px"></div> Regenerating…';
+    }
+    apiJson('/weekly-overview/regenerate', { method: 'POST' }).then(newData => {
+      clearCache('weekly');
+      drawWeeklyContent(el, newData, false);
+    }).catch(err => {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<span>🔄</span> Regenerate Analysis';
+      }
+      alert('Failed to regenerate: ' + (err.message || 'Unknown error'));
+    });
+  });
 }
 
 function renderSnapshot(a) {
