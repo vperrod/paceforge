@@ -2693,11 +2693,16 @@ with tab_profile:
                 except Exception:
                     _gen_str = ""
 
+                _updated_div = (
+                    f'<div style="font-size:0.75rem;color:#5C6478;margin-top:2px;">Updated {_gen_str}</div>'
+                    if _gen_str else ""
+                )
+
                 st.markdown(
                     f'<div style="text-align:center;margin-bottom:1.2rem;">'
                     f'<div style="font-family:var(--font-display);font-size:1.2rem;font-weight:700;color:#E8ECF4;">'
                     f'{_range_str}</div>'
-                    f'{f"<div style=\'font-size:0.75rem;color:#5C6478;margin-top:2px;\'>Updated {_gen_str}</div>" if _gen_str else ""}'
+                    f'{_updated_div}'
                     f'</div>',
                     unsafe_allow_html=True,
                 )
