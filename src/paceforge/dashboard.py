@@ -4608,6 +4608,7 @@ with tab_calendar:
                 cal_options = {
                     "editable": True,
                     "selectable": False,
+                    "firstDay": 1,
                     "headerToolbar": {
                         "left": "today prev,next",
                         "center": "title",
