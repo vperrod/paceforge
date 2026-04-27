@@ -771,17 +771,19 @@ async def cleanup_duplicate_workouts(user: dict = Depends(get_current_user)):
     if not garmin:
         raise HTTPException(401, "Not logged in to Garmin")
     try:
-        scheduled = garmin.get_scheduled_workouts(days_ahead=90)
+        all_workouts = garmin.get_all_workouts()
     except Exception:
-        raise HTTPException(500, "Could not fetch scheduled workouts")
-    # Group by (name, date) and delete extras
+        raise HTTPException(500, "Could not fetch Garmin workout library")
+    # Group by (name, scheduled_date) — keep first, delete rest
     seen: dict[tuple[str, str], int] = {}
     deleted = 0
-    for w in scheduled:
-        key = (w.get("name", ""), w.get("scheduled_date", ""))
-        wid = w.get("workout_id")
+    for w in all_workouts:
+        name = w.get("workoutName", "")
+        wid = w.get("workoutId")
+        cal_date = w.get("calendarDate") or ""
         if not wid:
             continue
+        key = (name, str(cal_date)[:10])
         if key in seen:
             garmin.delete_workout(wid)
             deleted += 1

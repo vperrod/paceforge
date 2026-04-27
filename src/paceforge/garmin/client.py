@@ -639,6 +639,21 @@ class GarminClient:
 
         return result
 
+    def get_all_workouts(self) -> list[dict]:
+        """Fetch all workouts from the Garmin workout library, paginating if needed."""
+        all_workouts: list[dict] = []
+        start = 0
+        batch_size = 200
+        while True:
+            batch = self.client.get_workouts(start=start, limit=batch_size)
+            if not batch:
+                break
+            all_workouts.extend(batch)
+            if len(batch) < batch_size:
+                break
+            start += batch_size
+        return all_workouts
+
     def get_scheduled_workouts(self, days_ahead: int = 30) -> list[dict]:
         """Fetch scheduled workouts from Garmin calendar for the next N days."""
         scheduled = []
@@ -676,9 +691,9 @@ class GarminClient:
         except Exception:
             logger.debug("Schedule endpoint failed, trying workout library", exc_info=True)
 
-        # Method 2: Fall back to workout library (templates with calendarDate)
+        # Method 2: Fall back to workout library (all workouts with a calendarDate)
         try:
-            workouts = self.client.get_workouts(start=0, limit=200)
+            workouts = self.get_all_workouts()
             for w in workouts:
                 cal_date = w.get("calendarDate")
                 if not cal_date:
@@ -775,21 +790,15 @@ class GarminClient:
         dates = [w.scheduled_date for w in active if w.scheduled_date]
         if dates:
             min_date, max_date = min(dates), max(dates)
-            days_ahead = (max_date - date.today()).days + 1
-            if days_ahead < 1:
-                days_ahead = 1
-            # Collect names we're about to push for matching
             push_names = {w.name for w in active}
             try:
-                existing = self.get_scheduled_workouts(days_ahead=days_ahead)
+                existing = self.get_all_workouts()
                 for ex in existing:
-                    ex_date = ex.get("scheduled_date", "")
-                    ex_id = ex.get("workout_id")
-                    ex_name = ex.get("name", "")
+                    ex_date = str(ex.get("calendarDate") or "")[:10]
+                    ex_id = ex.get("workoutId")
+                    ex_name = ex.get("workoutName", "")
                     if not ex_id or not ex_date:
                         continue
-                    # Delete if the workout name matches one we're pushing
-                    # and falls within the date range
                     if (
                         ex_name in push_names
                         and str(min_date) <= ex_date <= str(max_date)
