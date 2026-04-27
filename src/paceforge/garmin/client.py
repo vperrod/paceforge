@@ -722,6 +722,14 @@ class GarminClient:
 
     # ── Write operations ─────────────────────────────────────────────
 
+    def delete_workout(self, workout_id: int | str) -> None:
+        """Delete a workout from Garmin Connect by ID."""
+        try:
+            self.client.delete_workout(int(workout_id))
+            logger.info("Deleted Garmin workout %s", workout_id)
+        except Exception:
+            logger.warning("Failed to delete Garmin workout %s", workout_id, exc_info=True)
+
     def push_workout(self, workout: Workout, schedule_date: date | None = None, plan_paces: dict | None = None) -> dict:
         """Upload a structured running workout to Garmin Connect and optionally schedule it."""
         garmin_steps = []
@@ -754,11 +762,44 @@ class GarminClient:
         return result
 
     def push_plan_week(self, workouts: list[Workout], plan_paces: dict | None = None) -> list[dict]:
-        """Push a list of workouts (typically one week) to Garmin Connect."""
+        """Push a list of workouts (typically one week) to Garmin Connect.
+
+        Deletes existing scheduled workouts in the date range first to
+        prevent duplicates when re-pushing after a reschedule.
+        """
+        active = [w for w in workouts if w.workout_type.value != "rest"]
+        if not active:
+            return []
+
+        # Determine the date range covered by this batch
+        dates = [w.scheduled_date for w in active if w.scheduled_date]
+        if dates:
+            min_date, max_date = min(dates), max(dates)
+            days_ahead = (max_date - date.today()).days + 1
+            if days_ahead < 1:
+                days_ahead = 1
+            # Collect names we're about to push for matching
+            push_names = {w.name for w in active}
+            try:
+                existing = self.get_scheduled_workouts(days_ahead=days_ahead)
+                for ex in existing:
+                    ex_date = ex.get("scheduled_date", "")
+                    ex_id = ex.get("workout_id")
+                    ex_name = ex.get("name", "")
+                    if not ex_id or not ex_date:
+                        continue
+                    # Delete if the workout name matches one we're pushing
+                    # and falls within the date range
+                    if (
+                        ex_name in push_names
+                        and str(min_date) <= ex_date <= str(max_date)
+                    ):
+                        self.delete_workout(ex_id)
+            except Exception:
+                logger.warning("Could not clean up existing workouts before push", exc_info=True)
+
         results = []
-        for w in workouts:
-            if w.workout_type.value == "rest":
-                continue
+        for w in active:
             r = self.push_workout(w, schedule_date=w.scheduled_date, plan_paces=plan_paces)
             results.append(r)
         return results

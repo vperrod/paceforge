@@ -763,6 +763,33 @@ async def get_scheduled_workouts(user: dict = Depends(get_current_user)):
         return []
 
 
+@app.post("/garmin/cleanup-duplicates")
+async def cleanup_duplicate_workouts(user: dict = Depends(get_current_user)):
+    """Remove duplicate scheduled workouts from Garmin, keeping one per name+date."""
+    uid = user["id"]
+    garmin = _ensure_garmin(uid)
+    if not garmin:
+        raise HTTPException(401, "Not logged in to Garmin")
+    try:
+        scheduled = garmin.get_scheduled_workouts(days_ahead=90)
+    except Exception:
+        raise HTTPException(500, "Could not fetch scheduled workouts")
+    # Group by (name, date) and delete extras
+    seen: dict[tuple[str, str], int] = {}
+    deleted = 0
+    for w in scheduled:
+        key = (w.get("name", ""), w.get("scheduled_date", ""))
+        wid = w.get("workout_id")
+        if not wid:
+            continue
+        if key in seen:
+            garmin.delete_workout(wid)
+            deleted += 1
+        else:
+            seen[key] = wid
+    return {"status": "ok", "duplicates_deleted": deleted, "remaining": len(seen)}
+
+
 @app.get("/preferences")
 async def get_preferences(user: dict = Depends(get_current_user)):
     """Return user preferences (activity types to sync, etc.)."""

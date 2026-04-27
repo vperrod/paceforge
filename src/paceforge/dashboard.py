@@ -4521,7 +4521,7 @@ with tab_calendar:
         if True:
             # Legend + push controls row (only when events exist)
             if cal_events:
-                legend_cols = st.columns([3, 1, 1])
+                legend_cols = st.columns([3, 1, 1, 1])
                 with legend_cols[0]:
                     st.markdown(
                         '<div style="display:flex;flex-wrap:wrap;gap:1rem;margin-bottom:0.5rem;font-size:0.8rem;">'
@@ -4577,6 +4577,27 @@ with tab_calendar:
                                         st.success(f"Pushed {data.get('workouts_pushed', '?')} workouts to Garmin!")
                                     else:
                                         st.error(f"Push failed: {_error_detail(r)}")
+                                except requests.ConnectionError:
+                                    st.error("Cannot reach API.")
+                with legend_cols[3]:
+                    if st.session_state.garmin_logged_in:
+                        if st.button("🧹 Clean Duplicates", key="cal_cleanup_btn", use_container_width=True):
+                            with st.spinner("Removing duplicate workouts..."):
+                                try:
+                                    r = requests.post(
+                                        f"{API_BASE}/garmin/cleanup-duplicates",
+                                        headers=_auth_headers(),
+                                        timeout=60,
+                                    )
+                                    if r.status_code == 200:
+                                        data = r.json()
+                                        removed = data.get("duplicates_deleted", 0)
+                                        if removed:
+                                            st.success(f"Removed {removed} duplicate(s)!")
+                                        else:
+                                            st.info("No duplicates found.")
+                                    else:
+                                        st.error(f"Cleanup failed: {_error_detail(r)}")
                                 except requests.ConnectionError:
                                     st.error("Cannot reach API.")
 
