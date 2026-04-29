@@ -2996,8 +2996,9 @@ async def save_diet_profile(req: DietProfileRequest, user: dict = Depends(get_cu
     """Save/update diet profile."""
     uid = user["id"]
     data = _load_diet_data(uid)
+    valid_goals = {g.value for g in DietGoal}
     data.profile = DietProfile(
-        goals=[DietGoal(g) for g in req.goals if g in DietGoal.__members__.values()],
+        goals=[DietGoal(g) for g in req.goals if g in valid_goals],
         target_weight_kg=req.target_weight_kg,
         daily_meals_count=req.daily_meals_count,
         preferred_foods=req.preferred_foods,

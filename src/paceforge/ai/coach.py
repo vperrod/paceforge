@@ -510,8 +510,8 @@ class Coach:
         sections = self._parse_weekly_sections(reply)
         return sections
 
-    def _chat_openai_extended(self) -> str:
-        """OpenAI chat with extended token limit for weekly analysis."""
+    def _chat_openai_extended(self, max_tokens: int = 1500) -> str:
+        """OpenAI chat with configurable token limit for long-form output."""
         from openai import OpenAI
 
         kwargs: dict = {"api_key": self._api_key}
@@ -522,7 +522,7 @@ class Coach:
             model=self._model,
             messages=self._conversation,
             temperature=0.7,
-            max_tokens=1500,
+            max_tokens=max_tokens,
         )
         return response.choices[0].message.content or "I couldn't generate a response."
 
@@ -806,7 +806,7 @@ Important rules:
         self._conversation.append({"role": "user", "content": "\n".join(lines)})
 
         try:
-            reply = self._chat_openai_extended() if self._provider != "anthropic" else self._chat_anthropic()
+            reply = self._chat_openai_extended(max_tokens=8000) if self._provider != "anthropic" else self._chat_anthropic()
         except Exception as e:
             logger.error("Diet plan generation failed: %s", e, exc_info=True)
             reply = f'{{"error": "Could not generate diet plan: {e}"}}'
@@ -924,7 +924,7 @@ Respond with ONLY valid JSON (no markdown fences) in this exact format:
         self._conversation.append({"role": "user", "content": "\n".join(lines)})
 
         try:
-            reply = self._chat_openai_extended() if self._provider != "anthropic" else self._chat_anthropic()
+            reply = self._chat_openai_extended(max_tokens=8000) if self._provider != "anthropic" else self._chat_anthropic()
         except Exception as e:
             logger.error("Diet plan adjustment failed: %s", e, exc_info=True)
             reply = f'{{"error": "Could not adjust diet plan: {e}"}}'
