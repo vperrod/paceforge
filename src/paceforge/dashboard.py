@@ -4384,8 +4384,8 @@ with tab_calendar:
                 continue
             for _wk in _p.get("weeks", []):
                 for _w in _wk.get("workouts", []):
-                    if _w.get("matched_activity_id"):
-                        _matched_act_ids.add(_w["matched_activity_id"])
+                    for _mid in _w.get("matched_activity_ids") or ([_w["matched_activity_id"]] if _w.get("matched_activity_id") else []):
+                        _matched_act_ids.add(_mid)
 
         garmin_acts = st.session_state.get("garmin_activities", [])
         for i, act in enumerate(garmin_acts):
@@ -4503,7 +4503,8 @@ with tab_calendar:
                             "estimated_duration_seconds": w.get("estimated_duration_seconds", 0),
                             "plan_id": plan_id,
                             "completed": is_completed,
-                            "matched_activity_id": w.get("matched_activity_id"),
+                            "matched_activity_id": (w.get("matched_activity_ids") or [None])[0] if (w.get("matched_activity_ids")) else w.get("matched_activity_id"),
+                            "matched_activity_ids": json.dumps(w.get("matched_activity_ids") or ([w["matched_activity_id"]] if w.get("matched_activity_id") else [])),
                             "completion_analysis": w.get("completion_analysis", ""),
                             "completion_metrics": json.dumps(w.get("completion_metrics") or {}),
                             "user_rpe": w.get("user_rpe"),
@@ -5093,7 +5094,14 @@ with tab_calendar:
                             _plan_act_id = props.get("matched_activity_id")
                             if _plan_act_id:
                                 wo_name = props.get("name", "")
-                                if st.button("⛓️‍💥 Unmatch Activity", key=f"unmatch_{ev_date}_{wo_name}", use_container_width=True):
+                                _act_ids_json = props.get("matched_activity_ids", "[]")
+                                try:
+                                    _act_ids_list = json.loads(_act_ids_json) if isinstance(_act_ids_json, str) else _act_ids_json
+                                except (json.JSONDecodeError, TypeError):
+                                    _act_ids_list = []
+                                _n_matched = len(_act_ids_list)
+                                _unmatch_label = f"⛓️‍💥 Unmatch {'Activities' if _n_matched > 1 else 'Activity'}" + (f" ({_n_matched})" if _n_matched > 1 else "")
+                                if st.button(_unmatch_label, key=f"unmatch_{ev_date}_{wo_name}", use_container_width=True):
                                     try:
                                         r = requests.post(
                                             f"{API_BASE}/plan/unmatch-workout",

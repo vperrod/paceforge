@@ -962,6 +962,57 @@ _RUNNING_ACTIVITY_TYPES = {
 }
 
 
+def _aggregate_activity_metrics(activities: list[RecentActivity]) -> dict:
+    """Aggregate metrics from multiple activities into a single dict.
+
+    Distances and durations are summed. Paces, HR, and cadence are
+    weighted averages by duration. Calories are summed.
+    """
+    if not activities:
+        return {}
+    if len(activities) == 1:
+        a = activities[0]
+        return {
+            k: v for k, v in {
+                "distance_meters": a.distance_meters,
+                "duration_seconds": a.duration_seconds,
+                "avg_pace_sec_per_km": a.avg_pace_sec_per_km,
+                "avg_hr": a.avg_hr,
+                "max_hr": a.max_hr,
+                "calories": a.calories,
+                "training_effect_aerobic": a.training_effect_aerobic,
+                "avg_running_cadence": a.avg_running_cadence,
+                "elevation_gain": a.elevation_gain,
+            }.items() if v is not None
+        }
+    total_dist = sum(a.distance_meters for a in activities)
+    total_dur = sum(a.duration_seconds for a in activities)
+    total_cal = sum(a.calories or 0 for a in activities) or None
+    total_elev = sum(a.elevation_gain or 0 for a in activities) or None
+    max_hr = max((a.max_hr for a in activities if a.max_hr), default=None)
+    # Weighted averages by duration
+    def _wavg(field: str) -> float | None:
+        vals = [(getattr(a, field), a.duration_seconds) for a in activities if getattr(a, field) is not None]
+        if not vals:
+            return None
+        return round(sum(v * d for v, d in vals) / sum(d for _, d in vals), 2)
+
+    avg_pace = round(total_dur / (total_dist / 1000), 2) if total_dist > 0 else None
+    return {
+        k: v for k, v in {
+            "distance_meters": total_dist,
+            "duration_seconds": total_dur,
+            "avg_pace_sec_per_km": avg_pace,
+            "avg_hr": _wavg("avg_hr"),
+            "max_hr": max_hr,
+            "calories": total_cal,
+            "training_effect_aerobic": _wavg("training_effect_aerobic"),
+            "avg_running_cadence": _wavg("avg_running_cadence"),
+            "elevation_gain": total_elev,
+        }.items() if v is not None
+    }
+
+
 def _auto_match_activities(uid: str, activities: list[RecentActivity]) -> None:
     """Auto-match Garmin activities to planned workouts by date.
 
@@ -988,7 +1039,7 @@ def _auto_match_activities(uid: str, activities: list[RecentActivity]) -> None:
             continue
         for week in plan.weeks:
             for wo in week.workouts:
-                if wo.completed or wo.workout_type.value == "rest":
+                if wo.workout_type.value == "rest":
                     continue
                 wo_date = str(wo.scheduled_date)
                 all_candidates = acts_by_date.get(wo_date, [])
@@ -1002,28 +1053,26 @@ def _auto_match_activities(uid: str, activities: list[RecentActivity]) -> None:
                     candidates = list(all_candidates)
                 if not candidates:
                     continue
-                planned_dist = wo.estimated_distance_meters or 0
-                best = min(
-                    candidates,
-                    key=lambda a: abs(a.distance_meters - planned_dist) if planned_dist else 0,
-                )
+                # Match all eligible activities to this workout
+                already_ids = set(wo.matched_activity_ids)
+                matched_any_new = False
+                for act in candidates:
+                    if act.activity_id not in already_ids:
+                        wo.matched_activity_ids.append(act.activity_id)
+                        already_ids.add(act.activity_id)
+                        matched_any_new = True
+                if not matched_any_new:
+                    continue
                 wo.completed = True
-                wo.matched_activity_id = best.activity_id
-                wo.completion_metrics = {
-                    k: v for k, v in {
-                        "distance_meters": best.distance_meters,
-                        "duration_seconds": best.duration_seconds,
-                        "avg_pace_sec_per_km": best.avg_pace_sec_per_km,
-                        "avg_hr": best.avg_hr,
-                        "max_hr": best.max_hr,
-                        "calories": best.calories,
-                        "training_effect_aerobic": best.training_effect_aerobic,
-                        "avg_running_cadence": best.avg_running_cadence,
-                        "elevation_gain": best.elevation_gain,
-                    }.items() if v is not None
-                }
+                # Aggregate metrics across all matched activities
+                wo.completion_metrics = _aggregate_activity_metrics(
+                    [a for a in candidates if a.activity_id in already_ids]
+                )
                 newly_matched.append((plan, wo))
-                candidates.remove(best)
+                # Remove matched activities so they don't match other workouts
+                for act in candidates:
+                    if act.activity_id in already_ids and act in all_candidates:
+                        all_candidates.remove(act)
 
     if not newly_matched:
         return
@@ -1111,16 +1160,16 @@ def _auto_match_activities(uid: str, activities: list[RecentActivity]) -> None:
             if prefs.get("strava_auto_update"):
                 sent = prefs.get("strava_sent_activities", [])
                 for _plan, _wo in newly_matched:
-                    aid = _wo.matched_activity_id
-                    if aid and aid not in sent:
-                        try:
-                            result = _do_strava_push(uid, aid, raise_on_error=False)
-                            if result.get("error"):
-                                logger.warning("Auto Strava push failed for %s: %s", aid, result["error"])
-                            else:
-                                logger.info("Auto Strava push succeeded for activity %s", aid)
-                        except Exception:
-                            logger.warning("Auto Strava push error for activity %s", aid, exc_info=True)
+                    for aid in _wo.matched_activity_ids:
+                        if aid not in sent:
+                            try:
+                                result = _do_strava_push(uid, aid, raise_on_error=False)
+                                if result.get("error"):
+                                    logger.warning("Auto Strava push failed for %s: %s", aid, result["error"])
+                                else:
+                                    logger.info("Auto Strava push succeeded for activity %s", aid)
+                            except Exception:
+                                logger.warning("Auto Strava push error for activity %s", aid, exc_info=True)
     except Exception:
         logger.warning("Auto Strava push check failed", exc_info=True)
 
@@ -1290,7 +1339,7 @@ async def unmatch_workout(req: DeleteWorkoutRequest, user: dict = Depends(get_cu
             for w in week.workouts:
                 if w.name == req.workout_name and str(w.scheduled_date) == req.scheduled_date:
                     w.completed = False
-                    w.matched_activity_id = None
+                    w.matched_activity_ids = []
                     w.completion_metrics = None
                     w.completion_analysis = None
                     _save_plans(uid)
@@ -1581,7 +1630,8 @@ async def match_workout(req: MatchWorkoutRequest, user: dict = Depends(get_curre
                     break
 
     workout.completed = True
-    workout.matched_activity_id = req.activity_id
+    if req.activity_id not in workout.matched_activity_ids:
+        workout.matched_activity_ids.append(req.activity_id)
     workout.completion_metrics = {k: v for k, v in completion_metrics.items() if v is not None}
     _save_plans(uid)
     return {"ok": True, "workout": workout.model_dump(mode="json")}
@@ -1608,7 +1658,7 @@ async def analyze_workout_endpoint(req: AnalyzeWorkoutRequest, user: dict = Depe
             break
     if not workout:
         raise HTTPException(404, "Workout not found in plan")
-    if not workout.completed or not workout.matched_activity_id:
+    if not workout.completed or not workout.matched_activity_ids:
         raise HTTPException(400, "Workout is not matched to an activity yet")
 
     # Build activity dict from completion_metrics or fetch from Garmin
@@ -1617,7 +1667,7 @@ async def analyze_workout_endpoint(req: AnalyzeWorkoutRequest, user: dict = Depe
         garmin = _ensure_garmin(uid)
         if garmin:
             try:
-                detail = garmin.get_activity_detail(workout.matched_activity_id)
+                detail = garmin.get_activity_detail(workout.matched_activity_ids[0])
                 summary = detail.get("summary") or {}
                 summary_dto = summary.get("summaryDTO") or summary
                 activity_data = {
@@ -1640,7 +1690,7 @@ async def analyze_workout_endpoint(req: AnalyzeWorkoutRequest, user: dict = Depe
             cached = load_user_data(settings.db_path, uid)
             if cached and cached.get("activities_json"):
                 for act in json.loads(cached["activities_json"]):
-                    if act.get("activity_id") == workout.matched_activity_id:
+                    if act.get("activity_id") in workout.matched_activity_ids:
                         activity_data = act
                         break
     if not any(v for v in activity_data.values() if v is not None):
@@ -2500,7 +2550,7 @@ def _do_strava_push(uid: str, activity_id: int, *, raise_on_error: bool = True) 
             continue
         for week in plan.weeks:
             for wo in week.workouts:
-                if wo.matched_activity_id == activity_id and wo.description:
+                if activity_id in wo.matched_activity_ids and wo.description:
                     workout_description = wo.description
                     break
             if workout_description:

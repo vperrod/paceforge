@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date
 from enum import StrEnum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class WorkoutStepType(StrEnum):
@@ -84,9 +84,31 @@ class Workout(BaseModel):
     cadence_target: int | None = None
     # Completion tracking
     completed: bool = False
-    matched_activity_id: int | None = Field(None, description="Garmin activity ID matched to this workout")
+    matched_activity_ids: list[int] = Field(default_factory=list, description="Garmin activity IDs matched to this workout")
     completion_analysis: str | None = Field(None, description="AI analysis of how the workout went")
     completion_metrics: dict | None = Field(None, description="Actual vs planned metrics from matched activity")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _migrate_matched_activity_id(cls, data: dict) -> dict:
+        """Migrate legacy matched_activity_id (int) → matched_activity_ids (list)."""
+        if isinstance(data, dict):
+            old_id = data.pop("matched_activity_id", None)
+            if old_id is not None and not data.get("matched_activity_ids"):
+                data["matched_activity_ids"] = [old_id]
+        return data
+
+    @property
+    def matched_activity_id(self) -> int | None:
+        """Primary matched activity ID (backward compat)."""
+        return self.matched_activity_ids[0] if self.matched_activity_ids else None
+
+    @matched_activity_id.setter
+    def matched_activity_id(self, value: int | None) -> None:
+        if value is None:
+            self.matched_activity_ids = []
+        elif value not in self.matched_activity_ids:
+            self.matched_activity_ids = [value]
     # User feedback
     user_rpe: int | None = Field(None, description="Rate of Perceived Exertion (1-10)")
     user_notes: str | None = Field(None, description="User notes about how the workout felt")
