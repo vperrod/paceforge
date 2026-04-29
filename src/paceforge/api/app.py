@@ -3288,7 +3288,6 @@ def _parse_diet_plan_response(
     # Sanitise common JSON errors from LLMs
     cleaned = re.sub(r",\s*}", "}", cleaned)   # trailing comma before }
     cleaned = re.sub(r",\s*]", "]", cleaned)   # trailing comma before ]
-    cleaned = re.sub(r"'", '"', cleaned)        # single quotes → double
 
     try:
         parsed = json.loads(cleaned)
