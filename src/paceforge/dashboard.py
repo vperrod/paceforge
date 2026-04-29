@@ -6278,6 +6278,11 @@ with tab_diet:
 
         plan = st.session_state.get("diet_plan")
         if plan and plan.get("weekly_templates"):
+            # Show AI analysis if available
+            if plan.get("plan_analysis"):
+                st.markdown("#### 🧠 Plan Analysis")
+                st.info(plan["plan_analysis"])
+
             # Build calendar events from meal plan
             from streamlit_calendar import calendar as st_calendar
 

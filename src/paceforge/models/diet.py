@@ -105,6 +105,7 @@ class DietPlan(BaseModel):
     plan_id: str = ""
     profile: DietProfile = Field(default_factory=DietProfile)
     created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
+    plan_analysis: str = ""
     macro_targets: MacroTotals = Field(default_factory=MacroTotals)
     weekly_templates: list[WeeklyMealTemplate] = Field(default_factory=list)
     weight_history: list[WeightEntry] = Field(default_factory=list)

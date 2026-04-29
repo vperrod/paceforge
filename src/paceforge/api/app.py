@@ -3499,6 +3499,30 @@ def _parse_diet_plan_response(
                 adjustment_reason=src.adjustment_reason,
             ))
 
+    # Post-validate: ensure each day has the correct number of meals
+    expected_count = profile.daily_meals_count
+    expected_types = ["breakfast", "lunch", "dinner"]
+    if expected_count >= 4:
+        expected_types.insert(1, "morning_snack")
+    if expected_count >= 5:
+        expected_types.insert(3, "afternoon_snack")
+    if expected_count >= 6:
+        expected_types.append("evening_snack")
+    for day_plan in daily_plans:
+        if len(day_plan.meals) < expected_count:
+            existing_types = {m.meal_type.value for m in day_plan.meals}
+            for mt_str in expected_types:
+                if mt_str not in existing_types and len(day_plan.meals) < expected_count:
+                    day_plan.meals.append(Meal(
+                        name="[AI omitted — use Suggest Alternative]",
+                        meal_type=MealType(mt_str),
+                    ))
+            logger.warning(
+                "Day %s had fewer meals than expected (%d), padded to %d",
+                day_plan.date, len(day_plan.meals) - (expected_count - len(day_plan.meals)),
+                len(day_plan.meals),
+            )
+
     # Group days into weekly templates
     plan_weeks = max(1, profile.plan_weeks)
     weeks: list[WeeklyMealTemplate] = []
@@ -3522,6 +3546,7 @@ def _parse_diet_plan_response(
     plan = DietPlan(
         plan_id=existing_plan.plan_id if existing_plan else str(uuid.uuid4())[:8],
         profile=profile,
+        plan_analysis=parsed.get("plan_analysis", ""),
         macro_targets=macro_targets,
         weekly_templates=weeks,
         weight_history=existing_plan.weight_history if existing_plan else [],

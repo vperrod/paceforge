@@ -788,54 +788,50 @@ class Coach:
         if meals_count >= 6:
             meal_types.append("evening_snack")
 
+        # Protein rotation to force variety across days
+        proteins = ["chicken", "fish/seafood", "beef/pork", "eggs",
+                    "legumes/tofu", "turkey", "dairy/greek yogurt"]
+
         lines.append(f"""
 ## Instructions
 
-Create a 7-day meal plan (1 week). For each day, provide EXACTLY {meals_count} meals: {', '.join(meal_types)}.
+Create a personalised 7-day meal plan. Each day MUST have EXACTLY {meals_count} meals — one for EACH type: {', '.join(meal_types)}.
 
-CRITICAL RULES:
-- You MUST output exactly {meals_count} meals per day — one for EACH of these types: {', '.join(meal_types)}
-- Each day MUST have DIFFERENT meals — never repeat the same meal name or food combination across days
-- Vary protein sources (chicken, fish, beef, eggs, tofu, legumes), grains, and vegetables across the 7 days
-- Never output fewer than {meals_count} meals per day
+VARIETY IS MANDATORY — use this protein rotation:
+- Day 1: {proteins[0]} focus | Day 2: {proteins[1]} focus | Day 3: {proteins[2]} focus
+- Day 4: {proteins[3]} focus | Day 5: {proteins[4]} focus | Day 6: {proteins[5]} focus
+- Day 7: {proteins[6]} focus
+Each day's meals MUST use DIFFERENT main ingredients from other days. NEVER copy meals between days.
 
-Respond with ONLY valid JSON (no markdown fences, no explanation) in this exact format:
+Keep each meal compact: 2-4 food items max, brief recipe_notes (1 sentence).
+
+Respond with ONLY valid JSON (no markdown, no extra text) in this exact structure:
 {{
-  "macro_targets": {{"calories": <number>, "protein_g": <number>, "carbs_g": <number>, "fat_g": <number>, "fiber_g": <number>}},
+  "plan_analysis": "<2-4 sentences explaining WHY you chose these macros, calorie target, and food choices for THIS specific athlete based on their weight, goals, activity level, and preferences>",
+  "macro_targets": {{"calories": <num>, "protein_g": <num>, "carbs_g": <num>, "fat_g": <num>, "fiber_g": <num>}},
   "days": [
     {{
       "day_number": 1,
       "meals": [
         {{
-          "name": "<meal name>",
+          "name": "<unique meal name>",
           "meal_type": "<{'/'.join(meal_types)}>",
-          "foods": [
-            {{"name": "<food>", "quantity": <number>, "unit": "<g/ml/pcs/tbsp/cup>", "calories": <number>, "protein_g": <number>, "carbs_g": <number>, "fat_g": <number>}}
-          ],
-          "total_calories": <number>,
-          "protein_g": <number>,
-          "carbs_g": <number>,
-          "fat_g": <number>,
-          "fiber_g": <number>,
-          "recipe_notes": "<brief preparation notes>"
+          "foods": [{{"name": "<food>", "quantity": <num>, "unit": "<g/ml/pcs>", "calories": <num>, "protein_g": <num>, "carbs_g": <num>, "fat_g": <num>}}],
+          "total_calories": <num>, "protein_g": <num>, "carbs_g": <num>, "fat_g": <num>, "fiber_g": <num>,
+          "recipe_notes": "<1 sentence>"
         }}
       ],
-      "daily_totals": {{"calories": <number>, "protein_g": <number>, "carbs_g": <number>, "fat_g": <number>, "fiber_g": <number>}}
+      "daily_totals": {{"calories": <num>, "protein_g": <num>, "carbs_g": <num>, "fat_g": <num>, "fiber_g": <num>}}
     }}
   ]
 }}
 
-Important rules:
-- Calculate macro targets based on the athlete's weight, activity level, and goals
-- For weight loss: ~500 kcal deficit from TDEE; protein at 1.6-2.2g/kg body weight
-- For muscle gain: ~300-500 kcal surplus; protein at 1.6-2.2g/kg
-- For maintenance: match TDEE; protein at 1.4-1.8g/kg
-- Prioritize the athlete's preferred foods but add variety
-- Every meal must have realistic portion sizes and accurate macros
-- Include the exercise calorie burn when calculating daily needs
-- Make meals practical and easy to prepare
-- NEVER repeat the same meal on different days — each day must be unique
-- Output EXACTLY {meals_count} meals per day, one per meal type
+Rules:
+- TDEE: weight x activity factor, then apply goal deficit/surplus
+- Weight loss: ~500 kcal deficit, protein 1.6-2.2g/kg | Muscle gain: ~300-500 surplus, protein 1.6-2.2g/kg | Maintain: match TDEE, protein 1.4-1.8g/kg
+- Include exercise calorie burn in daily needs
+- You MUST output all 7 days with exactly {meals_count} meals each — {meals_count * 7} meals total
+- Each day MUST list exactly these meal_types in order: {', '.join(meal_types)}
 """)
 
         saved = self._conversation
@@ -846,7 +842,7 @@ Important rules:
         self._conversation.append({"role": "user", "content": "\n".join(lines)})
 
         try:
-            reply = self._chat_openai_extended(max_tokens=12000, json_mode=True) if self._provider != "anthropic" else self._chat_anthropic()
+            reply = self._chat_openai_extended(max_tokens=16000, json_mode=True) if self._provider != "anthropic" else self._chat_anthropic()
         except Exception as e:
             logger.error("Diet plan generation failed: %s", e, exc_info=True)
             reply = f'{{"error": "Could not generate diet plan: {e}"}}'
@@ -1047,6 +1043,6 @@ Safety rules:
 - Flag potential nutrient deficiencies in restrictive diets
 - Suggest gradual calorie adjustments (max 500 kcal deficit/surplus)
 
-You respond ONLY with valid JSON — no markdown fences, no prose outside the \
-JSON structure.
+You respond ONLY with valid JSON — no markdown fences. All explanations go \
+inside the JSON "plan_analysis" field.
 """
