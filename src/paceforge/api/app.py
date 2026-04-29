@@ -955,11 +955,19 @@ def _build_feed_metadata(wo, metrics: dict, splits: list[dict] | None = None) ->
     return meta
 
 
+# Activity types that count as "running" for auto-matching to planned workouts
+_RUNNING_ACTIVITY_TYPES = {
+    "running", "treadmill_running", "trail_running",
+    "track_running", "indoor_running", "virtual_run",
+}
+
+
 def _auto_match_activities(uid: str, activities: list[RecentActivity]) -> None:
     """Auto-match Garmin activities to planned workouts by date.
 
     For each accepted plan, find unmatched workouts whose scheduled_date
     matches an activity's date. Pick the best activity by closest distance.
+    Only running-type activities are matched to running workouts.
     Automatically runs AI analysis on newly matched workouts.
     """
     if uid not in _user_plans:
@@ -983,7 +991,15 @@ def _auto_match_activities(uid: str, activities: list[RecentActivity]) -> None:
                 if wo.completed or wo.workout_type.value == "rest":
                     continue
                 wo_date = str(wo.scheduled_date)
-                candidates = acts_by_date.get(wo_date, [])
+                all_candidates = acts_by_date.get(wo_date, [])
+                if not all_candidates:
+                    continue
+                # Only match running activities to running workouts
+                is_running_wo = wo.workout_type.value not in ("cross_training", "rest")
+                if is_running_wo:
+                    candidates = [a for a in all_candidates if a.activity_type in _RUNNING_ACTIVITY_TYPES]
+                else:
+                    candidates = list(all_candidates)
                 if not candidates:
                     continue
                 planned_dist = wo.estimated_distance_meters or 0
@@ -1260,6 +1276,25 @@ async def delete_workout(req: DeleteWorkoutRequest, user: dict = Depends(get_cur
                     )
                     _save_plans(uid)
                     return {"status": "ok", "message": f"Deleted '{w.name}' on {req.scheduled_date}"}
+    raise HTTPException(404, "Workout not found")
+
+
+@app.post("/plan/unmatch-workout")
+async def unmatch_workout(req: DeleteWorkoutRequest, user: dict = Depends(get_current_user)):
+    """Revert a wrongly matched activity from a planned workout."""
+    uid = user["id"]
+    if uid not in _user_plans:
+        _user_plans[uid] = _load_plans(uid)
+    for plan in _user_plans.get(uid, []):
+        for week in plan.weeks:
+            for w in week.workouts:
+                if w.name == req.workout_name and str(w.scheduled_date) == req.scheduled_date:
+                    w.completed = False
+                    w.matched_activity_id = None
+                    w.completion_metrics = None
+                    w.completion_analysis = None
+                    _save_plans(uid)
+                    return {"status": "ok", "message": f"Unmatched '{w.name}' on {req.scheduled_date}"}
     raise HTTPException(404, "Workout not found")
 
 

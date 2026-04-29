@@ -5089,6 +5089,29 @@ with tab_calendar:
                                         except requests.ConnectionError:
                                             st.error("Cannot reach API.")
 
+                            # ── Unmatch button (wrongly matched workouts) ──
+                            _plan_act_id = props.get("matched_activity_id")
+                            if _plan_act_id:
+                                wo_name = props.get("name", "")
+                                if st.button("⛓️‍💥 Unmatch Activity", key=f"unmatch_{ev_date}_{wo_name}", use_container_width=True):
+                                    try:
+                                        r = requests.post(
+                                            f"{API_BASE}/plan/unmatch-workout",
+                                            json={"workout_name": wo_name, "scheduled_date": ev_date},
+                                            headers=_auth_headers(),
+                                            timeout=15,
+                                        )
+                                        if r.status_code == 200:
+                                            st.success("Activity unmatched — workout is back to planned.")
+                                            pr = requests.get(f"{API_BASE}/plans", headers=_auth_headers(), timeout=10)
+                                            if pr.status_code == 200:
+                                                st.session_state.plans = pr.json()
+                                            st.rerun()
+                                        else:
+                                            st.error(f"Unmatch failed: {_error_detail(r)}")
+                                    except requests.ConnectionError:
+                                        st.error("Cannot reach API.")
+
                             # ── Send to Strava button (completed planned workouts) ──
                             _plan_act_id = props.get("matched_activity_id")
                             if _plan_act_id:
