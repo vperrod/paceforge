@@ -2939,6 +2939,7 @@ class DietProfileRequest(BaseModel):
     target_weight_kg: float | None = None
     daily_meals_count: int = 3
     plan_weeks: int = 1
+    start_date: str | None = None
     preferred_foods: list[str] = []
     allergies: list[str] = []
     restrictions: list[str] = []
@@ -2998,11 +2999,16 @@ async def save_diet_profile(req: DietProfileRequest, user: dict = Depends(get_cu
     uid = user["id"]
     data = _load_diet_data(uid)
     valid_goals = {g.value for g in DietGoal}
+    parsed_start = None
+    if req.start_date:
+        with contextlib.suppress(ValueError):
+            parsed_start = date.fromisoformat(req.start_date)
     data.profile = DietProfile(
         goals=[DietGoal(g) for g in req.goals if g in valid_goals],
         target_weight_kg=req.target_weight_kg,
         daily_meals_count=req.daily_meals_count,
         plan_weeks=max(1, min(4, req.plan_weeks)),
+        start_date=parsed_start,
         preferred_foods=req.preferred_foods,
         allergies=req.allergies,
         restrictions=req.restrictions,
@@ -3068,6 +3074,96 @@ async def get_diet_plan(user: dict = Depends(get_current_user)):
     if not data.active_plan:
         return {"plan": None}
     return data.active_plan.model_dump(mode="json")
+
+
+class MealRegenerateRequest(BaseModel):
+    day_index: int = 0
+    meal_index: int = 0
+
+
+@app.post("/diet/meal/regenerate")
+async def regenerate_single_meal(
+    req: MealRegenerateRequest,
+    user: dict = Depends(get_current_user),
+):
+    """Regenerate a single meal in the active diet plan."""
+    uid = user["id"]
+    data = _load_diet_data(uid)
+    if not data.active_plan:
+        raise HTTPException(404, "No active diet plan")
+
+    plan = data.active_plan
+    # Flatten all days across weekly templates
+    all_days = [d for w in plan.weekly_templates for d in w.days]
+    if req.day_index < 0 or req.day_index >= len(all_days):
+        raise HTTPException(400, f"Invalid day_index {req.day_index}")
+    target_day = all_days[req.day_index]
+    if req.meal_index < 0 or req.meal_index >= len(target_day.meals):
+        raise HTTPException(400, f"Invalid meal_index {req.meal_index}")
+
+    target_meal = target_day.meals[req.meal_index]
+    other_names = [m.name for i, m in enumerate(target_day.meals) if i != req.meal_index]
+
+    coach = _get_or_create_coach(uid)
+    raw = coach.generate_single_meal(
+        meal_type=target_meal.meal_type.value,
+        current_meal_name=target_meal.name,
+        other_meals_today=other_names,
+        macro_targets=plan.macro_targets.model_dump(),
+        diet_profile=data.profile.model_dump(mode="json"),
+    )
+
+    # Parse single meal JSON
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        from json_repair import loads as repair_loads
+        parsed = repair_loads(raw)
+        if not isinstance(parsed, dict):
+            raise HTTPException(500, "AI returned invalid meal format")
+
+    if parsed.get("error"):
+        raise HTTPException(500, parsed["error"])
+
+    # Build replacement meal
+    foods = [
+        FoodItem(
+            name=f.get("name", ""), quantity=f.get("quantity", 0),
+            unit=f.get("unit", "g"), calories=f.get("calories", 0),
+            protein_g=f.get("protein_g", 0), carbs_g=f.get("carbs_g", 0),
+            fat_g=f.get("fat_g", 0),
+        )
+        for f in parsed.get("foods", [])
+    ]
+    raw_type = parsed.get("meal_type", target_meal.meal_type.value)
+    try:
+        meal_type = MealType(raw_type)
+    except ValueError:
+        meal_type = target_meal.meal_type
+    new_meal = Meal(
+        name=parsed.get("name", "Meal"),
+        meal_type=meal_type,
+        foods=foods,
+        total_calories=parsed.get("total_calories", 0),
+        protein_g=parsed.get("protein_g", 0),
+        carbs_g=parsed.get("carbs_g", 0),
+        fat_g=parsed.get("fat_g", 0),
+        fiber_g=parsed.get("fiber_g", 0),
+        recipe_notes=parsed.get("recipe_notes", ""),
+    )
+    target_day.meals[req.meal_index] = new_meal
+
+    # Recalculate daily totals
+    target_day.daily_totals = MacroTotals(
+        calories=sum(m.total_calories for m in target_day.meals),
+        protein_g=sum(m.protein_g for m in target_day.meals),
+        carbs_g=sum(m.carbs_g for m in target_day.meals),
+        fat_g=sum(m.fat_g for m in target_day.meals),
+        fiber_g=sum(m.fiber_g for m in target_day.meals),
+    )
+
+    _save_diet_data(uid, data)
+    return plan.model_dump(mode="json")
 
 
 @app.delete("/diet/plan")
@@ -3324,11 +3420,13 @@ def _parse_diet_plan_response(
         fiber_g=mt.get("fiber_g", 0),
     )
 
-    # Build daily meal plans
+    # Build daily meal plans — use profile start_date or default to next Monday
     today = date.today()
-    # Start from next Monday
-    days_until_monday = (7 - today.weekday()) % 7 or 7
-    start_date = today + timedelta(days=days_until_monday)
+    if profile.start_date and profile.start_date >= today:
+        start_date = profile.start_date
+    else:
+        days_until_monday = (7 - today.weekday()) % 7 or 7
+        start_date = today + timedelta(days=days_until_monday)
 
     days_data = parsed.get("days", [])
     if not days_data:

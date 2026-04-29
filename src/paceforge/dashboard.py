@@ -6189,6 +6189,21 @@ with tab_diet:
         )
         meals_count = st.slider("Meals per Day", 2, 6, current_profile.get("daily_meals_count", 3))
         plan_weeks = st.slider("Plan Duration (weeks)", 1, 4, current_profile.get("plan_weeks", 1))
+
+        # Start date picker — default to saved value or next Monday
+        _today = date.today()
+        _saved_start = current_profile.get("start_date")
+        if _saved_start:
+            try:
+                _default_start = date.fromisoformat(_saved_start)
+                if _default_start < _today:
+                    _default_start = _today + timedelta(days=(7 - _today.weekday()) % 7 or 7)
+            except ValueError:
+                _default_start = _today + timedelta(days=(7 - _today.weekday()) % 7 or 7)
+        else:
+            _default_start = _today + timedelta(days=(7 - _today.weekday()) % 7 or 7)
+        start_date = st.date_input("Plan Start Date", value=_default_start, min_value=_today)
+
         preferred = st.text_area(
             "Preferred Foods (comma-separated)",
             value=", ".join(current_profile.get("preferred_foods", [])),
@@ -6210,6 +6225,7 @@ with tab_diet:
                     "target_weight_kg": target_weight,
                     "daily_meals_count": meals_count,
                     "plan_weeks": plan_weeks,
+                    "start_date": start_date.isoformat(),
                     "preferred_foods": [f.strip() for f in preferred.split(",") if f.strip()],
                     "allergies": [a.strip() for a in allergies.split(",") if a.strip()],
                     "restrictions": [r.strip() for r in restrictions.split(",") if r.strip()],
@@ -6271,8 +6287,10 @@ with tab_diet:
                 "lunch": "#10B981", "afternoon_snack": "#6EE7B7",
                 "dinner": "#3B82F6", "evening_snack": "#93C5FD",
             }
+            all_days = []
             for week in plan.get("weekly_templates", []):
                 for day in week.get("days", []):
+                    all_days.append(day)
                     for meal in day.get("meals", []):
                         mt = meal.get("meal_type", "lunch")
                         cal_events.append({
@@ -6287,26 +6305,55 @@ with tab_diet:
                 "initialView": "dayGridWeek",
                 "initialDate": cal_events[0]["start"] if cal_events else None,
                 "headerToolbar": {"left": "prev,next today", "center": "title", "right": "dayGridWeek,dayGridMonth"},
-                "height": 450,
+                "height": 350,
                 "editable": False,
             }
-            calendar_result = st_calendar(events=cal_events, options=cal_options, key="diet_calendar")
+            st_calendar(events=cal_events, options=cal_options, key="diet_calendar")
 
-            # Show selected day details
-            if calendar_result and calendar_result.get("dateClick"):
-                clicked_date = calendar_result["dateClick"].get("date", "")[:10]
-                st.markdown(f"### Meals for {clicked_date}")
-                for week in plan.get("weekly_templates", []):
-                    for day in week.get("days", []):
-                        if day.get("date") == clicked_date:
-                            for meal in day.get("meals", []):
-                                with st.expander(f"**{meal.get('name')}** — {meal.get('total_calories', 0)} cal", expanded=False):
-                                    for food in meal.get("foods", []):
-                                        st.write(f"- {food.get('name')}: {food.get('quantity')}{food.get('unit', 'g')} ({food.get('calories', 0)} cal, P:{food.get('protein_g', 0)}g C:{food.get('carbs_g', 0)}g F:{food.get('fat_g', 0)}g)")
-                                    if meal.get("recipe_notes"):
-                                        st.info(meal["recipe_notes"])
-                            totals = day.get("daily_totals", {})
-                            st.markdown(f"**Daily totals:** {totals.get('calories', 0)} cal | P: {totals.get('protein_g', 0)}g | C: {totals.get('carbs_g', 0)}g | F: {totals.get('fat_g', 0)}g")
+            # Day-by-day meal detail view
+            st.markdown("---")
+            if all_days:
+                day_labels = [f"{d.get('date', '')} ({['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][date.fromisoformat(d.get('date','2026-01-05')).weekday()]})" for d in all_days]
+                selected_day_idx = st.selectbox("Select day", range(len(day_labels)), format_func=lambda i: day_labels[i], key="diet_day_select")
+                day = all_days[selected_day_idx]
+
+                # Daily totals banner
+                totals = day.get("daily_totals", {})
+                t_cols = st.columns(4)
+                t_cols[0].metric("Calories", f"{totals.get('calories', 0):.0f}")
+                t_cols[1].metric("Protein", f"{totals.get('protein_g', 0):.0f}g")
+                t_cols[2].metric("Carbs", f"{totals.get('carbs_g', 0):.0f}g")
+                t_cols[3].metric("Fat", f"{totals.get('fat_g', 0):.0f}g")
+
+                # Meal cards
+                _type_emoji = {
+                    "breakfast": "🌅", "morning_snack": "🍎",
+                    "lunch": "☀️", "afternoon_snack": "🥤",
+                    "dinner": "🌙", "evening_snack": "🍵",
+                }
+                _type_label = {
+                    "breakfast": "Breakfast", "morning_snack": "Morning Snack",
+                    "lunch": "Lunch", "afternoon_snack": "Afternoon Snack",
+                    "dinner": "Dinner", "evening_snack": "Evening Snack",
+                }
+                for meal_idx, meal in enumerate(day.get("meals", [])):
+                    mt = meal.get("meal_type", "lunch")
+                    emoji = _type_emoji.get(mt, "🍽️")
+                    label = _type_label.get(mt, mt.replace("_", " ").title())
+                    with st.expander(f"{emoji} **{label}: {meal.get('name', 'Meal')}** — {meal.get('total_calories', 0):.0f} cal | P:{meal.get('protein_g', 0):.0f}g C:{meal.get('carbs_g', 0):.0f}g F:{meal.get('fat_g', 0):.0f}g", expanded=True):
+                        for food in meal.get("foods", []):
+                            st.markdown(f"- **{food.get('name')}**: {food.get('quantity')}{food.get('unit', 'g')} — {food.get('calories', 0)} cal (P:{food.get('protein_g', 0)}g C:{food.get('carbs_g', 0)}g F:{food.get('fat_g', 0)}g)")
+                        if meal.get("recipe_notes"):
+                            st.info(f"📝 {meal['recipe_notes']}")
+                        if st.button(f"🔄 Suggest Alternative", key=f"regen_meal_{selected_day_idx}_{meal_idx}", use_container_width=True):
+                            with st.spinner(f"Finding alternative for {meal.get('name')}..."):
+                                try:
+                                    new_plan = _diet_api("POST", "/diet/meal/regenerate", json={"day_index": selected_day_idx, "meal_index": meal_idx})
+                                    st.session_state["diet_plan"] = new_plan
+                                    st.success("Meal updated!")
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Failed: {e}")
 
             # User feedback
             st.markdown("---")

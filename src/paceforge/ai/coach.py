@@ -791,7 +791,13 @@ class Coach:
         lines.append(f"""
 ## Instructions
 
-Create a 7-day meal plan (1 week). For each day, provide {meals_count} meals: {', '.join(meal_types)}.
+Create a 7-day meal plan (1 week). For each day, provide EXACTLY {meals_count} meals: {', '.join(meal_types)}.
+
+CRITICAL RULES:
+- You MUST output exactly {meals_count} meals per day — one for EACH of these types: {', '.join(meal_types)}
+- Each day MUST have DIFFERENT meals — never repeat the same meal name or food combination across days
+- Vary protein sources (chicken, fish, beef, eggs, tofu, legumes), grains, and vegetables across the 7 days
+- Never output fewer than {meals_count} meals per day
 
 Respond with ONLY valid JSON (no markdown fences, no explanation) in this exact format:
 {{
@@ -828,6 +834,8 @@ Important rules:
 - Every meal must have realistic portion sizes and accurate macros
 - Include the exercise calorie burn when calculating daily needs
 - Make meals practical and easy to prepare
+- NEVER repeat the same meal on different days — each day must be unique
+- Output EXACTLY {meals_count} meals per day, one per meal type
 """)
 
         saved = self._conversation
@@ -843,6 +851,59 @@ Important rules:
             logger.error("Diet plan generation failed: %s", e, exc_info=True)
             reply = f'{{"error": "Could not generate diet plan: {e}"}}'
 
+        self._conversation = saved
+        return reply
+
+    def generate_single_meal(
+        self,
+        meal_type: str,
+        current_meal_name: str,
+        other_meals_today: list[str],
+        macro_targets: dict,
+        diet_profile: dict,
+    ) -> str:
+        """Generate a single replacement meal using AI.
+
+        Returns a JSON string with one meal object.
+        """
+        preferred = diet_profile.get("preferred_foods", [])
+        allergies = diet_profile.get("allergies", [])
+        restrictions = diet_profile.get("restrictions", [])
+
+        prompt = f"""Suggest an alternative {meal_type} meal that is DIFFERENT from "{current_meal_name}".
+
+Daily macro targets: {macro_targets.get('calories', 2000)} cal, {macro_targets.get('protein_g', 120)}g protein, {macro_targets.get('carbs_g', 250)}g carbs, {macro_targets.get('fat_g', 70)}g fat.
+
+Other meals today (do NOT repeat ingredients): {', '.join(other_meals_today) if other_meals_today else 'none yet'}.
+{'Preferred foods: ' + ', '.join(preferred) if preferred else ''}
+{'Allergies (AVOID): ' + ', '.join(allergies) if allergies else ''}
+{'Restrictions: ' + ', '.join(restrictions) if restrictions else ''}
+
+Respond with ONLY valid JSON for a single meal:
+{{
+  "name": "<meal name>",
+  "meal_type": "{meal_type}",
+  "foods": [
+    {{"name": "<food>", "quantity": <number>, "unit": "<g/ml/pcs/tbsp/cup>", "calories": <number>, "protein_g": <number>, "carbs_g": <number>, "fat_g": <number>}}
+  ],
+  "total_calories": <number>,
+  "protein_g": <number>,
+  "carbs_g": <number>,
+  "fat_g": <number>,
+  "fiber_g": <number>,
+  "recipe_notes": "<brief preparation notes>"
+}}"""
+
+        saved = self._conversation
+        self._conversation = [
+            {"role": "system", "content": _DIET_SYSTEM_PROMPT},
+            {"role": "user", "content": prompt},
+        ]
+        try:
+            reply = self._chat_openai_extended(max_tokens=2000, json_mode=True) if self._provider != "anthropic" else self._chat_anthropic()
+        except Exception as e:
+            logger.error("Single meal generation failed: %s", e, exc_info=True)
+            reply = f'{{"error": "Could not generate meal: {e}"}}'
         self._conversation = saved
         return reply
 
