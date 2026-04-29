@@ -551,13 +551,16 @@ class Coach:
         except _json.JSONDecodeError:
             pass
 
-        # Trim back to the last complete item (comma, bracket, or brace boundary)
-        # then close all open brackets/braces
-        for trim_char in (",", "{", "[", '"'):
-            idx = content.rfind(trim_char)
-            if idx <= 0:
-                continue
-            candidate = content[:idx].rstrip().rstrip(",")
+        # Strategy: progressively trim from the end until we find valid JSON
+        # First, remove any unterminated string by finding the last balanced quote
+        quotes = [i for i, c in enumerate(content) if c == '"' and (i == 0 or content[i - 1] != '\\')]
+        if len(quotes) % 2 != 0:
+            # Odd number of quotes = unterminated string
+            content = content[:quotes[-1]]  # Remove from the last unmatched quote
+
+        # Now try trimming back to find valid JSON
+        for end_pos in range(len(content), max(0, len(content) - 2000), -1):
+            candidate = content[:end_pos].rstrip().rstrip(",")
             open_brackets = candidate.count("[") - candidate.count("]")
             open_braces = candidate.count("{") - candidate.count("}")
             candidate += "]" * max(0, open_brackets)
@@ -568,12 +571,6 @@ class Coach:
             except _json.JSONDecodeError:
                 continue
 
-        # Last resort: naive brace/bracket closing
-        content = content.rstrip().rstrip(",")
-        open_brackets = content.count("[") - content.count("]")
-        open_braces = content.count("{") - content.count("}")
-        content += "]" * max(0, open_brackets)
-        content += "}" * max(0, open_braces)
         return content
 
     @staticmethod
@@ -860,7 +857,7 @@ Important rules:
         self._conversation.append({"role": "user", "content": "\n".join(lines)})
 
         try:
-            tokens = min(16000, 4000 + plan_weeks * 4000)
+            tokens = min(16000, 12000 + (plan_weeks - 1) * 4000)
             reply = self._chat_openai_extended(max_tokens=tokens, json_mode=True) if self._provider != "anthropic" else self._chat_anthropic()
         except Exception as e:
             logger.error("Diet plan generation failed: %s", e, exc_info=True)
