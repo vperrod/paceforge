@@ -6148,8 +6148,14 @@ with tab_hyrox:
 def _diet_api(method: str, path: str, **kwargs) -> dict:
     """Helper for diet API calls."""
     url = f"{API_BASE}{path}"
-    r = requests.request(method, url, headers=_auth_headers(), timeout=30, **kwargs)
-    r.raise_for_status()
+    r = requests.request(method, url, headers=_auth_headers(), timeout=60, **kwargs)
+    if r.status_code >= 400:
+        # Extract the actual error detail from the JSON response
+        try:
+            detail = r.json().get("detail", r.text)
+        except Exception:
+            detail = r.text
+        raise RuntimeError(detail)
     return r.json()
 
 

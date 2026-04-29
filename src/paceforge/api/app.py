@@ -3021,37 +3021,43 @@ async def generate_diet_plan(user: dict = Depends(get_current_user)):
     if not data.profile.goals:
         raise HTTPException(400, "Set diet goals in your profile first")
 
-    # Gather context
-    profile = _user_profile.get(uid)
-    activities: list[dict] = []
-    cached = load_user_data(settings.db_path, uid)
-    if cached and cached.get("activities_json"):
-        with contextlib.suppress(json.JSONDecodeError, TypeError):
-            activities = json.loads(cached["activities_json"])
+    try:
+        # Gather context
+        profile = _user_profile.get(uid)
+        activities: list[dict] = []
+        cached = load_user_data(settings.db_path, uid)
+        if cached and cached.get("activities_json"):
+            with contextlib.suppress(json.JSONDecodeError, TypeError):
+                activities = json.loads(cached["activities_json"])
 
-    weight_hist = [w.model_dump(mode="json") for w in data.weight_history[-30:]]
+        weight_hist = [w.model_dump(mode="json") for w in data.weight_history[-30:]]
 
-    # Get active training plan
-    training_plan = None
-    if uid in _user_plans:
-        accepted = [p for p in _user_plans[uid] if p.accepted]
-        if accepted:
-            training_plan = accepted[0]
+        # Get active training plan
+        training_plan = None
+        if uid in _user_plans:
+            accepted = [p for p in _user_plans[uid] if p.accepted]
+            if accepted:
+                training_plan = accepted[0]
 
-    coach = _get_or_create_coach(uid)
-    raw_json = coach.generate_diet_plan(
-        diet_profile=data.profile.model_dump(mode="json"),
-        fitness_profile=profile,
-        activities=activities[-30:],
-        weight_history=weight_hist,
-        training_plan=training_plan,
-    )
+        coach = _get_or_create_coach(uid)
+        raw_json = coach.generate_diet_plan(
+            diet_profile=data.profile.model_dump(mode="json"),
+            fitness_profile=profile,
+            activities=activities[-30:],
+            weight_history=weight_hist,
+            training_plan=training_plan,
+        )
 
-    # Parse the AI response
-    plan = _parse_diet_plan_response(raw_json, data.profile)
-    data.active_plan = plan
-    _save_diet_data(uid, data)
-    return plan.model_dump(mode="json")
+        # Parse the AI response
+        plan = _parse_diet_plan_response(raw_json, data.profile)
+        data.active_plan = plan
+        _save_diet_data(uid, data)
+        return plan.model_dump(mode="json")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Diet plan generation failed for %s: %s", uid, e, exc_info=True)
+        raise HTTPException(500, f"Diet plan generation failed: {e}")
 
 
 @app.get("/diet/plan")
