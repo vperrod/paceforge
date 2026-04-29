@@ -26,6 +26,7 @@ dependencies = [
     "pydantic[email]>=2.0",
     "beautifulsoup4>=4.11.0",
     "lxml>=4.9.0",
+    "json-repair>=0.30",
 ]
 
 [project.optional-dependencies]

@@ -3275,7 +3275,6 @@ def _parse_diet_plan_response(
 
     # Strip markdown code fences if present
     cleaned = raw_json.strip()
-    # Remove ```json ... ``` wrapping (handles newlines)
     fence_match = re.search(r"```(?:json)?\s*\n?(.*?)\n?\s*```", cleaned, re.DOTALL)
     if fence_match:
         cleaned = fence_match.group(1).strip()
@@ -3285,18 +3284,20 @@ def _parse_diet_plan_response(
         if brace_match:
             cleaned = brace_match.group(0)
 
-    # Sanitise common JSON errors from LLMs
-    cleaned = re.sub(r",\s*}", "}", cleaned)   # trailing comma before }
-    cleaned = re.sub(r",\s*]", "]", cleaned)   # trailing comma before ]
-
+    # Parse JSON — use json_repair as fallback for truncated / malformed output
     try:
         parsed = json.loads(cleaned)
-    except json.JSONDecodeError as exc:
-        logger.error(
-            "Failed to parse diet plan JSON (err=%s): …%s…",
-            exc, cleaned[max(0, exc.pos - 80):exc.pos + 80] if exc.pos else cleaned[:300],
-        )
-        raise HTTPException(500, f"AI returned invalid diet plan format: {exc}")
+    except json.JSONDecodeError:
+        from json_repair import loads as repair_loads
+
+        logger.warning("json.loads failed, attempting json_repair on %d chars", len(cleaned))
+        try:
+            parsed = repair_loads(cleaned)
+            if not isinstance(parsed, dict):
+                raise ValueError(f"Expected dict, got {type(parsed).__name__}")
+        except Exception as exc:
+            logger.error("json_repair also failed: %s — raw: %.500s", exc, cleaned)
+            raise HTTPException(500, f"AI returned invalid diet plan format: {exc}")
 
     if parsed.get("error"):
         raise HTTPException(500, parsed["error"])

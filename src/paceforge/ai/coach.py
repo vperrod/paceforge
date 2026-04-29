@@ -540,37 +540,21 @@ class Coach:
 
     @staticmethod
     def _repair_truncated_json(content: str) -> str:
-        """Best-effort repair of truncated JSON by finding the last valid parse point."""
+        """Repair truncated / malformed JSON using json_repair."""
         import json as _json
 
+        from json_repair import loads as repair_loads
+
         content = content.rstrip()
-        # Try parsing as-is first
         try:
             _json.loads(content)
             return content
         except _json.JSONDecodeError:
             pass
 
-        # Strategy: progressively trim from the end until we find valid JSON
-        # First, remove any unterminated string by finding the last balanced quote
-        quotes = [i for i, c in enumerate(content) if c == '"' and (i == 0 or content[i - 1] != '\\')]
-        if len(quotes) % 2 != 0:
-            # Odd number of quotes = unterminated string
-            content = content[:quotes[-1]]  # Remove from the last unmatched quote
-
-        # Now try trimming back to find valid JSON
-        for end_pos in range(len(content), max(0, len(content) - 2000), -1):
-            candidate = content[:end_pos].rstrip().rstrip(",")
-            open_brackets = candidate.count("[") - candidate.count("]")
-            open_braces = candidate.count("{") - candidate.count("}")
-            candidate += "]" * max(0, open_brackets)
-            candidate += "}" * max(0, open_braces)
-            try:
-                _json.loads(candidate)
-                return candidate
-            except _json.JSONDecodeError:
-                continue
-
+        repaired = repair_loads(content)
+        if isinstance(repaired, (dict, list)):
+            return _json.dumps(repaired)
         return content
 
     @staticmethod
