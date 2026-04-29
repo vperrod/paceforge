@@ -720,9 +720,8 @@ class Coach:
         caller parses into DietPlan / DailyMealPlan models.
         """
         lines: list[str] = []
-        plan_weeks = diet_profile.get("plan_weeks", 1)
-        total_days = plan_weeks * 7
-        lines.append(f"Generate a detailed {plan_weeks}-week ({total_days}-day) meal plan for this athlete.\n")
+        # Always generate a 7-day template; the caller clones it for multi-week plans
+        lines.append("Generate a detailed 7-day (1-week) meal plan for this athlete.\n")
 
         # Diet goals & preferences
         lines.append("## Diet Profile")
@@ -731,7 +730,6 @@ class Coach:
         if diet_profile.get("target_weight_kg"):
             lines.append(f"- Target weight: {diet_profile['target_weight_kg']} kg")
         lines.append(f"- Meals per day: {diet_profile.get('daily_meals_count', 3)}")
-        lines.append(f"- Plan duration: {plan_weeks} week(s)")
         preferred = diet_profile.get("preferred_foods", [])
         if preferred:
             lines.append(f"- Preferred foods: {', '.join(preferred)}")
@@ -793,8 +791,7 @@ class Coach:
         lines.append(f"""
 ## Instructions
 
-Create a {total_days}-day meal plan ({plan_weeks} week(s)). For each day, provide {meals_count} meals: {', '.join(meal_types)}.
-{'Vary meals across weeks — do not repeat the same day plan.' if plan_weeks > 1 else ''}
+Create a 7-day meal plan (1 week). For each day, provide {meals_count} meals: {', '.join(meal_types)}.
 
 Respond with ONLY valid JSON (no markdown fences, no explanation) in this exact format:
 {{
@@ -841,8 +838,7 @@ Important rules:
         self._conversation.append({"role": "user", "content": "\n".join(lines)})
 
         try:
-            tokens = min(16000, 12000 + (plan_weeks - 1) * 4000)
-            reply = self._chat_openai_extended(max_tokens=tokens, json_mode=True) if self._provider != "anthropic" else self._chat_anthropic()
+            reply = self._chat_openai_extended(max_tokens=12000, json_mode=True) if self._provider != "anthropic" else self._chat_anthropic()
         except Exception as e:
             logger.error("Diet plan generation failed: %s", e, exc_info=True)
             reply = f'{{"error": "Could not generate diet plan: {e}"}}'

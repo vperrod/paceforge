@@ -3333,10 +3333,10 @@ def _parse_diet_plan_response(
     days_data = parsed.get("days", [])
     if len(days_data) < 7:
         logger.error(
-            "AI returned only %d days (expected %d). Response may be truncated. Raw: %.500s",
-            len(days_data), 7 * max(1, profile.plan_weeks), raw_json,
+            "AI returned only %d days (expected 7). Response may be truncated. Raw: %.500s",
+            len(days_data), raw_json,
         )
-        raise HTTPException(500, f"AI returned only {len(days_data)} day(s) instead of {7 * max(1, profile.plan_weeks)}. Please try again.")
+        raise HTTPException(500, f"AI returned only {len(days_data)} day(s) instead of 7. Please try again.")
     daily_plans: list[DailyMealPlan] = []
     for day_info in days_data:
         day_num = day_info.get("day_number", len(daily_plans) + 1)
