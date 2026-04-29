@@ -555,6 +555,12 @@ class DeleteWorkoutRequest(BaseModel):
     scheduled_date: str
 
 
+class UnmatchSingleRequest(BaseModel):
+    workout_name: str
+    scheduled_date: str
+    activity_id: int
+
+
 class MatchWorkoutRequest(BaseModel):
     plan_id: str
     workout_name: str
@@ -1087,13 +1093,15 @@ def _auto_match_activities(uid: str, activities: list[RecentActivity]) -> None:
         try:
             # Enrich with full Garmin detail (splits, HR zones) for richer analysis
             activity_data = dict(wo.completion_metrics or {})
-            if garmin and wo.matched_activity_id:
-                try:
-                    detail = garmin.get_activity_detail(wo.matched_activity_id)
-                    summary = detail.get("summary") or {}
-                    summary_dto = summary.get("summaryDTO") or summary
-                    activity_data.update({
-                        k: v for k, v in {
+            if garmin and wo.matched_activity_ids:
+                per_activity_details = []
+                for aid in wo.matched_activity_ids:
+                    try:
+                        detail = garmin.get_activity_detail(aid)
+                        summary = detail.get("summary") or {}
+                        summary_dto = summary.get("summaryDTO") or summary
+                        per_activity_details.append({
+                            "activity_id": aid,
                             "distance_meters": summary_dto.get("distance"),
                             "duration_seconds": summary_dto.get("duration"),
                             "avg_pace_sec_per_km": _meters_per_sec_to_sec_per_km(summary_dto.get("averageSpeed")),
@@ -1104,18 +1112,45 @@ def _auto_match_activities(uid: str, activities: list[RecentActivity]) -> None:
                             "training_effect_anaerobic": summary_dto.get("anaerobicTrainingEffect"),
                             "avg_running_cadence": summary_dto.get("averageRunningCadenceInStepsPerMinute"),
                             "elevation_gain": summary_dto.get("elevationGain"),
-                        }.items() if v is not None
-                    })
-                    # Store full detail for dashboard graphs
-                    wo.completion_metrics = activity_data
-                    wo.completion_metrics["detail"] = {
-                        "splits": detail.get("splits"),
-                        "hr_zones": detail.get("hr_zones"),
-                        "weather": detail.get("weather"),
-                        "split_summaries": detail.get("split_summaries"),
-                    }
-                except Exception:
-                    logger.debug("Could not fetch detail for activity %s", wo.matched_activity_id)
+                            "splits": detail.get("splits"),
+                            "hr_zones": detail.get("hr_zones"),
+                            "weather": detail.get("weather"),
+                            "split_summaries": detail.get("split_summaries"),
+                        })
+                    except Exception:
+                        logger.debug("Could not fetch detail for activity %s", aid)
+                if per_activity_details:
+                    if len(per_activity_details) == 1:
+                        # Single activity — use its metrics directly
+                        d = per_activity_details[0]
+                        activity_data.update({k: v for k, v in d.items() if v is not None and k not in ("splits", "hr_zones", "weather", "split_summaries", "activity_id")})
+                        wo.completion_metrics = activity_data
+                        wo.completion_metrics["detail"] = {
+                            "splits": d.get("splits"),
+                            "hr_zones": d.get("hr_zones"),
+                            "weather": d.get("weather"),
+                            "split_summaries": d.get("split_summaries"),
+                        }
+                    else:
+                        # Multiple activities — keep aggregated totals, store per-activity breakdown
+                        # Re-aggregate with richer detail data
+                        total_dist = sum(d.get("distance_meters") or 0 for d in per_activity_details)
+                        total_dur = sum(d.get("duration_seconds") or 0 for d in per_activity_details)
+                        if total_dist > 0:
+                            activity_data["distance_meters"] = total_dist
+                            activity_data["avg_pace_sec_per_km"] = round(total_dur / (total_dist / 1000), 2)
+                        if total_dur > 0:
+                            activity_data["duration_seconds"] = total_dur
+                        activity_data["calories"] = sum(d.get("calories") or 0 for d in per_activity_details) or None
+                        activity_data["elevation_gain"] = sum(d.get("elevation_gain") or 0 for d in per_activity_details) or None
+                        activity_data["max_hr"] = max((d["max_hr"] for d in per_activity_details if d.get("max_hr")), default=None)
+                        # Weighted averages
+                        for field in ("avg_hr", "avg_running_cadence"):
+                            vals = [(d[field], d.get("duration_seconds") or 0) for d in per_activity_details if d.get(field)]
+                            if vals:
+                                activity_data[field] = round(sum(v * w for v, w in vals) / sum(w for _, w in vals), 2)
+                        wo.completion_metrics = {k: v for k, v in activity_data.items() if v is not None}
+                        wo.completion_metrics["per_activity"] = per_activity_details
 
             coach = _get_or_create_coach(uid)
             profile = _user_profile.get(uid)
@@ -1344,6 +1379,40 @@ async def unmatch_workout(req: DeleteWorkoutRequest, user: dict = Depends(get_cu
                     w.completion_analysis = None
                     _save_plans(uid)
                     return {"status": "ok", "message": f"Unmatched '{w.name}' on {req.scheduled_date}"}
+    raise HTTPException(404, "Workout not found")
+
+
+@app.post("/plan/unmatch-single-activity")
+async def unmatch_single_activity(req: UnmatchSingleRequest, user: dict = Depends(get_current_user)):
+    """Remove a single activity from a multi-matched workout."""
+    uid = user["id"]
+    if uid not in _user_plans:
+        _user_plans[uid] = _load_plans(uid)
+    for plan in _user_plans.get(uid, []):
+        for week in plan.weeks:
+            for w in week.workouts:
+                if w.name == req.workout_name and str(w.scheduled_date) == req.scheduled_date:
+                    if req.activity_id not in w.matched_activity_ids:
+                        raise HTTPException(404, "Activity not linked to this workout")
+                    w.matched_activity_ids.remove(req.activity_id)
+                    if not w.matched_activity_ids:
+                        w.completed = False
+                        w.completion_metrics = None
+                        w.completion_analysis = None
+                    else:
+                        # Re-aggregate metrics from remaining activities
+                        cached = load_user_data(settings.db_path, uid)
+                        remaining_acts = []
+                        if cached and cached.get("activities_json"):
+                            all_acts = json.loads(cached["activities_json"])
+                            for a in all_acts:
+                                if a.get("activity_id") in w.matched_activity_ids:
+                                    remaining_acts.append(RecentActivity(**a))
+                        if remaining_acts:
+                            w.completion_metrics = _aggregate_activity_metrics(remaining_acts)
+                        w.completion_analysis = None
+                    _save_plans(uid)
+                    return {"status": "ok", "remaining": len(w.matched_activity_ids)}
     raise HTTPException(404, "Workout not found")
 
 

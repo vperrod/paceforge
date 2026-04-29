@@ -4748,6 +4748,26 @@ with tab_calendar:
                     else:
                         st.session_state["cal_selected_detail"] = None
 
+                    # Pre-fetch ALL matched activity details for multi-activity workouts
+                    _act_ids_json = props.get("matched_activity_ids", "[]")
+                    try:
+                        _all_act_ids = json.loads(_act_ids_json) if isinstance(_act_ids_json, str) else (_act_ids_json or [])
+                    except (json.JSONDecodeError, TypeError):
+                        _all_act_ids = []
+                    if len(_all_act_ids) > 1:
+                        _multi_details = {}
+                        with st.spinner("Loading activity details..."):
+                            for _aid in _all_act_ids:
+                                try:
+                                    _r = requests.get(f"{API_BASE}/activities/{_aid}", headers=_auth_headers(), timeout=30)
+                                    if _r.status_code == 200:
+                                        _multi_details[_aid] = _r.json()
+                                except requests.ConnectionError:
+                                    pass
+                        st.session_state["cal_multi_details"] = _multi_details
+                    else:
+                        st.session_state["cal_multi_details"] = {}
+
             # ── Detail panel (right column) ──
             with detail_col:
                 sel = st.session_state.get("cal_selected_event")
@@ -4926,10 +4946,17 @@ with tab_calendar:
                             }
 
                         # Show completion status header
+                        _act_ids_json_hdr = props.get("matched_activity_ids", "[]")
+                        try:
+                            _act_ids_hdr = json.loads(_act_ids_json_hdr) if isinstance(_act_ids_json_hdr, str) else (_act_ids_json_hdr or [])
+                        except (json.JSONDecodeError, TypeError):
+                            _act_ids_hdr = []
+                        _n_act = len(_act_ids_hdr)
                         if is_completed:
+                            _compl_label = "✓ Completed" + (f" · {_n_act} activities" if _n_act > 1 else "")
                             st.markdown(
-                                '<div style="background:#1B3A2A;border:1px solid #10B981;border-radius:8px;padding:0.5rem 0.75rem;margin-bottom:0.5rem;">'
-                                '<span style="color:#10B981;font-weight:700;">✓ Completed</span></div>',
+                                f'<div style="background:#1B3A2A;border:1px solid #10B981;border-radius:8px;padding:0.5rem 0.75rem;margin-bottom:0.5rem;">'
+                                f'<span style="color:#10B981;font-weight:700;">{_compl_label}</span></div>',
                                 unsafe_allow_html=True,
                             )
 
@@ -4952,8 +4979,52 @@ with tab_calendar:
 
                             # Merge in live-fetched detail EARLY so richer data populates cards
                             detail_data = metrics.get("detail") or {}
+                            multi_details = st.session_state.get("cal_multi_details", {})
                             live_detail = st.session_state.get("cal_selected_detail")
-                            if live_detail:
+
+                            if multi_details and len(multi_details) > 1:
+                                # Multiple activities — aggregate live data from all fetched details
+                                _total_dist = 0.0
+                                _total_dur = 0.0
+                                _total_cal = 0.0
+                                _total_elev = 0.0
+                                _hr_vals = []
+                                _max_hrs = []
+                                _cadence_vals = []
+                                for _md in multi_details.values():
+                                    _ms = (_md.get("summary") or {})
+                                    _mdto = _ms.get("summaryDTO") or _ms
+                                    _d = _mdto.get("distance") or 0
+                                    _t = _mdto.get("duration") or 0
+                                    _total_dist += _d
+                                    _total_dur += _t
+                                    if _mdto.get("calories"):
+                                        _total_cal += _mdto["calories"]
+                                    if _mdto.get("elevationGain"):
+                                        _total_elev += _mdto["elevationGain"]
+                                    if _mdto.get("averageHR") and _t:
+                                        _hr_vals.append((_mdto["averageHR"], _t))
+                                    if _mdto.get("maxHR"):
+                                        _max_hrs.append(_mdto["maxHR"])
+                                    if _mdto.get("averageRunningCadenceInStepsPerMinute") and _t:
+                                        _cadence_vals.append((_mdto["averageRunningCadenceInStepsPerMinute"], _t))
+                                if _total_dist:
+                                    metrics["distance_meters"] = _total_dist
+                                if _total_dur:
+                                    metrics["duration_seconds"] = _total_dur
+                                if _total_dist > 0 and _total_dur > 0:
+                                    metrics["avg_pace_sec_per_km"] = _total_dur / (_total_dist / 1000)
+                                if _hr_vals:
+                                    metrics["avg_hr"] = sum(v * w for v, w in _hr_vals) / sum(w for _, w in _hr_vals)
+                                if _max_hrs:
+                                    metrics["max_hr"] = max(_max_hrs)
+                                if _cadence_vals:
+                                    metrics["avg_running_cadence"] = sum(v * w for v, w in _cadence_vals) / sum(w for _, w in _cadence_vals)
+                                if _total_cal:
+                                    metrics["calories"] = _total_cal
+                                if _total_elev:
+                                    metrics["elevation_gain"] = _total_elev
+                            elif live_detail:
                                 live_summary = live_detail.get("summary") or {}
                                 live_dto = live_summary.get("summaryDTO") or live_summary
                                 if not detail_data.get("splits") and live_detail.get("splits"):
@@ -5016,6 +5087,79 @@ with tab_calendar:
 
                             if card_data:
                                 st.markdown(_metrics_strip(card_data), unsafe_allow_html=True)
+
+                            # ── Linked Activities breakdown (multi-activity) ──
+                            _act_ids_json_detail = props.get("matched_activity_ids", "[]")
+                            try:
+                                _act_ids_detail = json.loads(_act_ids_json_detail) if isinstance(_act_ids_json_detail, str) else (_act_ids_json_detail or [])
+                            except (json.JSONDecodeError, TypeError):
+                                _act_ids_detail = []
+                            if len(_act_ids_detail) > 1:
+                                _garmin_acts_all = st.session_state.get("garmin_activities", [])
+                                _act_lookup = {a.get("activity_id"): a for a in _garmin_acts_all}
+                                _multi_dets = st.session_state.get("cal_multi_details", {})
+                                with st.expander(f"🔗 Linked Activities ({len(_act_ids_detail)})", expanded=False):
+                                    for _i, _aid in enumerate(_act_ids_detail):
+                                        _act_info = _act_lookup.get(_aid) or {}
+                                        _act_detail = _multi_dets.get(_aid)
+                                        _act_name = _act_info.get("name", f"Activity {_aid}")
+                                        # Get metrics from live detail or cached activity
+                                        if _act_detail:
+                                            _s = (_act_detail.get("summary") or {})
+                                            _sdto = _s.get("summaryDTO") or _s
+                                            _a_dist = _sdto.get("distance", 0)
+                                            _a_dur = _sdto.get("duration", 0)
+                                            _a_hr = _sdto.get("averageHR")
+                                            _a_spd = _sdto.get("averageSpeed")
+                                        else:
+                                            _a_dist = _act_info.get("distance_meters", 0)
+                                            _a_dur = _act_info.get("duration_seconds", 0)
+                                            _a_hr = _act_info.get("avg_hr")
+                                            _a_spd = None
+                                        # Format
+                                        _a_dist_km = f"{_a_dist / 1000:.1f}km" if _a_dist else ""
+                                        _a_dur_m, _a_dur_s = divmod(int(_a_dur), 60) if _a_dur else (0, 0)
+                                        _a_dur_str = f"{_a_dur_m}:{_a_dur_s:02d}" if _a_dur else ""
+                                        _a_pace_str = ""
+                                        if _a_spd and _a_spd > 0:
+                                            _a_pace_total = 1000 / _a_spd
+                                            _a_pm, _a_ps = divmod(int(_a_pace_total), 60)
+                                            _a_pace_str = f"{_a_pm}:{_a_ps:02d}/km"
+                                        elif _act_info.get("avg_pace_sec_per_km"):
+                                            _a_pm, _a_ps = divmod(int(_act_info["avg_pace_sec_per_km"]), 60)
+                                            _a_pace_str = f"{_a_pm}:{_a_ps:02d}/km"
+                                        _a_hr_str = f"HR {int(_a_hr)}" if _a_hr else ""
+                                        _parts = [p for p in [_a_dist_km, _a_dur_str, _a_pace_str, _a_hr_str] if p]
+                                        _a_summary = " · ".join(_parts) if _parts else "No data"
+                                        _wo_name = props.get("name", "")
+                                        _cols = st.columns([5, 1])
+                                        with _cols[0]:
+                                            st.markdown(
+                                                f'<div style="padding:0.3rem 0;border-bottom:1px solid #2A2D3A;">'
+                                                f'<div style="color:#E8ECF4;font-size:0.82rem;font-weight:600;">{_act_name}</div>'
+                                                f'<div style="color:#8B95AD;font-size:0.75rem;">{_a_summary}</div>'
+                                                f'</div>',
+                                                unsafe_allow_html=True,
+                                            )
+                                        with _cols[1]:
+                                            if st.button("✕", key=f"unlink_{ev_date}_{_wo_name}_{_aid}", help="Unlink this activity"):
+                                                try:
+                                                    _ur = requests.post(
+                                                        f"{API_BASE}/plan/unmatch-single-activity",
+                                                        json={"workout_name": _wo_name, "scheduled_date": ev_date, "activity_id": _aid},
+                                                        headers=_auth_headers(),
+                                                        timeout=15,
+                                                    )
+                                                    if _ur.status_code == 200:
+                                                        st.success(f"Unlinked activity")
+                                                        _pr = requests.get(f"{API_BASE}/plans", headers=_auth_headers(), timeout=10)
+                                                        if _pr.status_code == 200:
+                                                            st.session_state.plans = _pr.json()
+                                                        st.rerun()
+                                                    else:
+                                                        st.error(f"Failed: {_error_detail(_ur)}")
+                                                except requests.ConnectionError:
+                                                    st.error("Cannot reach API.")
 
                             # ── Planned vs Actual comparison ──
                             planned_dist = props.get("estimated_distance_meters", 0)
