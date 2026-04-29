@@ -3331,12 +3331,13 @@ def _parse_diet_plan_response(
     start_date = today + timedelta(days=days_until_monday)
 
     days_data = parsed.get("days", [])
+    if not days_data:
+        logger.error("AI returned 0 days. Raw: %.500s", raw_json)
+        raise HTTPException(500, "AI returned an empty meal plan. Please try again.")
     if len(days_data) < 7:
-        logger.error(
-            "AI returned only %d days (expected 7). Response may be truncated. Raw: %.500s",
-            len(days_data), raw_json,
+        logger.warning(
+            "AI returned only %d days (expected 7), will cycle to fill week", len(days_data),
         )
-        raise HTTPException(500, f"AI returned only {len(days_data)} day(s) instead of 7. Please try again.")
     daily_plans: list[DailyMealPlan] = []
     for day_info in days_data:
         day_num = day_info.get("day_number", len(daily_plans) + 1)
@@ -3386,6 +3387,19 @@ def _parse_diet_plan_response(
             ),
             adjustment_reason=parsed.get("adjustment_reason", ""),
         ))
+
+    # Pad to 7 days by cycling available days if AI was truncated
+    if daily_plans and len(daily_plans) < 7:
+        base = list(daily_plans)
+        while len(daily_plans) < 7:
+            src = base[len(daily_plans) % len(base)]
+            daily_plans.append(DailyMealPlan(
+                date=start_date + timedelta(days=len(daily_plans)),
+                meals=src.meals,
+                daily_totals=src.daily_totals,
+                notes=src.notes,
+                adjustment_reason=src.adjustment_reason,
+            ))
 
     # Group days into weekly templates
     plan_weeks = max(1, profile.plan_weeks)
