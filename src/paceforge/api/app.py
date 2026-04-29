@@ -3271,16 +3271,28 @@ def _parse_diet_plan_response(
     import re
     import uuid
 
+    logger.debug("Raw diet AI response (%d chars): %.300s", len(raw_json), raw_json)
+
     # Strip markdown code fences if present
     cleaned = raw_json.strip()
-    cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
-    cleaned = re.sub(r"\s*```$", "", cleaned)
+    # Remove ```json ... ``` wrapping (handles newlines)
+    fence_match = re.search(r"```(?:json)?\s*\n?(.*?)\n?\s*```", cleaned, re.DOTALL)
+    if fence_match:
+        cleaned = fence_match.group(1).strip()
+    # Fallback: extract first { ... } block
+    if not cleaned.startswith("{"):
+        brace_match = re.search(r"\{.*\}", cleaned, re.DOTALL)
+        if brace_match:
+            cleaned = brace_match.group(0)
 
     try:
         parsed = json.loads(cleaned)
-    except json.JSONDecodeError:
-        logger.error("Failed to parse diet plan JSON: %s", cleaned[:500])
-        raise HTTPException(500, "AI returned invalid diet plan format")
+    except json.JSONDecodeError as exc:
+        logger.error(
+            "Failed to parse diet plan JSON (err=%s): %s…",
+            exc, cleaned[:800],
+        )
+        raise HTTPException(500, f"AI returned invalid diet plan format: {exc}")
 
     if parsed.get("error"):
         raise HTTPException(500, parsed["error"])

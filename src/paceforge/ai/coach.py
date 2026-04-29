@@ -524,7 +524,21 @@ class Coach:
             temperature=0.7,
             max_tokens=max_tokens,
         )
-        return response.choices[0].message.content or "I couldn't generate a response."
+        choice = response.choices[0]
+        content = choice.message.content or ""
+        if choice.finish_reason == "length":
+            logger.warning(
+                "OpenAI response truncated (max_tokens=%d, model=%s). "
+                "Attempting JSON repair.",
+                max_tokens, self._model,
+            )
+            # Try to close truncated JSON so the parser can still use it
+            open_braces = content.count("{") - content.count("}")
+            open_brackets = content.count("[") - content.count("]")
+            content = content.rstrip().rstrip(",")
+            content += "]" * max(0, open_brackets)
+            content += "}" * max(0, open_braces)
+        return content or "I couldn't generate a response."
 
     @staticmethod
     def _parse_weekly_sections(text: str) -> dict:
