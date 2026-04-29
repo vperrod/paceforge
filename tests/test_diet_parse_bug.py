@@ -2,6 +2,8 @@
 import json
 import re
 
+import pytest
+
 
 def test_apostrophe_corruption():
     """Valid JSON with apostrophes in values gets corrupted by re.sub(r"'", '"')."""
@@ -17,11 +19,8 @@ def test_apostrophe_corruption():
 
     # The single-quote replacement breaks it
     corrupted = re.sub(r"'", '"', valid)
-    try:
+    with pytest.raises(json.JSONDecodeError):
         json.loads(corrupted)
-        assert False, "Should have raised JSONDecodeError"
-    except json.JSONDecodeError as e:
-        assert "Unterminated string" in str(e) or "Expecting" in str(e)
 
 
 def test_trailing_comma_fix_is_safe():
