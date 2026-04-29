@@ -6204,6 +6204,37 @@ with tab_diet:
             _default_start = _today + timedelta(days=(7 - _today.weekday()) % 7 or 7)
         start_date = st.date_input("Plan Start Date", value=_default_start, min_value=_today)
 
+        # Meal size distribution
+        st.markdown("**Meal Sizes** — control how calories are distributed across meals")
+        _size_labels = {
+            "breakfast": "🌅 Breakfast", "morning_snack": "🍎 Morning Snack",
+            "lunch": "☀️ Lunch", "afternoon_snack": "🥤 Afternoon Snack",
+            "dinner": "🌙 Dinner", "evening_snack": "🍵 Evening Snack",
+        }
+        _active_types = ["breakfast", "lunch", "dinner"]
+        if meals_count >= 4:
+            _active_types.insert(1, "morning_snack")
+        if meals_count >= 5:
+            _active_types.insert(3, "afternoon_snack")
+        if meals_count >= 6:
+            _active_types.append("evening_snack")
+        _saved_sizes = current_profile.get("meal_sizes", {})
+        _size_options = ["Light", "Regular", "Large"]
+        meal_sizes = {}
+        _size_cols = st.columns(min(len(_active_types), 3))
+        for i, mt in enumerate(_active_types):
+            with _size_cols[i % len(_size_cols)]:
+                saved_val = _saved_sizes.get(mt, "regular").capitalize()
+                if saved_val not in _size_options:
+                    saved_val = "Regular"
+                chosen = st.select_slider(
+                    _size_labels.get(mt, mt),
+                    options=_size_options,
+                    value=saved_val,
+                    key=f"meal_size_{mt}",
+                )
+                meal_sizes[mt] = chosen.lower()
+
         preferred = st.text_area(
             "Preferred Foods (comma-separated)",
             value=", ".join(current_profile.get("preferred_foods", [])),
@@ -6226,6 +6257,7 @@ with tab_diet:
                     "daily_meals_count": meals_count,
                     "plan_weeks": plan_weeks,
                     "start_date": start_date.isoformat(),
+                    "meal_sizes": meal_sizes,
                     "preferred_foods": [f.strip() for f in preferred.split(",") if f.strip()],
                     "allergies": [a.strip() for a in allergies.split(",") if a.strip()],
                     "restrictions": [r.strip() for r in restrictions.split(",") if r.strip()],

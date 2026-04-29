@@ -88,6 +88,7 @@ class DietProfile(BaseModel):
     daily_meals_count: int = Field(default=3, ge=2, le=6)
     plan_weeks: int = Field(default=1, ge=1, le=4)
     start_date: date | None = None
+    meal_sizes: dict[str, str] = Field(default_factory=dict)
     preferred_foods: list[str] = Field(default_factory=list)
     allergies: list[str] = Field(default_factory=list)
     restrictions: list[str] = Field(default_factory=list)

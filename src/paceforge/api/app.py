@@ -2940,6 +2940,7 @@ class DietProfileRequest(BaseModel):
     daily_meals_count: int = 3
     plan_weeks: int = 1
     start_date: str | None = None
+    meal_sizes: dict[str, str] = {}
     preferred_foods: list[str] = []
     allergies: list[str] = []
     restrictions: list[str] = []
@@ -3003,12 +3004,15 @@ async def save_diet_profile(req: DietProfileRequest, user: dict = Depends(get_cu
     if req.start_date:
         with contextlib.suppress(ValueError):
             parsed_start = date.fromisoformat(req.start_date)
+    valid_sizes = {"light", "regular", "large"}
+    meal_sizes = {k: v for k, v in req.meal_sizes.items() if v in valid_sizes}
     data.profile = DietProfile(
         goals=[DietGoal(g) for g in req.goals if g in valid_goals],
         target_weight_kg=req.target_weight_kg,
         daily_meals_count=req.daily_meals_count,
         plan_weeks=max(1, min(4, req.plan_weeks)),
         start_date=parsed_start,
+        meal_sizes=meal_sizes,
         preferred_foods=req.preferred_foods,
         allergies=req.allergies,
         restrictions=req.restrictions,

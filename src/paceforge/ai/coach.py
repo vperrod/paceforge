@@ -706,6 +706,19 @@ class Coach:
 
     # ── Diet & Nutrition ─────────────────────────────────────────────
 
+    @staticmethod
+    def _build_meal_size_instruction(meal_types: list[str], meal_sizes: dict[str, str]) -> str:
+        """Build a calorie distribution instruction based on meal size preferences."""
+        if not meal_sizes or all(v == "regular" for v in meal_sizes.values()):
+            return ""
+        size_pct = {"light": "~10-15%", "regular": "~20-25%", "large": "~30-35%"}
+        size_label = {"light": "LIGHT", "regular": "REGULAR", "large": "LARGE"}
+        parts = []
+        for mt in meal_types:
+            sz = meal_sizes.get(mt, "regular")
+            parts.append(f"{mt}={size_label.get(sz, 'REGULAR')} ({size_pct.get(sz, '~20-25%')})")
+        return f"CALORIE DISTRIBUTION: {', '.join(parts)} of daily calories.\n\n"
+
     def generate_diet_plan(
         self,
         diet_profile: dict,
@@ -822,7 +835,7 @@ VARIETY IS MANDATORY — use this protein rotation:
 - Day 7: {proteins[6]} focus
 Each day's meals MUST use DIFFERENT main ingredients from other days. NEVER copy meals between days.
 
-Keep each meal compact: 2-4 food items max, brief recipe_notes (1 sentence).
+{self._build_meal_size_instruction(meal_types, diet_profile.get('meal_sizes', {}))}Keep each meal compact: 2-4 food items max, brief recipe_notes (1 sentence).
 
 Respond with ONLY valid JSON (no markdown, no extra text) in this exact structure:
 {{
