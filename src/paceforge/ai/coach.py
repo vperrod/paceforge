@@ -727,16 +727,81 @@ class Coach:
         weight_history: list[dict] | None = None,
         training_plan: TrainingPlan | None = None,
     ) -> str:
-        """Generate a personalised diet plan using AI.
+        """Generate a personalised diet plan using AI (day-by-day).
 
-        Returns a JSON string representing the full meal plan that the
-        caller parses into DietPlan / DailyMealPlan models.
+        Makes 1 call for macro targets + plan_analysis, then 7 separate calls
+        for each day's meals to guarantee variety and avoid truncation.
+        Returns a JSON string that the caller parses into DietPlan models.
         """
-        lines: list[str] = []
-        # Always generate a 7-day template; the caller clones it for multi-week plans
-        lines.append("Generate a detailed 7-day (1-week) meal plan for this athlete.\n")
+        import json as _json
 
-        # Diet goals & preferences
+        profile_context = self._build_profile_context(
+            diet_profile, fitness_profile, activities, weight_history, training_plan,
+        )
+        meals_count = diet_profile.get("daily_meals_count", 3)
+        meal_types = self._resolve_meal_types(meals_count)
+
+        # Phase 1: get macro targets + plan analysis
+        targets_data = self._generate_diet_targets(profile_context, meals_count, meal_types)
+
+        # Phase 2: generate each day's meals
+        proteins = ["chicken", "fish/seafood", "beef/pork", "eggs",
+                    "legumes/tofu", "turkey", "dairy/greek yogurt"]
+        used_meal_names: list[str] = []
+        days: list[dict] = []
+
+        meal_size_instruction = self._build_meal_size_instruction(
+            meal_types, diet_profile.get("meal_sizes", {}),
+        )
+
+        for day_num in range(1, 8):
+            protein_focus = proteins[(day_num - 1) % len(proteins)]
+            day_data = self._generate_single_day_meals(
+                day_number=day_num,
+                protein_focus=protein_focus,
+                macro_targets=targets_data.get("macro_targets", {}),
+                meal_types=meal_types,
+                diet_profile=diet_profile,
+                used_meal_names=used_meal_names,
+                meal_size_instruction=meal_size_instruction,
+            )
+            # Accumulate used meal names for variety enforcement
+            for m in day_data.get("meals", []):
+                name = m.get("name", "")
+                if name:
+                    used_meal_names.append(name)
+            days.append(day_data)
+
+        # Assemble full response in the same format the parser expects
+        result = {
+            "plan_analysis": targets_data.get("plan_analysis", ""),
+            "macro_targets": targets_data.get("macro_targets", {}),
+            "days": days,
+        }
+        return _json.dumps(result)
+
+    @staticmethod
+    def _resolve_meal_types(meals_count: int) -> list[str]:
+        """Return ordered meal type list for the given meal count."""
+        meal_types = ["breakfast", "lunch", "dinner"]
+        if meals_count >= 4:
+            meal_types.insert(1, "morning_snack")
+        if meals_count >= 5:
+            meal_types.insert(3, "afternoon_snack")
+        if meals_count >= 6:
+            meal_types.append("evening_snack")
+        return meal_types
+
+    @staticmethod
+    def _build_profile_context(
+        diet_profile: dict,
+        fitness_profile: UserFitnessProfile | None = None,
+        activities: list[dict] | None = None,
+        weight_history: list[dict] | None = None,
+        training_plan: TrainingPlan | None = None,
+    ) -> str:
+        """Build shared athlete context string for diet AI calls."""
+        lines: list[str] = []
         lines.append("## Diet Profile")
         goals = diet_profile.get("goals", [])
         lines.append(f"- Goals: {', '.join(goals) if goals else 'general health'}")
@@ -755,7 +820,6 @@ class Coach:
         if diet_profile.get("notes"):
             lines.append(f"- Additional notes: {diet_profile['notes']}")
 
-        # Athlete metrics
         if fitness_profile:
             lines.append("\n## Athlete Metrics")
             if fitness_profile.weight_kg:
@@ -767,7 +831,6 @@ class Coach:
             if fitness_profile.training_status:
                 lines.append(f"- Training status: {fitness_profile.training_status}")
 
-        # Recent activity calorie burn
         if activities:
             total_cal = sum(a.get("calories") or 0 for a in activities)
             total_dur = sum(a.get("duration_seconds") or 0 for a in activities)
@@ -777,14 +840,12 @@ class Coach:
             lines.append(f"- Avg daily exercise calories: {total_cal // days}")
             lines.append(f"- Total training time: {total_dur // 60} min")
 
-        # Weight trend
         if weight_history:
             lines.append("\n## Weight History")
             for w in weight_history[-10:]:
                 bf = f" | Body fat: {w['body_fat_pct']}%" if w.get("body_fat_pct") else ""
                 lines.append(f"- {w['date']}: {w['weight_kg']} kg{bf}")
 
-        # Training plan context
         if training_plan:
             lines.append(f"\n## Training Plan: {training_plan.name}")
             lines.append(f"- Goal: {training_plan.goal_type}")
@@ -792,89 +853,138 @@ class Coach:
                 lines.append(f"- Target race date: {training_plan.target_date}")
             lines.append(f"- Total weeks: {training_plan.total_weeks}")
 
-        meals_count = diet_profile.get("daily_meals_count", 3)
-        meal_types = ["breakfast", "lunch", "dinner"]
-        if meals_count >= 4:
-            meal_types.insert(1, "morning_snack")
-        if meals_count >= 5:
-            meal_types.insert(3, "afternoon_snack")
-        if meals_count >= 6:
-            meal_types.append("evening_snack")
+        return "\n".join(lines)
 
-        # Protein rotation to force variety across days
-        proteins = ["chicken", "fish/seafood", "beef/pork", "eggs",
-                    "legumes/tofu", "turkey", "dairy/greek yogurt"]
+    def _generate_diet_targets(
+        self, profile_context: str, meals_count: int, meal_types: list[str],
+    ) -> dict:
+        """AI call to get plan_analysis + macro_targets (no meals)."""
+        import json as _json
 
-        # Build explicit meal array example showing ALL required meal types
-        meal_example_items = []
-        _example_names = {
-            "breakfast": "Scrambled Eggs & Toast",
-            "morning_snack": "Greek Yogurt & Berries",
-            "lunch": "Grilled Chicken Salad",
-            "afternoon_snack": "Apple & Almond Butter",
-            "dinner": "Salmon & Vegetables",
-            "evening_snack": "Cottage Cheese & Fruit",
-        }
-        for mt in meal_types:
-            meal_example_items.append(
-                f'        {{"name": "{_example_names.get(mt, "Meal")}", "meal_type": "{mt}", '
-                f'"foods": [{{"name": "...", "quantity": 0, "unit": "g", "calories": 0, '
-                f'"protein_g": 0, "carbs_g": 0, "fat_g": 0}}], '
-                f'"total_calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0, '
-                f'"recipe_notes": "..."}}')
-        meals_example_block = ",\n".join(meal_example_items)
+        prompt = f"""{profile_context}
 
-        lines.append(f"""
-## Instructions
+Based on this athlete's profile, calculate their optimal daily nutrition targets \
+for a {meals_count}-meal plan ({', '.join(meal_types)}).
 
-Create a personalised 7-day meal plan. Each day MUST have EXACTLY {meals_count} meals — one for EACH type: {', '.join(meal_types)}.
-
-VARIETY IS MANDATORY — use this protein rotation:
-- Day 1: {proteins[0]} focus | Day 2: {proteins[1]} focus | Day 3: {proteins[2]} focus
-- Day 4: {proteins[3]} focus | Day 5: {proteins[4]} focus | Day 6: {proteins[5]} focus
-- Day 7: {proteins[6]} focus
-Each day's meals MUST use DIFFERENT main ingredients from other days. NEVER copy meals between days.
-
-{self._build_meal_size_instruction(meal_types, diet_profile.get('meal_sizes', {}))}Keep each meal compact: 2-4 food items max, brief recipe_notes (1 sentence).
-
-Respond with ONLY valid JSON (no markdown, no extra text) in this exact structure:
+Respond with ONLY valid JSON:
 {{
-  "plan_analysis": "<2-4 sentences explaining WHY you chose these macros, calorie target, and food choices for THIS specific athlete based on their weight, goals, activity level, and preferences>",
-  "macro_targets": {{"calories": <num>, "protein_g": <num>, "carbs_g": <num>, "fat_g": <num>, "fiber_g": <num>}},
-  "days": [
-    {{
-      "day_number": 1,
-      "meals": [
-{meals_example_block}
-      ],
-      "daily_totals": {{"calories": <num>, "protein_g": <num>, "carbs_g": <num>, "fat_g": <num>, "fiber_g": <num>}}
-    }}
-  ]
+  "plan_analysis": "<2-4 sentences explaining WHY you chose these macros, \
+calorie target, and approach for THIS specific athlete based on their weight, \
+goals, activity level, and preferences>",
+  "macro_targets": {{"calories": <num>, "protein_g": <num>, "carbs_g": <num>, \
+"fat_g": <num>, "fiber_g": <num>}}
 }}
 
 Rules:
 - TDEE: weight x activity factor, then apply goal deficit/surplus
-- Weight loss: ~500 kcal deficit, protein 1.6-2.2g/kg | Muscle gain: ~300-500 surplus, protein 1.6-2.2g/kg | Maintain: match TDEE, protein 1.4-1.8g/kg
-- Include exercise calorie burn in daily needs
-- You MUST output all 7 days with exactly {meals_count} meals each — {meals_count * 7} meals total
-- Each day MUST list exactly these meal_types in order: {', '.join(meal_types)}
-""")
+- Weight loss: ~500 kcal deficit, protein 1.6-2.2g/kg
+- Muscle gain: ~300-500 surplus, protein 1.6-2.2g/kg
+- Maintain: match TDEE, protein 1.4-1.8g/kg
+- Include exercise calorie burn in daily needs"""
 
         saved = self._conversation
         self._conversation = [
             {"role": "system", "content": _DIET_SYSTEM_PROMPT},
+            {"role": "user", "content": prompt},
         ]
-
-        self._conversation.append({"role": "user", "content": "\n".join(lines)})
+        try:
+            reply = (
+                self._chat_openai_extended(max_tokens=1000, json_mode=True)
+                if self._provider != "anthropic"
+                else self._chat_anthropic()
+            )
+        except Exception as e:
+            logger.error("Diet targets generation failed: %s", e, exc_info=True)
+            reply = '{"plan_analysis": "", "macro_targets": {"calories": 2000, "protein_g": 120, "carbs_g": 250, "fat_g": 65, "fiber_g": 30}}'
+        finally:
+            self._conversation = saved
 
         try:
-            reply = self._chat_openai_extended(max_tokens=16000, json_mode=True) if self._provider != "anthropic" else self._chat_anthropic()
-        except Exception as e:
-            logger.error("Diet plan generation failed: %s", e, exc_info=True)
-            reply = f'{{"error": "Could not generate diet plan: {e}"}}'
+            return _json.loads(reply)
+        except _json.JSONDecodeError:
+            from json_repair import loads as repair_loads
+            result = repair_loads(reply)
+            return result if isinstance(result, dict) else {
+                "plan_analysis": "",
+                "macro_targets": {"calories": 2000, "protein_g": 120, "carbs_g": 250, "fat_g": 65, "fiber_g": 30},
+            }
 
-        self._conversation = saved
-        return reply
+    def _generate_single_day_meals(
+        self,
+        day_number: int,
+        protein_focus: str,
+        macro_targets: dict,
+        meal_types: list[str],
+        diet_profile: dict,
+        used_meal_names: list[str],
+        meal_size_instruction: str = "",
+    ) -> dict:
+        """AI call to generate one day's meals with variety enforcement."""
+        import json as _json
+
+        meals_count = len(meal_types)
+        avoid_list = ", ".join(used_meal_names[-30:]) if used_meal_names else "none"
+
+        preferred = diet_profile.get("preferred_foods", [])
+        allergies = diet_profile.get("allergies", [])
+        restrictions = diet_profile.get("restrictions", [])
+
+        prompt = f"""Generate Day {day_number} meals for this athlete.
+
+Daily macro targets: {macro_targets.get('calories', 2000)} cal, \
+{macro_targets.get('protein_g', 120)}g protein, \
+{macro_targets.get('carbs_g', 250)}g carbs, \
+{macro_targets.get('fat_g', 65)}g fat, \
+{macro_targets.get('fiber_g', 30)}g fiber.
+
+PRIMARY PROTEIN for today: {protein_focus} — feature this in at least lunch or dinner.
+{'Preferred foods: ' + ', '.join(preferred) if preferred else ''}
+{'Allergies (AVOID): ' + ', '.join(allergies) if allergies else ''}
+{'Restrictions: ' + ', '.join(restrictions) if restrictions else ''}
+
+Meals already used on previous days (DO NOT repeat these): {avoid_list}
+
+{meal_size_instruction}Create EXACTLY {meals_count} meals — one for each type: {', '.join(meal_types)}.
+Keep each meal compact: 2-4 food items, 1-sentence recipe_notes.
+
+Respond with ONLY valid JSON:
+{{
+  "day_number": {day_number},
+  "meals": [
+    {{"name": "<meal name>", "meal_type": "<type>", \
+"foods": [{{"name": "<food>", "quantity": <num>, "unit": "<g/ml/pcs/tbsp/cup>", \
+"calories": <num>, "protein_g": <num>, "carbs_g": <num>, "fat_g": <num>}}], \
+"total_calories": <num>, "protein_g": <num>, "carbs_g": <num>, "fat_g": <num>, \
+"fiber_g": <num>, "recipe_notes": "<brief prep notes>"}}
+  ],
+  "daily_totals": {{"calories": <num>, "protein_g": <num>, "carbs_g": <num>, \
+"fat_g": <num>, "fiber_g": <num>}}
+}}"""
+
+        saved = self._conversation
+        self._conversation = [
+            {"role": "system", "content": _DIET_SYSTEM_PROMPT},
+            {"role": "user", "content": prompt},
+        ]
+        try:
+            reply = (
+                self._chat_openai_extended(max_tokens=2500, json_mode=True)
+                if self._provider != "anthropic"
+                else self._chat_anthropic()
+            )
+        except Exception as e:
+            logger.error("Day %d meal generation failed: %s", day_number, e, exc_info=True)
+            reply = f'{{"error": "Could not generate day {day_number}: {e}"}}'
+        finally:
+            self._conversation = saved
+
+        try:
+            return _json.loads(reply)
+        except _json.JSONDecodeError:
+            from json_repair import loads as repair_loads
+            logger.warning("Day %d JSON parse failed, attempting repair", day_number)
+            result = repair_loads(reply)
+            return result if isinstance(result, dict) else {"day_number": day_number, "meals": [], "daily_totals": {}}
 
     def generate_single_meal(
         self,
@@ -1049,26 +1159,120 @@ Respond with ONLY valid JSON (no markdown fences) in this exact format:
 
 
 _DIET_SYSTEM_PROMPT = """\
-You are PaceForge Nutrition Coach, an expert sports nutritionist specialising \
-in meal planning for endurance athletes.
+You are PaceForge Nutrition Coach — a registered dietitian, private chef, and \
+sports nutritionist combined. Optimise for adherence first, perfection second.
 
-Your role:
-- Create personalised meal plans that support the athlete's training and body \
-composition goals
-- Calculate accurate TDEE (Total Daily Energy Expenditure) based on weight, \
-activity level, and exercise data
-- Ensure adequate protein intake for recovery (1.4-2.2 g/kg depending on goal)
-- Time carbohydrate intake around training sessions
-- Prioritise whole foods and the athlete's preferred ingredients
-- Provide practical, easy-to-prepare meals with realistic portion sizes
+## Philosophy
+- Create meals a real person would actually cook and enjoy — restaurant-inspired, \
+meal-prep friendly, and culturally aware.
+- NEVER produce bland bodybuilding-style plans (plain chicken + rice + broccoli) \
+unless the user explicitly requests it.
+- Prioritise: nutritional adequacy > practicality > variety > enjoyment > budget.
 
-Safety rules:
+## Methodology
+Draw on evidence-based meal planning frameworks:
+- Precision Nutrition: habit-based coaching, portion hand method, whole-food emphasis
+- RP Strength: body composition meal structuring, protein distribution across meals
+- Eat This Much: automated meal variety patterns, realistic portion combinations
+- Academy of Nutrition and Dietetics: evidence-based nutrition principles
+- Cronometer: micronutrient adequacy awareness (iron, calcium, B12, omega-3)
+- Noom: behavioural adherence — meals people actually look forward to eating
+- WW International: sustainable, non-restrictive approaches
+- PlateJoy: personalised lifestyle-aware planning
+- Lifesum: lifestyle-matched meal timing
+- MyFitnessPal: accurate calorie/macronutrient targeting
+
+## Meal Quality Rules
+Every main meal (breakfast, lunch, dinner) MUST:
+✅ Include a quality protein source (lean meat, fish, eggs, legumes, dairy, tofu)
+✅ Include at least one fruit or vegetable
+✅ Include a fibre-rich component
+✅ Use healthy fats (olive oil, avocado, nuts, seeds — not excessive butter/cream)
+✅ Be realistic for a normal kitchen (no exotic/hard-to-find ingredients)
+✅ Feel like something from a healthy cookbook or restaurant menu
+
+Snacks MUST be simple, satisfying combinations (2-3 items max).
+
+## Meal Structure Templates
+BREAKFAST — choose from these patterns:
+- Eggs + toast/avocado + fruit side
+- Oatmeal/porridge + fruit + nuts/seeds (NO meat in oatmeal)
+- Greek yogurt + granola + berries
+- Smoothie bowl with protein
+- Pancakes/waffles + fruit + maple syrup
+- Smoked salmon + bagel/toast + cream cheese
+- Breakfast burrito/wrap with eggs + vegetables
+
+LUNCH — protein + grain/bread + vegetables:
+- Salad bowl with protein (chicken, tuna, salmon, falafel, tofu)
+- Wrap or sandwich with protein + vegetables
+- Grain bowl (quinoa, rice, couscous) with roasted vegetables + protein
+- Soup + crusty bread (lentil, chicken, minestrone)
+- Stir-fry with rice or noodles
+
+DINNER — protein + starch + cooked vegetables:
+- Grilled/baked protein + roasted potatoes/sweet potato + steamed vegetables
+- Pasta with protein-rich sauce (bolognese, pesto chicken, shrimp)
+- Curry/stew with rice (chicken tikka, lentil dal, beef stew)
+- Tacos/fajitas with protein + toppings
+- Stir-fry with rice or noodles
+
+SNACKS — simple 2-3 item combinations:
+- Fruit + nut butter (apple + almond butter, banana + peanut butter)
+- Yogurt + berries/granola
+- Hummus + vegetable sticks (carrots, cucumbers, bell pepper)
+- Trail mix (nuts, seeds, dried fruit)
+- Cottage cheese + fruit
+- Rice cakes + avocado or cheese
+- Hard-boiled eggs + cherry tomatoes
+
+## Flavour Coherence (CRITICAL)
+All items within a single meal MUST share a coherent cuisine or flavour profile.
+NEVER combine:
+❌ Meat or fish with breakfast cereals or oatmeal
+❌ Dessert toppings (chocolate, syrup) with savory proteins
+❌ Raw fruit mixed into cooked savory meat dishes
+❌ Incompatible cuisines in one meal (e.g. soy sauce + Italian cheese)
+If unsure whether foods pair well, imagine serving it in a restaurant — if it \
+would be strange on a menu, do not combine them.
+
+## Smart Personalisation
+- High training volume → emphasise pre/post workout carbs + protein timing
+- Fat loss goal → prioritise high-satiety foods (high protein, high fibre, \
+high volume, low calorie density)
+- Muscle gain goal → ensure protein spread across ALL meals (not front-loaded)
+- If restrictions present → use real culinary alternatives, not just "remove ingredient"
+- Prefer overlapping ingredients across days to reduce grocery waste
+
+## Reference Meal Inspiration
+Use these as starting points — vary and adapt, do not copy verbatim:
+Breakfast: Scrambled eggs with whole wheat toast and avocado, Overnight oats \
+with berries and chia seeds, Greek yogurt parfait with granola and honey, \
+Veggie omelette with side fruit, Banana pancakes with maple syrup, Smoked \
+salmon bagel with cream cheese, Açaí smoothie bowl with granola, Breakfast \
+burrito with eggs and black beans
+Lunch: Grilled chicken Caesar salad, Turkey and avocado wrap, Quinoa bowl \
+with roasted vegetables and feta, Tuna Niçoise salad, Chicken tikka with \
+basmati rice, Mediterranean falafel bowl, Thai peanut noodle salad, Lentil \
+soup with crusty bread
+Dinner: Pan-seared salmon with sweet potato and asparagus, Chicken stir-fry \
+with vegetables and jasmine rice, Beef bolognese with whole wheat pasta, Baked \
+cod with roasted potatoes and greens, Turkey meatballs with marinara and \
+spaghetti, Shrimp tacos with cabbage slaw, Lamb chops with couscous and \
+roasted vegetables, Tofu curry with jasmine rice
+Snacks: Apple slices with almond butter, Greek yogurt with mixed berries, \
+Hummus with carrot and cucumber sticks, Trail mix with nuts and dried fruit, \
+Cottage cheese with pineapple, Rice cakes with avocado, Hard-boiled eggs with \
+cherry tomatoes, Banana with peanut butter
+
+## Safety Rules
 - Never recommend fewer than 1200 kcal/day for women or 1500 kcal/day for men
 - Never suggest eliminating entire macronutrient groups
 - Always recommend consulting a dietitian for medical dietary needs
 - Flag potential nutrient deficiencies in restrictive diets
 - Suggest gradual calorie adjustments (max 500 kcal deficit/surplus)
 
-You respond ONLY with valid JSON — no markdown fences. All explanations go \
-inside the JSON "plan_analysis" field.
+## Output Format
+You respond ONLY with valid JSON — no markdown fences, no extra text. \
+All explanations go inside the JSON "plan_analysis" field.
 """

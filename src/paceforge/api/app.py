@@ -3490,8 +3490,14 @@ def _parse_diet_plan_response(
             adjustment_reason=parsed.get("adjustment_reason", ""),
         ))
 
-    # Pad to 7 days by cycling available days if AI was truncated
+    # Pad to 7 days by cycling available days (safety net — day-by-day
+    # generation should always produce 7, so log an error if this triggers)
     if daily_plans and len(daily_plans) < 7:
+        logger.error(
+            "AI returned only %d days (expected 7) — cycling to fill. "
+            "This should not happen with day-by-day generation.",
+            len(daily_plans),
+        )
         base = list(daily_plans)
         while len(daily_plans) < 7:
             src = base[len(daily_plans) % len(base)]
