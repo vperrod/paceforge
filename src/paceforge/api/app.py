@@ -2938,6 +2938,7 @@ class DietProfileRequest(BaseModel):
     goals: list[str] = []
     target_weight_kg: float | None = None
     daily_meals_count: int = 3
+    plan_weeks: int = 1
     preferred_foods: list[str] = []
     allergies: list[str] = []
     restrictions: list[str] = []
@@ -3001,6 +3002,7 @@ async def save_diet_profile(req: DietProfileRequest, user: dict = Depends(get_cu
         goals=[DietGoal(g) for g in req.goals if g in valid_goals],
         target_weight_kg=req.target_weight_kg,
         daily_meals_count=req.daily_meals_count,
+        plan_weeks=max(1, min(4, req.plan_weeks)),
         preferred_foods=req.preferred_foods,
         allergies=req.allergies,
         restrictions=req.restrictions,
@@ -3344,14 +3346,31 @@ def _parse_diet_plan_response(
             adjustment_reason=parsed.get("adjustment_reason", ""),
         ))
 
-    # Group into a single weekly template
-    week = WeeklyMealTemplate(week_number=1, days=daily_plans)
+    # Group days into weekly templates
+    plan_weeks = max(1, profile.plan_weeks)
+    weeks: list[WeeklyMealTemplate] = []
+    for wk in range(plan_weeks):
+        week_days = daily_plans[wk * 7 : (wk + 1) * 7]
+        if not week_days:
+            # Repeat week 1 with shifted dates for weeks beyond the AI output
+            base_days = daily_plans[:7]
+            week_days = [
+                DailyMealPlan(
+                    date=start_date + timedelta(days=wk * 7 + i),
+                    meals=d.meals,
+                    daily_totals=d.daily_totals,
+                    notes=d.notes,
+                    adjustment_reason=d.adjustment_reason,
+                )
+                for i, d in enumerate(base_days)
+            ]
+        weeks.append(WeeklyMealTemplate(week_number=wk + 1, days=week_days))
 
     plan = DietPlan(
         plan_id=existing_plan.plan_id if existing_plan else str(uuid.uuid4())[:8],
         profile=profile,
         macro_targets=macro_targets,
-        weekly_templates=[week],
+        weekly_templates=weeks,
         weight_history=existing_plan.weight_history if existing_plan else [],
         user_notes=existing_plan.user_notes if existing_plan else [],
         active=True,

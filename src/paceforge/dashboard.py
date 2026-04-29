@@ -6182,6 +6182,7 @@ with tab_diet:
             value=float(current_profile.get("target_weight_kg") or 0) or 70.0, step=0.5,
         )
         meals_count = st.slider("Meals per Day", 2, 6, current_profile.get("daily_meals_count", 3))
+        plan_weeks = st.slider("Plan Duration (weeks)", 1, 4, current_profile.get("plan_weeks", 1))
         preferred = st.text_area(
             "Preferred Foods (comma-separated)",
             value=", ".join(current_profile.get("preferred_foods", [])),
@@ -6202,6 +6203,7 @@ with tab_diet:
                     "goals": selected_goals,
                     "target_weight_kg": target_weight,
                     "daily_meals_count": meals_count,
+                    "plan_weeks": plan_weeks,
                     "preferred_foods": [f.strip() for f in preferred.split(",") if f.strip()],
                     "allergies": [a.strip() for a in allergies.split(",") if a.strip()],
                     "restrictions": [r.strip() for r in restrictions.split(",") if r.strip()],
