@@ -672,3 +672,288 @@ class Coach:
 
         self._conversation = saved
         return reply
+
+    # ── Diet & Nutrition ─────────────────────────────────────────────
+
+    def generate_diet_plan(
+        self,
+        diet_profile: dict,
+        fitness_profile: UserFitnessProfile | None = None,
+        activities: list[dict] | None = None,
+        weight_history: list[dict] | None = None,
+        training_plan: TrainingPlan | None = None,
+    ) -> str:
+        """Generate a personalised diet plan using AI.
+
+        Returns a JSON string representing the full meal plan that the
+        caller parses into DietPlan / DailyMealPlan models.
+        """
+        lines: list[str] = []
+        lines.append("Generate a detailed weekly meal plan for this athlete.\n")
+
+        # Diet goals & preferences
+        lines.append("## Diet Profile")
+        goals = diet_profile.get("goals", [])
+        lines.append(f"- Goals: {', '.join(goals) if goals else 'general health'}")
+        if diet_profile.get("target_weight_kg"):
+            lines.append(f"- Target weight: {diet_profile['target_weight_kg']} kg")
+        lines.append(f"- Meals per day: {diet_profile.get('daily_meals_count', 3)}")
+        preferred = diet_profile.get("preferred_foods", [])
+        if preferred:
+            lines.append(f"- Preferred foods: {', '.join(preferred)}")
+        allergies = diet_profile.get("allergies", [])
+        if allergies:
+            lines.append(f"- Allergies: {', '.join(allergies)}")
+        restrictions = diet_profile.get("restrictions", [])
+        if restrictions:
+            lines.append(f"- Dietary restrictions: {', '.join(restrictions)}")
+        if diet_profile.get("notes"):
+            lines.append(f"- Additional notes: {diet_profile['notes']}")
+
+        # Athlete metrics
+        if fitness_profile:
+            lines.append("\n## Athlete Metrics")
+            if fitness_profile.weight_kg:
+                lines.append(f"- Current weight: {fitness_profile.weight_kg} kg")
+            if fitness_profile.vo2_max:
+                lines.append(f"- VO2max: {fitness_profile.vo2_max}")
+            if fitness_profile.weekly_mileage_km:
+                lines.append(f"- Weekly mileage: {fitness_profile.weekly_mileage_km} km")
+            if fitness_profile.training_status:
+                lines.append(f"- Training status: {fitness_profile.training_status}")
+
+        # Recent activity calorie burn
+        if activities:
+            total_cal = sum(a.get("calories") or 0 for a in activities)
+            total_dur = sum(a.get("duration_seconds") or 0 for a in activities)
+            days = max(1, len({str(a.get("start_time", ""))[:10] for a in activities}))
+            lines.append(f"\n## Recent Activity ({len(activities)} sessions, last {days} active days)")
+            lines.append(f"- Total calories burned: {total_cal}")
+            lines.append(f"- Avg daily exercise calories: {total_cal // days}")
+            lines.append(f"- Total training time: {total_dur // 60} min")
+
+        # Weight trend
+        if weight_history:
+            lines.append("\n## Weight History")
+            for w in weight_history[-10:]:
+                bf = f" | Body fat: {w['body_fat_pct']}%" if w.get("body_fat_pct") else ""
+                lines.append(f"- {w['date']}: {w['weight_kg']} kg{bf}")
+
+        # Training plan context
+        if training_plan:
+            lines.append(f"\n## Training Plan: {training_plan.name}")
+            lines.append(f"- Goal: {training_plan.goal_type}")
+            if training_plan.target_date:
+                lines.append(f"- Target race date: {training_plan.target_date}")
+            lines.append(f"- Total weeks: {training_plan.total_weeks}")
+
+        meals_count = diet_profile.get("daily_meals_count", 3)
+        meal_types = ["breakfast", "lunch", "dinner"]
+        if meals_count >= 4:
+            meal_types.insert(1, "morning_snack")
+        if meals_count >= 5:
+            meal_types.insert(3, "afternoon_snack")
+        if meals_count >= 6:
+            meal_types.append("evening_snack")
+
+        lines.append(f"""
+## Instructions
+
+Create a 7-day meal plan. For each day, provide {meals_count} meals: {', '.join(meal_types)}.
+
+Respond with ONLY valid JSON (no markdown fences, no explanation) in this exact format:
+{{
+  "macro_targets": {{"calories": <number>, "protein_g": <number>, "carbs_g": <number>, "fat_g": <number>, "fiber_g": <number>}},
+  "days": [
+    {{
+      "day_number": 1,
+      "meals": [
+        {{
+          "name": "<meal name>",
+          "meal_type": "<{'/'.join(meal_types)}>",
+          "foods": [
+            {{"name": "<food>", "quantity": <number>, "unit": "<g/ml/pcs/tbsp/cup>", "calories": <number>, "protein_g": <number>, "carbs_g": <number>, "fat_g": <number>}}
+          ],
+          "total_calories": <number>,
+          "protein_g": <number>,
+          "carbs_g": <number>,
+          "fat_g": <number>,
+          "fiber_g": <number>,
+          "recipe_notes": "<brief preparation notes>"
+        }}
+      ],
+      "daily_totals": {{"calories": <number>, "protein_g": <number>, "carbs_g": <number>, "fat_g": <number>, "fiber_g": <number>}}
+    }}
+  ]
+}}
+
+Important rules:
+- Calculate macro targets based on the athlete's weight, activity level, and goals
+- For weight loss: ~500 kcal deficit from TDEE; protein at 1.6-2.2g/kg body weight
+- For muscle gain: ~300-500 kcal surplus; protein at 1.6-2.2g/kg
+- For maintenance: match TDEE; protein at 1.4-1.8g/kg
+- Prioritize the athlete's preferred foods but add variety
+- Every meal must have realistic portion sizes and accurate macros
+- Include the exercise calorie burn when calculating daily needs
+- Make meals practical and easy to prepare
+""")
+
+        saved = self._conversation
+        self._conversation = [
+            {"role": "system", "content": _DIET_SYSTEM_PROMPT},
+        ]
+
+        self._conversation.append({"role": "user", "content": "\n".join(lines)})
+
+        try:
+            reply = self._chat_openai_extended() if self._provider != "anthropic" else self._chat_anthropic()
+        except Exception as e:
+            logger.error("Diet plan generation failed: %s", e, exc_info=True)
+            reply = f'{{"error": "Could not generate diet plan: {e}"}}'
+
+        self._conversation = saved
+        return reply
+
+    def adjust_diet_plan(
+        self,
+        current_plan_summary: dict,
+        weight_trend: list[dict],
+        activity_data: list[dict],
+        user_notes: list[dict] | None = None,
+        fitness_profile: UserFitnessProfile | None = None,
+    ) -> str:
+        """Re-evaluate and adjust an existing diet plan.
+
+        Returns JSON string with updated plan in the same format as generate_diet_plan.
+        """
+        lines: list[str] = []
+        lines.append("Re-evaluate and adjust this athlete's diet plan based on their progress.\n")
+
+        # Current plan
+        lines.append("## Current Plan")
+        targets = current_plan_summary.get("macro_targets", {})
+        lines.append(f"- Daily calorie target: {targets.get('calories', 'unknown')}")
+        lines.append(f"- Protein target: {targets.get('protein_g', 'unknown')}g")
+        lines.append(f"- Carbs target: {targets.get('carbs_g', 'unknown')}g")
+        lines.append(f"- Fat target: {targets.get('fat_g', 'unknown')}g")
+        goals = current_plan_summary.get("goals", [])
+        if goals:
+            lines.append(f"- Goals: {', '.join(goals)}")
+        preferred = current_plan_summary.get("preferred_foods", [])
+        if preferred:
+            lines.append(f"- Preferred foods: {', '.join(preferred)}")
+
+        # Weight progress
+        if weight_trend:
+            lines.append("\n## Weight Trend (recent)")
+            for w in weight_trend[-14:]:
+                bf = f" | Body fat: {w['body_fat_pct']}%" if w.get("body_fat_pct") else ""
+                lines.append(f"- {w['date']}: {w['weight_kg']} kg{bf}")
+            if len(weight_trend) >= 2:
+                first_w = weight_trend[0]["weight_kg"]
+                last_w = weight_trend[-1]["weight_kg"]
+                change = last_w - first_w
+                lines.append(f"- Change: {change:+.1f} kg over {len(weight_trend)} entries")
+
+        # Activity
+        if activity_data:
+            total_cal = sum(a.get("calories") or 0 for a in activity_data)
+            lines.append(f"\n## Recent Activity ({len(activity_data)} sessions)")
+            lines.append(f"- Total calories burned: {total_cal}")
+
+        # Athlete metrics
+        if fitness_profile and fitness_profile.weight_kg:
+            lines.append(f"\n## Current Metrics")
+            lines.append(f"- Weight: {fitness_profile.weight_kg} kg")
+
+        # User feedback
+        if user_notes:
+            lines.append("\n## Athlete Feedback")
+            for note in user_notes[-5:]:
+                lines.append(f"- [{note.get('date', '')}]: {note.get('content', '')}")
+
+        meals_count = current_plan_summary.get("daily_meals_count", 3)
+        meal_types = ["breakfast", "lunch", "dinner"]
+        if meals_count >= 4:
+            meal_types.insert(1, "morning_snack")
+        if meals_count >= 5:
+            meal_types.insert(3, "afternoon_snack")
+        if meals_count >= 6:
+            meal_types.append("evening_snack")
+
+        lines.append(f"""
+## Instructions
+
+Based on the athlete's progress and feedback, generate an adjusted 7-day meal plan.
+First explain in 2-3 sentences what you're changing and why (as "adjustment_reason"),
+then provide the new plan.
+
+Respond with ONLY valid JSON (no markdown fences) in this exact format:
+{{
+  "adjustment_reason": "<what changed and why>",
+  "macro_targets": {{"calories": <number>, "protein_g": <number>, "carbs_g": <number>, "fat_g": <number>, "fiber_g": <number>}},
+  "days": [
+    {{
+      "day_number": 1,
+      "meals": [
+        {{
+          "name": "<meal name>",
+          "meal_type": "<{'/'.join(meal_types)}>",
+          "foods": [
+            {{"name": "<food>", "quantity": <number>, "unit": "<g/ml/pcs/tbsp/cup>", "calories": <number>, "protein_g": <number>, "carbs_g": <number>, "fat_g": <number>}}
+          ],
+          "total_calories": <number>,
+          "protein_g": <number>,
+          "carbs_g": <number>,
+          "fat_g": <number>,
+          "fiber_g": <number>,
+          "recipe_notes": "<brief preparation notes>"
+        }}
+      ],
+      "daily_totals": {{"calories": <number>, "protein_g": <number>, "carbs_g": <number>, "fat_g": <number>, "fiber_g": <number>}}
+    }}
+  ]
+}}
+""")
+
+        saved = self._conversation
+        self._conversation = [
+            {"role": "system", "content": _DIET_SYSTEM_PROMPT},
+        ]
+
+        self._conversation.append({"role": "user", "content": "\n".join(lines)})
+
+        try:
+            reply = self._chat_openai_extended() if self._provider != "anthropic" else self._chat_anthropic()
+        except Exception as e:
+            logger.error("Diet plan adjustment failed: %s", e, exc_info=True)
+            reply = f'{{"error": "Could not adjust diet plan: {e}"}}'
+
+        self._conversation = saved
+        return reply
+
+
+_DIET_SYSTEM_PROMPT = """\
+You are PaceForge Nutrition Coach, an expert sports nutritionist specialising \
+in meal planning for endurance athletes.
+
+Your role:
+- Create personalised meal plans that support the athlete's training and body \
+composition goals
+- Calculate accurate TDEE (Total Daily Energy Expenditure) based on weight, \
+activity level, and exercise data
+- Ensure adequate protein intake for recovery (1.4-2.2 g/kg depending on goal)
+- Time carbohydrate intake around training sessions
+- Prioritise whole foods and the athlete's preferred ingredients
+- Provide practical, easy-to-prepare meals with realistic portion sizes
+
+Safety rules:
+- Never recommend fewer than 1200 kcal/day for women or 1500 kcal/day for men
+- Never suggest eliminating entire macronutrient groups
+- Always recommend consulting a dietitian for medical dietary needs
+- Flag potential nutrient deficiencies in restrictive diets
+- Suggest gradual calorie adjustments (max 500 kcal deficit/surplus)
+
+You respond ONLY with valid JSON — no markdown fences, no prose outside the \
+JSON structure.
+"""

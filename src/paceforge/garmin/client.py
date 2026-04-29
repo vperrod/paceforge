@@ -776,6 +776,64 @@ class GarminClient:
 
         return result
 
+    # ── Weight & body composition ────────────────────────────────────
+
+    def get_weight_history(self, start_date: date, end_date: date) -> list[dict]:
+        """Fetch weigh-in entries from Garmin for a date range.
+
+        Returns list of dicts with: date, weight_kg, bmi, body_fat_pct,
+        muscle_mass_kg, source='garmin'.
+        """
+        try:
+            raw = self.client.get_weigh_ins(
+                start_date.isoformat(), end_date.isoformat()
+            )
+        except Exception:
+            logger.warning("Could not fetch weigh-ins", exc_info=True)
+            return []
+
+        entries = []
+        # Response structure: {"dailyWeightSummaries": [...]}
+        summaries = []
+        if isinstance(raw, dict):
+            summaries = raw.get("dailyWeightSummaries") or raw.get("dateWeightList") or []
+        elif isinstance(raw, list):
+            summaries = raw
+
+        for item in summaries:
+            try:
+                cal_date = item.get("summaryDate") or item.get("calendarDate") or item.get("date")
+                if not cal_date:
+                    continue
+                # Weight can be at top level or nested
+                weight_g = item.get("weight") or item.get("maxWeight") or 0
+                if weight_g <= 0:
+                    continue
+                weight_kg = round(weight_g / 1000, 1) if weight_g > 500 else round(weight_g, 1)
+                entries.append({
+                    "date": cal_date,
+                    "weight_kg": weight_kg,
+                    "bmi": item.get("bmi"),
+                    "body_fat_pct": item.get("bodyFat"),
+                    "muscle_mass_kg": round(item.get("muscleMass", 0) / 1000, 1) if item.get("muscleMass") and item["muscleMass"] > 500 else item.get("muscleMass"),
+                    "source": "garmin",
+                })
+            except Exception:
+                logger.debug("Skipping weigh-in item: %s", item, exc_info=True)
+        return entries
+
+    def get_body_composition(self, target_date: date) -> dict:
+        """Fetch body composition data for a specific date."""
+        try:
+            raw = self.client.get_body_composition(
+                target_date.isoformat(), target_date.isoformat()
+            )
+            if isinstance(raw, dict):
+                return raw
+        except Exception:
+            logger.warning("Could not fetch body composition for %s", target_date, exc_info=True)
+        return {}
+
     def push_plan_week(self, workouts: list[Workout], plan_paces: dict | None = None) -> list[dict]:
         """Push a list of workouts (typically one week) to Garmin Connect.
 

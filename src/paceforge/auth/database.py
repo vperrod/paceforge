@@ -127,6 +127,8 @@ _MIGRATIONS = [
         id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id),
         token_hash TEXT NOT NULL, expires_at TEXT NOT NULL,
         used_at TEXT, created_at TEXT NOT NULL)""",
+    # Add diet_json column for diet planning & weight management
+    "ALTER TABLE user_data ADD COLUMN diet_json TEXT",
 ]
 
 
@@ -373,8 +375,9 @@ def save_user_data(
     health_json: str | None = None,
     activity_details_json: str | None = None,
     weekly_overview_json: str | None = None,
+    diet_json: str | None = None,
 ) -> None:
-    """Upsert cached user data (plan, activities, profile, hyrox, preferences, health, activity details, weekly overview)."""
+    """Upsert cached user data (plan, activities, profile, hyrox, preferences, health, activity details, weekly overview, diet)."""
     now = datetime.now(UTC).isoformat()
     with _lock:
         conn = _get_conn(db_path)
@@ -408,6 +411,9 @@ def save_user_data(
             if weekly_overview_json is not None:
                 sets.append("weekly_overview_json = ?")
                 vals.append(weekly_overview_json)
+            if diet_json is not None:
+                sets.append("diet_json = ?")
+                vals.append(diet_json)
             vals.append(user_id)
             conn.execute(
                 f"UPDATE user_data SET {', '.join(sets)} WHERE user_id = ?",

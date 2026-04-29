@@ -2038,7 +2038,7 @@ st.markdown(
 
 # ── Tabs ─────────────────────────────────────────────────────────────
 
-tab_names = ["Feed", "Fitness Profile", "Training Plan", "Calendar", "HYROX", "AI Coach", "User Profile"]
+tab_names = ["Feed", "Fitness Profile", "Training Plan", "Calendar", "HYROX", "Diet & Nutrition", "AI Coach", "User Profile"]
 if st.session_state.role == "admin":
     tab_names.append("Admin Panel")
 
@@ -2048,9 +2048,10 @@ tab_profile = tabs[1]
 tab_plan = tabs[2]
 tab_calendar = tabs[3]
 tab_hyrox = tabs[4]
-tab_coach = tabs[5]
-tab_user_settings = tabs[6]
-tab_admin = tabs[7] if st.session_state.role == "admin" else None
+tab_diet = tabs[5]
+tab_coach = tabs[6]
+tab_user_settings = tabs[7]
+tab_admin = tabs[8] if st.session_state.role == "admin" else None
 
 
 # ── Tab 0: Feed ──────────────────────────────────────────────────────
@@ -6141,7 +6142,281 @@ with tab_hyrox:
             st.rerun()
 
 
-# ── Tab 5: AI Coach ──────────────────────────────────────────────────
+# ── Tab 5: Diet & Nutrition ───────────────────────────────────────────
+
+
+def _diet_api(method: str, path: str, **kwargs) -> dict:
+    """Helper for diet API calls."""
+    url = f"{API_BASE}{path}"
+    r = requests.request(method, url, headers=_auth_headers(), timeout=30, **kwargs)
+    r.raise_for_status()
+    return r.json()
+
+
+with tab_diet:
+    st.markdown('<div class="pf-section-header">Diet & Nutrition</div>', unsafe_allow_html=True)
+
+    diet_sub = st.tabs(["🍽️ Meal Plan", "📊 Macro Tracker", "⚖️ Weight Progress", "⚙️ Preferences"])
+
+    # ── Sub-tab: Preferences ──
+    with diet_sub[3]:
+        st.subheader("Diet Profile")
+
+        # Load current profile
+        try:
+            prof_resp = _diet_api("GET", "/diet/profile")
+            current_profile = prof_resp.get("profile", {})
+        except Exception:
+            current_profile = {}
+
+        goal_options = ["lose_weight", "lose_fat", "gain_muscle", "maintain", "body_recomposition"]
+        goal_labels = {"lose_weight": "Lose Weight", "lose_fat": "Lose Fat", "gain_muscle": "Gain Muscle", "maintain": "Maintain", "body_recomposition": "Body Recomposition"}
+        selected_goals = st.multiselect(
+            "Goals",
+            goal_options,
+            default=current_profile.get("goals", []),
+            format_func=lambda x: goal_labels.get(x, x),
+        )
+        target_weight = st.number_input(
+            "Target Weight (kg)", min_value=30.0, max_value=200.0,
+            value=float(current_profile.get("target_weight_kg") or 0) or 70.0, step=0.5,
+        )
+        meals_count = st.slider("Meals per Day", 2, 6, current_profile.get("daily_meals_count", 3))
+        preferred = st.text_area(
+            "Preferred Foods (comma-separated)",
+            value=", ".join(current_profile.get("preferred_foods", [])),
+        )
+        allergies = st.text_area(
+            "Allergies (comma-separated)",
+            value=", ".join(current_profile.get("allergies", [])),
+        )
+        restrictions = st.text_area(
+            "Dietary Restrictions (comma-separated)",
+            value=", ".join(current_profile.get("restrictions", [])),
+        )
+        diet_notes = st.text_area("Additional Notes", value=current_profile.get("notes", ""))
+
+        if st.button("💾 Save Diet Profile", use_container_width=True):
+            try:
+                _diet_api("POST", "/diet/profile", json={
+                    "goals": selected_goals,
+                    "target_weight_kg": target_weight,
+                    "daily_meals_count": meals_count,
+                    "preferred_foods": [f.strip() for f in preferred.split(",") if f.strip()],
+                    "allergies": [a.strip() for a in allergies.split(",") if a.strip()],
+                    "restrictions": [r.strip() for r in restrictions.split(",") if r.strip()],
+                    "notes": diet_notes,
+                })
+                st.success("Diet profile saved!")
+            except Exception as e:
+                st.error(f"Failed to save: {e}")
+
+    # ── Sub-tab: Meal Plan ──
+    with diet_sub[0]:
+        col_gen, col_regen = st.columns(2)
+        with col_gen:
+            if st.button("🤖 Generate New Plan", use_container_width=True):
+                with st.spinner("Generating your personalized meal plan..."):
+                    try:
+                        plan_data = _diet_api("POST", "/diet/generate")
+                        st.session_state["diet_plan"] = plan_data
+                        st.success("Meal plan generated!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Generation failed: {e}")
+        with col_regen:
+            if st.button("🔄 Re-evaluate Plan", use_container_width=True):
+                with st.spinner("Adjusting your meal plan..."):
+                    try:
+                        plan_data = _diet_api("POST", "/diet/plan/regenerate")
+                        st.session_state["diet_plan"] = plan_data
+                        st.success("Plan adjusted!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Adjustment failed: {e}")
+
+        # Load plan
+        if "diet_plan" not in st.session_state:
+            try:
+                plan_resp = _diet_api("GET", "/diet/plan")
+                st.session_state["diet_plan"] = plan_resp if plan_resp.get("plan_id") else None
+            except Exception:
+                st.session_state["diet_plan"] = None
+
+        plan = st.session_state.get("diet_plan")
+        if plan and plan.get("weekly_templates"):
+            # Build calendar events from meal plan
+            from streamlit_calendar import calendar as st_calendar
+
+            cal_events = []
+            _meal_colors = {
+                "breakfast": "#F59E0B", "morning_snack": "#FBBF24",
+                "lunch": "#10B981", "afternoon_snack": "#6EE7B7",
+                "dinner": "#3B82F6", "evening_snack": "#93C5FD",
+            }
+            for week in plan.get("weekly_templates", []):
+                for day in week.get("days", []):
+                    for meal in day.get("meals", []):
+                        mt = meal.get("meal_type", "lunch")
+                        cal_events.append({
+                            "title": f"{meal.get('name', 'Meal')} ({meal.get('total_calories', 0)} cal)",
+                            "start": day.get("date", ""),
+                            "end": day.get("date", ""),
+                            "backgroundColor": _meal_colors.get(mt, "#6B7280"),
+                            "borderColor": _meal_colors.get(mt, "#6B7280"),
+                        })
+
+            cal_options = {
+                "initialView": "dayGridWeek",
+                "headerToolbar": {"left": "prev,next today", "center": "title", "right": "dayGridWeek,dayGridMonth"},
+                "height": 450,
+                "editable": False,
+            }
+            calendar_result = st_calendar(events=cal_events, options=cal_options, key="diet_calendar")
+
+            # Show selected day details
+            if calendar_result and calendar_result.get("dateClick"):
+                clicked_date = calendar_result["dateClick"].get("date", "")[:10]
+                st.markdown(f"### Meals for {clicked_date}")
+                for week in plan.get("weekly_templates", []):
+                    for day in week.get("days", []):
+                        if day.get("date") == clicked_date:
+                            for meal in day.get("meals", []):
+                                with st.expander(f"**{meal.get('name')}** — {meal.get('total_calories', 0)} cal", expanded=False):
+                                    for food in meal.get("foods", []):
+                                        st.write(f"- {food.get('name')}: {food.get('quantity')}{food.get('unit', 'g')} ({food.get('calories', 0)} cal, P:{food.get('protein_g', 0)}g C:{food.get('carbs_g', 0)}g F:{food.get('fat_g', 0)}g)")
+                                    if meal.get("recipe_notes"):
+                                        st.info(meal["recipe_notes"])
+                            totals = day.get("daily_totals", {})
+                            st.markdown(f"**Daily totals:** {totals.get('calories', 0)} cal | P: {totals.get('protein_g', 0)}g | C: {totals.get('carbs_g', 0)}g | F: {totals.get('fat_g', 0)}g")
+
+            # User feedback
+            st.markdown("---")
+            st.subheader("Feedback & Adjustments")
+            feedback = st.text_area("Tell the AI what to adjust (e.g., 'more protein at breakfast', 'I don't like fish')", key="diet_feedback")
+            if st.button("📝 Send Feedback", use_container_width=True) and feedback:
+                try:
+                    note_resp = _diet_api("POST", "/diet/note", json={"content": feedback})
+                    if note_resp.get("ai_response"):
+                        st.info(f"🤖 {note_resp['ai_response']}")
+                    st.success("Feedback recorded! Click 'Re-evaluate Plan' to apply changes.")
+                except Exception as e:
+                    st.error(f"Failed: {e}")
+        else:
+            st.info("No active meal plan. Set your preferences in the ⚙️ tab, then generate a plan.")
+
+    # ── Sub-tab: Macro Tracker ──
+    with diet_sub[1]:
+        try:
+            macros = _diet_api("GET", "/diet/macros-summary")
+        except Exception:
+            macros = {"targets": None, "daily": [], "calorie_burn": [], "weight_history": []}
+
+        targets = macros.get("targets")
+        daily = macros.get("daily", [])
+
+        if targets and daily:
+            import pandas as pd
+
+            st.subheader("Daily Targets")
+            t_cols = st.columns(4)
+            t_cols[0].metric("Calories", f"{targets['calories']} cal")
+            t_cols[1].metric("Protein", f"{targets['protein_g']}g")
+            t_cols[2].metric("Carbs", f"{targets['carbs_g']}g")
+            t_cols[3].metric("Fat", f"{targets['fat_g']}g")
+
+            df = pd.DataFrame(daily)
+            if not df.empty:
+                df["date"] = pd.to_datetime(df["date"])
+                df = df.set_index("date")
+
+                st.subheader("Calorie Plan")
+                st.line_chart(df[["calories"]])
+
+                st.subheader("Macronutrient Breakdown")
+                st.line_chart(df[["protein_g", "carbs_g", "fat_g"]])
+
+            # Calorie burn overlay
+            burn = macros.get("calorie_burn", [])
+            if burn:
+                burn_df = pd.DataFrame(burn)
+                burn_df["date"] = pd.to_datetime(burn_df["date"])
+                daily_burn = burn_df.groupby("date")["calories_burned"].sum().reset_index()
+                daily_burn = daily_burn.set_index("date")
+                st.subheader("Calories Burned (Activities)")
+                st.bar_chart(daily_burn[["calories_burned"]])
+        else:
+            st.info("Generate a meal plan to see macro tracking data.")
+
+    # ── Sub-tab: Weight Progress ──
+    with diet_sub[2]:
+        st.subheader("Weight History")
+
+        wcol1, wcol2 = st.columns(2)
+        with wcol1:
+            if st.button("🔄 Sync from Garmin", use_container_width=True, key="sync_garmin_weight"):
+                try:
+                    sync_resp = _diet_api("POST", "/diet/sync-weight")
+                    st.success(f"Synced {sync_resp.get('synced', 0)} entries from Garmin ({sync_resp.get('total', 0)} total)")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Sync failed: {e}")
+
+        with wcol2:
+            st.markdown("**Add Manual Entry**")
+            with st.form("manual_weight"):
+                w_date = st.date_input("Date")
+                w_kg = st.number_input("Weight (kg)", min_value=30.0, max_value=200.0, value=70.0, step=0.1)
+                w_bf = st.number_input("Body Fat % (optional)", min_value=0.0, max_value=60.0, value=0.0, step=0.1)
+                if st.form_submit_button("Add Entry"):
+                    try:
+                        _diet_api("POST", "/diet/weight", json={
+                            "weight_kg": w_kg,
+                            "body_fat_pct": w_bf if w_bf > 0 else None,
+                            "date": str(w_date),
+                        })
+                        st.success("Weight entry added!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Failed: {e}")
+
+        # Weight chart
+        try:
+            weight_data = _diet_api("GET", "/diet/weight-history")
+        except Exception:
+            weight_data = []
+
+        if weight_data:
+            import pandas as pd
+
+            wdf = pd.DataFrame(weight_data)
+            wdf["date"] = pd.to_datetime(wdf["date"])
+            wdf = wdf.sort_values("date").set_index("date")
+
+            st.line_chart(wdf[["weight_kg"]])
+
+            if "body_fat_pct" in wdf.columns and wdf["body_fat_pct"].notna().any():
+                st.subheader("Body Fat %")
+                bf_df = wdf[wdf["body_fat_pct"].notna()][["body_fat_pct"]]
+                if not bf_df.empty:
+                    st.line_chart(bf_df)
+
+            # Show target line
+            try:
+                prof_r = _diet_api("GET", "/diet/profile")
+                tw = prof_r.get("profile", {}).get("target_weight_kg")
+                if tw:
+                    latest = wdf["weight_kg"].iloc[-1] if not wdf.empty else None
+                    if latest:
+                        diff = latest - tw
+                        st.metric("Current vs Target", f"{latest:.1f} kg", f"{diff:+.1f} kg to goal")
+            except Exception:
+                pass
+        else:
+            st.info("No weight data yet. Sync from Garmin or add manual entries.")
+
+
+# ── Tab 6: AI Coach ──────────────────────────────────────────────────
 
 with tab_coach:
     st.markdown('<div class="pf-section-header">AI Running Coach</div>', unsafe_allow_html=True)

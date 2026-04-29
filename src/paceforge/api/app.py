@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 from contextlib import asynccontextmanager
@@ -747,6 +748,8 @@ async def get_activities(
         save_user_data(settings.db_path, uid, activities_json=json.dumps(activities))
         # Auto-match activities to planned workouts
         _auto_match_activities(uid, profile.recent_activities)
+        # Auto-adjust diet plan if due
+        _maybe_auto_adjust_diet(uid)
         return profile.recent_activities
     # Final fallback to cache
     cached = load_user_data(settings.db_path, uid)
@@ -2869,6 +2872,493 @@ async def post_health_data(payload: dict, user: dict = Depends(get_current_user)
 
     save_user_data(settings.db_path, uid, health_json=json.dumps(result))
     return result
+
+
+# ── Diet & Nutrition ─────────────────────────────────────────────────
+
+
+def _maybe_auto_adjust_diet(uid: str) -> None:
+    """Auto-adjust diet plan if enabled and 7+ days since last adjustment."""
+    try:
+        data = _load_diet_data(uid)
+        if not data.active_plan or not data.active_plan.active or not data.active_plan.auto_adjust:
+            return
+        last = data.active_plan.last_adjusted
+        if last:
+            from datetime import datetime as dt
+            last_dt = dt.fromisoformat(last.replace("Z", "+00:00")) if isinstance(last, str) else last
+            if (datetime.now(UTC) - last_dt).days < 7:
+                return
+        # Trigger adjustment
+        profile = _user_profile.get(uid)
+        activities: list[dict] = []
+        cached = load_user_data(settings.db_path, uid)
+        if cached and cached.get("activities_json"):
+            with contextlib.suppress(json.JSONDecodeError, TypeError):
+                activities = json.loads(cached["activities_json"])
+        weight_hist = [w.model_dump(mode="json") for w in data.weight_history[-30:]]
+        user_notes = [n.model_dump(mode="json") for n in data.user_notes[-10:]]
+        coach = _get_or_create_coach(uid)
+        raw_json = coach.adjust_diet_plan(
+            current_plan_summary={
+                "macro_targets": data.active_plan.macro_targets.model_dump(mode="json"),
+                "goals": [g.value for g in data.profile.goals],
+            },
+            weight_trend=weight_hist,
+            activity_data=activities[-14:],
+            user_notes=user_notes,
+            fitness_profile=profile,
+        )
+        plan = _parse_diet_plan_response(raw_json, data.profile, existing_plan=data.active_plan)
+        data.active_plan = plan
+        _save_diet_data(uid, data)
+        logger.info("Auto-adjusted diet plan for user %s", uid)
+    except Exception:
+        logger.warning("Diet auto-adjust failed for %s", uid, exc_info=True)
+
+
+from paceforge.models.diet import (  # noqa: E402
+    DailyMealPlan,
+    DietData,
+    DietGoal,
+    DietPlan,
+    DietProfile,
+    FoodItem,
+    MacroTotals,
+    Meal,
+    MealType,
+    UserNote,
+    WeeklyMealTemplate,
+    WeightEntry,
+    WeightSource,
+)
+
+
+class DietProfileRequest(BaseModel):
+    goals: list[str] = []
+    target_weight_kg: float | None = None
+    daily_meals_count: int = 3
+    preferred_foods: list[str] = []
+    allergies: list[str] = []
+    restrictions: list[str] = []
+    notes: str = ""
+
+
+class WeightEntryRequest(BaseModel):
+    weight_kg: float
+    body_fat_pct: float | None = None
+    date: str | None = None
+
+
+class DietNoteRequest(BaseModel):
+    content: str
+
+
+def _load_diet_data(uid: str) -> DietData:
+    """Load diet data from DB, returning empty DietData if none exists."""
+    cached = load_user_data(settings.db_path, uid)
+    if cached and cached.get("diet_json"):
+        try:
+            return DietData.model_validate_json(cached["diet_json"])
+        except Exception:
+            logger.warning("Could not parse diet_json for %s", uid)
+    return DietData()
+
+
+def _save_diet_data(uid: str, data: DietData) -> None:
+    """Persist diet data to DB."""
+    save_user_data(
+        settings.db_path, uid,
+        diet_json=data.model_dump_json(),
+    )
+
+
+@app.get("/diet/profile")
+async def get_diet_profile(user: dict = Depends(get_current_user)):
+    """Get diet profile and active plan summary."""
+    uid = user["id"]
+    data = _load_diet_data(uid)
+    result: dict = {"profile": data.profile.model_dump(mode="json")}
+    if data.active_plan:
+        result["plan_summary"] = {
+            "plan_id": data.active_plan.plan_id,
+            "active": data.active_plan.active,
+            "created_at": data.active_plan.created_at,
+            "macro_targets": data.active_plan.macro_targets.model_dump(mode="json"),
+            "weeks_count": len(data.active_plan.weekly_templates),
+            "auto_adjust": data.active_plan.auto_adjust,
+        }
+    return result
+
+
+@app.post("/diet/profile")
+async def save_diet_profile(req: DietProfileRequest, user: dict = Depends(get_current_user)):
+    """Save/update diet profile."""
+    uid = user["id"]
+    data = _load_diet_data(uid)
+    data.profile = DietProfile(
+        goals=[DietGoal(g) for g in req.goals if g in DietGoal.__members__.values()],
+        target_weight_kg=req.target_weight_kg,
+        daily_meals_count=req.daily_meals_count,
+        preferred_foods=req.preferred_foods,
+        allergies=req.allergies,
+        restrictions=req.restrictions,
+        notes=req.notes,
+    )
+    _save_diet_data(uid, data)
+    return {"ok": True}
+
+
+@app.post("/diet/generate")
+async def generate_diet_plan(user: dict = Depends(get_current_user)):
+    """Generate a new AI diet plan based on profile, Garmin data, and weight history."""
+    uid = user["id"]
+    data = _load_diet_data(uid)
+
+    if not data.profile.goals:
+        raise HTTPException(400, "Set diet goals in your profile first")
+
+    # Gather context
+    profile = _user_profile.get(uid)
+    activities: list[dict] = []
+    cached = load_user_data(settings.db_path, uid)
+    if cached and cached.get("activities_json"):
+        with contextlib.suppress(json.JSONDecodeError, TypeError):
+            activities = json.loads(cached["activities_json"])
+
+    weight_hist = [w.model_dump(mode="json") for w in data.weight_history[-30:]]
+
+    # Get active training plan
+    training_plan = None
+    if uid in _user_plans:
+        accepted = [p for p in _user_plans[uid] if p.accepted]
+        if accepted:
+            training_plan = accepted[0]
+
+    coach = _get_or_create_coach(uid)
+    raw_json = coach.generate_diet_plan(
+        diet_profile=data.profile.model_dump(mode="json"),
+        fitness_profile=profile,
+        activities=activities[-30:],
+        weight_history=weight_hist,
+        training_plan=training_plan,
+    )
+
+    # Parse the AI response
+    plan = _parse_diet_plan_response(raw_json, data.profile)
+    data.active_plan = plan
+    _save_diet_data(uid, data)
+    return plan.model_dump(mode="json")
+
+
+@app.get("/diet/plan")
+async def get_diet_plan(user: dict = Depends(get_current_user)):
+    """Get the active diet plan."""
+    uid = user["id"]
+    data = _load_diet_data(uid)
+    if not data.active_plan:
+        return {"plan": None}
+    return data.active_plan.model_dump(mode="json")
+
+
+@app.post("/diet/plan/regenerate")
+async def regenerate_diet_plan(user: dict = Depends(get_current_user)):
+    """Re-evaluate and adjust the current diet plan based on progress."""
+    uid = user["id"]
+    data = _load_diet_data(uid)
+
+    if not data.active_plan:
+        raise HTTPException(404, "No active diet plan to adjust")
+
+    profile = _user_profile.get(uid)
+    activities: list[dict] = []
+    cached = load_user_data(settings.db_path, uid)
+    if cached and cached.get("activities_json"):
+        with contextlib.suppress(json.JSONDecodeError, TypeError):
+            activities = json.loads(cached["activities_json"])
+
+    weight_hist = [w.model_dump(mode="json") for w in data.weight_history[-30:]]
+    user_notes = [n.model_dump(mode="json") for n in data.user_notes[-10:]]
+
+    coach = _get_or_create_coach(uid)
+    raw_json = coach.adjust_diet_plan(
+        current_plan_summary={
+            "macro_targets": data.active_plan.macro_targets.model_dump(mode="json"),
+            "goals": [g.value for g in data.profile.goals],
+            "preferred_foods": data.profile.preferred_foods,
+            "daily_meals_count": data.profile.daily_meals_count,
+        },
+        weight_trend=weight_hist,
+        activity_data=activities[-14:],
+        user_notes=user_notes,
+        fitness_profile=profile,
+    )
+
+    plan = _parse_diet_plan_response(raw_json, data.profile, existing_plan=data.active_plan)
+    data.active_plan = plan
+    _save_diet_data(uid, data)
+    return plan.model_dump(mode="json")
+
+
+@app.get("/diet/weight-history")
+async def get_weight_history(user: dict = Depends(get_current_user)):
+    """Get weight history (combined Garmin + manual entries)."""
+    uid = user["id"]
+    data = _load_diet_data(uid)
+    return [w.model_dump(mode="json") for w in data.weight_history]
+
+
+@app.post("/diet/weight")
+async def add_weight_entry(req: WeightEntryRequest, user: dict = Depends(get_current_user)):
+    """Add a manual weight entry."""
+    uid = user["id"]
+    data = _load_diet_data(uid)
+    entry_date = date.fromisoformat(req.date) if req.date else date.today()
+    entry = WeightEntry(
+        date=entry_date,
+        weight_kg=req.weight_kg,
+        body_fat_pct=req.body_fat_pct,
+        source=WeightSource.MANUAL,
+    )
+    # Replace if same date exists, otherwise append
+    data.weight_history = [w for w in data.weight_history if str(w.date) != str(entry_date)]
+    data.weight_history.append(entry)
+    data.weight_history.sort(key=lambda w: w.date)
+    _save_diet_data(uid, data)
+    return {"ok": True, "entry": entry.model_dump(mode="json")}
+
+
+@app.post("/diet/sync-weight")
+async def sync_weight_from_garmin(user: dict = Depends(get_current_user)):
+    """Pull weight history from Garmin Connect."""
+    uid = user["id"]
+    garmin = _ensure_garmin(uid)
+    data = _load_diet_data(uid)
+
+    end = date.today()
+    start = end - timedelta(days=90)
+    entries = garmin.get_weight_history(start, end)
+
+    new_count = 0
+    existing_dates = {str(w.date) for w in data.weight_history if w.source == WeightSource.GARMIN}
+    for e in entries:
+        d = str(e["date"])
+        if d not in existing_dates:
+            data.weight_history.append(WeightEntry(
+                date=date.fromisoformat(d) if isinstance(e["date"], str) else e["date"],
+                weight_kg=e["weight_kg"],
+                body_fat_pct=e.get("body_fat_pct"),
+                muscle_mass_kg=e.get("muscle_mass_kg"),
+                bmi=e.get("bmi"),
+                source=WeightSource.GARMIN,
+            ))
+            new_count += 1
+
+    data.weight_history.sort(key=lambda w: w.date)
+    _save_diet_data(uid, data)
+    return {"ok": True, "synced": new_count, "total": len(data.weight_history)}
+
+
+@app.post("/diet/note")
+async def add_diet_note(req: DietNoteRequest, user: dict = Depends(get_current_user)):
+    """Add user feedback note and get AI response."""
+    uid = user["id"]
+    data = _load_diet_data(uid)
+
+    note = UserNote(
+        date=date.today(),
+        content=req.content,
+    )
+
+    # Get AI response to the note
+    coach = _get_or_create_coach(uid)
+    try:
+        profile = _user_profile.get(uid)
+        context_parts = [f"The athlete submitted this diet feedback: \"{req.content}\""]
+        if data.active_plan:
+            targets = data.active_plan.macro_targets
+            context_parts.append(f"Current plan targets: {targets.calories} cal, {targets.protein_g}g protein")
+        if data.weight_history:
+            last = data.weight_history[-1]
+            context_parts.append(f"Latest weight: {last.weight_kg} kg ({last.date})")
+        context_parts.append("Provide a brief, supportive response (2-3 sentences) addressing their feedback and suggesting adjustments if needed.")
+
+        response = coach.chat("\n".join(context_parts), profile=profile)
+        note.ai_response = response.reply
+    except Exception:
+        logger.warning("Could not generate AI response to diet note", exc_info=True)
+        note.ai_response = ""
+
+    data.user_notes.append(note)
+    if data.active_plan:
+        data.active_plan.user_notes.append(note)
+    _save_diet_data(uid, data)
+    return note.model_dump(mode="json")
+
+
+@app.get("/diet/macros-summary")
+async def get_macros_summary(user: dict = Depends(get_current_user)):
+    """Get macro targets and daily plan totals for charting."""
+    uid = user["id"]
+    data = _load_diet_data(uid)
+    if not data.active_plan:
+        return {"targets": None, "daily": []}
+
+    plan = data.active_plan
+    daily_data = []
+    for week in plan.weekly_templates:
+        for day in week.days:
+            daily_data.append({
+                "date": str(day.date),
+                "calories": day.daily_totals.calories,
+                "protein_g": day.daily_totals.protein_g,
+                "carbs_g": day.daily_totals.carbs_g,
+                "fat_g": day.daily_totals.fat_g,
+                "fiber_g": day.daily_totals.fiber_g,
+            })
+
+    # Add Garmin calorie burn data
+    burn_data = []
+    cached = load_user_data(settings.db_path, uid)
+    if cached and cached.get("activities_json"):
+        try:
+            acts = json.loads(cached["activities_json"])
+            for a in acts:
+                start = str(a.get("start_time", ""))[:10]
+                if start:
+                    burn_data.append({
+                        "date": start,
+                        "calories_burned": a.get("calories") or 0,
+                        "activity": a.get("name", ""),
+                    })
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    return {
+        "targets": plan.macro_targets.model_dump(mode="json"),
+        "daily": daily_data,
+        "calorie_burn": burn_data,
+        "weight_history": [w.model_dump(mode="json") for w in data.weight_history[-60:]],
+    }
+
+
+@app.post("/diet/auto-adjust-toggle")
+async def toggle_diet_auto_adjust(body: dict, user: dict = Depends(get_current_user)):
+    """Toggle automatic weekly diet plan adjustment."""
+    uid = user["id"]
+    data = _load_diet_data(uid)
+    if data.active_plan:
+        data.active_plan.auto_adjust = bool(body.get("enabled", True))
+        _save_diet_data(uid, data)
+    return {"ok": True}
+
+
+def _parse_diet_plan_response(
+    raw_json: str,
+    profile: DietProfile,
+    existing_plan: DietPlan | None = None,
+) -> DietPlan:
+    """Parse AI JSON response into a DietPlan model."""
+    import re
+    import uuid
+
+    # Strip markdown code fences if present
+    cleaned = raw_json.strip()
+    cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
+    cleaned = re.sub(r"\s*```$", "", cleaned)
+
+    try:
+        parsed = json.loads(cleaned)
+    except json.JSONDecodeError:
+        logger.error("Failed to parse diet plan JSON: %s", cleaned[:500])
+        raise HTTPException(500, "AI returned invalid diet plan format")
+
+    if parsed.get("error"):
+        raise HTTPException(500, parsed["error"])
+
+    # Build macro targets
+    mt = parsed.get("macro_targets", {})
+    macro_targets = MacroTotals(
+        calories=mt.get("calories", 0),
+        protein_g=mt.get("protein_g", 0),
+        carbs_g=mt.get("carbs_g", 0),
+        fat_g=mt.get("fat_g", 0),
+        fiber_g=mt.get("fiber_g", 0),
+    )
+
+    # Build daily meal plans
+    today = date.today()
+    # Start from next Monday
+    days_until_monday = (7 - today.weekday()) % 7 or 7
+    start_date = today + timedelta(days=days_until_monday)
+
+    days_data = parsed.get("days", [])
+    daily_plans: list[DailyMealPlan] = []
+    for day_info in days_data:
+        day_num = day_info.get("day_number", len(daily_plans) + 1)
+        plan_date = start_date + timedelta(days=day_num - 1)
+        meals: list[Meal] = []
+        for m in day_info.get("meals", []):
+            foods = [
+                FoodItem(
+                    name=f.get("name", ""),
+                    quantity=f.get("quantity", 0),
+                    unit=f.get("unit", "g"),
+                    calories=f.get("calories", 0),
+                    protein_g=f.get("protein_g", 0),
+                    carbs_g=f.get("carbs_g", 0),
+                    fat_g=f.get("fat_g", 0),
+                )
+                for f in m.get("foods", [])
+            ]
+            # Validate meal_type
+            raw_type = m.get("meal_type", "lunch")
+            try:
+                meal_type = MealType(raw_type)
+            except ValueError:
+                meal_type = MealType.LUNCH
+            meals.append(Meal(
+                name=m.get("name", "Meal"),
+                meal_type=meal_type,
+                foods=foods,
+                total_calories=m.get("total_calories", 0),
+                protein_g=m.get("protein_g", 0),
+                carbs_g=m.get("carbs_g", 0),
+                fat_g=m.get("fat_g", 0),
+                fiber_g=m.get("fiber_g", 0),
+                recipe_notes=m.get("recipe_notes", ""),
+            ))
+
+        dt = day_info.get("daily_totals", {})
+        daily_plans.append(DailyMealPlan(
+            date=plan_date,
+            meals=meals,
+            daily_totals=MacroTotals(
+                calories=dt.get("calories", 0),
+                protein_g=dt.get("protein_g", 0),
+                carbs_g=dt.get("carbs_g", 0),
+                fat_g=dt.get("fat_g", 0),
+                fiber_g=dt.get("fiber_g", 0),
+            ),
+            adjustment_reason=parsed.get("adjustment_reason", ""),
+        ))
+
+    # Group into a single weekly template
+    week = WeeklyMealTemplate(week_number=1, days=daily_plans)
+
+    plan = DietPlan(
+        plan_id=existing_plan.plan_id if existing_plan else str(uuid.uuid4())[:8],
+        profile=profile,
+        macro_targets=macro_targets,
+        weekly_templates=[week],
+        weight_history=existing_plan.weight_history if existing_plan else [],
+        user_notes=existing_plan.user_notes if existing_plan else [],
+        active=True,
+        auto_adjust=existing_plan.auto_adjust if existing_plan else True,
+        last_adjusted=datetime.now(UTC).isoformat(),
+    )
+    return plan
+
 
 # ── Mobile Web SPA ───────────────────────────────────────────────────
 _mobile_web_dir = Path(__file__).resolve().parent.parent / "mobile_web"
