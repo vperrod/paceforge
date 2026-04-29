@@ -6221,7 +6221,7 @@ with tab_diet:
 
     # ── Sub-tab: Meal Plan ──
     with diet_sub[0]:
-        col_gen, col_regen = st.columns(2)
+        col_gen, col_regen, col_del = st.columns(3)
         with col_gen:
             if st.button("🤖 Generate New Plan", use_container_width=True):
                 with st.spinner("Generating your personalized meal plan..."):
@@ -6242,6 +6242,15 @@ with tab_diet:
                         st.rerun()
                     except Exception as e:
                         st.error(f"Adjustment failed: {e}")
+        with col_del:
+            if st.button("🗑️ Delete Plan", use_container_width=True):
+                try:
+                    _diet_api("DELETE", "/diet/plan")
+                    st.session_state["diet_plan"] = None
+                    st.success("Meal plan deleted.")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Delete failed: {e}")
 
         # Load plan
         if "diet_plan" not in st.session_state:
@@ -6276,6 +6285,7 @@ with tab_diet:
 
             cal_options = {
                 "initialView": "dayGridWeek",
+                "initialDate": cal_events[0]["start"] if cal_events else None,
                 "headerToolbar": {"left": "prev,next today", "center": "title", "right": "dayGridWeek,dayGridMonth"},
                 "height": 450,
                 "editable": False,

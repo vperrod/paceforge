@@ -3070,6 +3070,18 @@ async def get_diet_plan(user: dict = Depends(get_current_user)):
     return data.active_plan.model_dump(mode="json")
 
 
+@app.delete("/diet/plan")
+async def delete_diet_plan(user: dict = Depends(get_current_user)):
+    """Delete the active diet plan."""
+    uid = user["id"]
+    data = _load_diet_data(uid)
+    if not data.active_plan:
+        raise HTTPException(404, "No active diet plan to delete")
+    data.active_plan = None
+    _save_diet_data(uid, data)
+    return {"ok": True}
+
+
 @app.post("/diet/plan/regenerate")
 async def regenerate_diet_plan(user: dict = Depends(get_current_user)):
     """Re-evaluate and adjust the current diet plan based on progress."""
@@ -3319,6 +3331,12 @@ def _parse_diet_plan_response(
     start_date = today + timedelta(days=days_until_monday)
 
     days_data = parsed.get("days", [])
+    if len(days_data) < 7:
+        logger.error(
+            "AI returned only %d days (expected %d). Response may be truncated. Raw: %.500s",
+            len(days_data), 7 * max(1, profile.plan_weeks), raw_json,
+        )
+        raise HTTPException(500, f"AI returned only {len(days_data)} day(s) instead of {7 * max(1, profile.plan_weeks)}. Please try again.")
     daily_plans: list[DailyMealPlan] = []
     for day_info in days_data:
         day_num = day_info.get("day_number", len(daily_plans) + 1)
