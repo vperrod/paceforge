@@ -510,7 +510,7 @@ class Coach:
         sections = self._parse_weekly_sections(reply)
         return sections
 
-    def _chat_openai_extended(self, max_tokens: int = 1500) -> str:
+    def _chat_openai_extended(self, max_tokens: int = 1500, json_mode: bool = False) -> str:
         """OpenAI chat with configurable token limit for long-form output."""
         from openai import OpenAI
 
@@ -518,12 +518,15 @@ class Coach:
         if self._base_url:
             kwargs["base_url"] = self._base_url
         client = OpenAI(**kwargs)
-        response = client.chat.completions.create(
-            model=self._model,
-            messages=self._conversation,
-            temperature=0.7,
-            max_tokens=max_tokens,
-        )
+        create_kwargs: dict = {
+            "model": self._model,
+            "messages": self._conversation,
+            "temperature": 0.7,
+            "max_tokens": max_tokens,
+        }
+        if json_mode:
+            create_kwargs["response_format"] = {"type": "json_object"}
+        response = client.chat.completions.create(**create_kwargs)
         choice = response.choices[0]
         content = choice.message.content or ""
         if choice.finish_reason == "length":
@@ -532,13 +535,46 @@ class Coach:
                 "Attempting JSON repair.",
                 max_tokens, self._model,
             )
-            # Try to close truncated JSON so the parser can still use it
-            open_braces = content.count("{") - content.count("}")
-            open_brackets = content.count("[") - content.count("]")
-            content = content.rstrip().rstrip(",")
-            content += "]" * max(0, open_brackets)
-            content += "}" * max(0, open_braces)
+            content = self._repair_truncated_json(content)
         return content or "I couldn't generate a response."
+
+    @staticmethod
+    def _repair_truncated_json(content: str) -> str:
+        """Best-effort repair of truncated JSON by finding the last valid parse point."""
+        import json as _json
+
+        content = content.rstrip()
+        # Try parsing as-is first
+        try:
+            _json.loads(content)
+            return content
+        except _json.JSONDecodeError:
+            pass
+
+        # Trim back to the last complete item (comma, bracket, or brace boundary)
+        # then close all open brackets/braces
+        for trim_char in (",", "{", "[", '"'):
+            idx = content.rfind(trim_char)
+            if idx <= 0:
+                continue
+            candidate = content[:idx].rstrip().rstrip(",")
+            open_brackets = candidate.count("[") - candidate.count("]")
+            open_braces = candidate.count("{") - candidate.count("}")
+            candidate += "]" * max(0, open_brackets)
+            candidate += "}" * max(0, open_braces)
+            try:
+                _json.loads(candidate)
+                return candidate
+            except _json.JSONDecodeError:
+                continue
+
+        # Last resort: naive brace/bracket closing
+        content = content.rstrip().rstrip(",")
+        open_brackets = content.count("[") - content.count("]")
+        open_braces = content.count("{") - content.count("}")
+        content += "]" * max(0, open_brackets)
+        content += "}" * max(0, open_braces)
+        return content
 
     @staticmethod
     def _parse_weekly_sections(text: str) -> dict:
@@ -825,7 +861,7 @@ Important rules:
 
         try:
             tokens = min(16000, 4000 + plan_weeks * 4000)
-            reply = self._chat_openai_extended(max_tokens=tokens) if self._provider != "anthropic" else self._chat_anthropic()
+            reply = self._chat_openai_extended(max_tokens=tokens, json_mode=True) if self._provider != "anthropic" else self._chat_anthropic()
         except Exception as e:
             logger.error("Diet plan generation failed: %s", e, exc_info=True)
             reply = f'{{"error": "Could not generate diet plan: {e}"}}'
@@ -943,7 +979,7 @@ Respond with ONLY valid JSON (no markdown fences) in this exact format:
         self._conversation.append({"role": "user", "content": "\n".join(lines)})
 
         try:
-            reply = self._chat_openai_extended(max_tokens=8000) if self._provider != "anthropic" else self._chat_anthropic()
+            reply = self._chat_openai_extended(max_tokens=8000, json_mode=True) if self._provider != "anthropic" else self._chat_anthropic()
         except Exception as e:
             logger.error("Diet plan adjustment failed: %s", e, exc_info=True)
             reply = f'{{"error": "Could not adjust diet plan: {e}"}}'
