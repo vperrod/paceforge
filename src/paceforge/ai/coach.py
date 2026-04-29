@@ -792,6 +792,25 @@ class Coach:
         proteins = ["chicken", "fish/seafood", "beef/pork", "eggs",
                     "legumes/tofu", "turkey", "dairy/greek yogurt"]
 
+        # Build explicit meal array example showing ALL required meal types
+        meal_example_items = []
+        _example_names = {
+            "breakfast": "Scrambled Eggs & Toast",
+            "morning_snack": "Greek Yogurt & Berries",
+            "lunch": "Grilled Chicken Salad",
+            "afternoon_snack": "Apple & Almond Butter",
+            "dinner": "Salmon & Vegetables",
+            "evening_snack": "Cottage Cheese & Fruit",
+        }
+        for mt in meal_types:
+            meal_example_items.append(
+                f'        {{"name": "{_example_names.get(mt, "Meal")}", "meal_type": "{mt}", '
+                f'"foods": [{{"name": "...", "quantity": 0, "unit": "g", "calories": 0, '
+                f'"protein_g": 0, "carbs_g": 0, "fat_g": 0}}], '
+                f'"total_calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0, '
+                f'"recipe_notes": "..."}}')
+        meals_example_block = ",\n".join(meal_example_items)
+
         lines.append(f"""
 ## Instructions
 
@@ -813,13 +832,7 @@ Respond with ONLY valid JSON (no markdown, no extra text) in this exact structur
     {{
       "day_number": 1,
       "meals": [
-        {{
-          "name": "<unique meal name>",
-          "meal_type": "<{'/'.join(meal_types)}>",
-          "foods": [{{"name": "<food>", "quantity": <num>, "unit": "<g/ml/pcs>", "calories": <num>, "protein_g": <num>, "carbs_g": <num>, "fat_g": <num>}}],
-          "total_calories": <num>, "protein_g": <num>, "carbs_g": <num>, "fat_g": <num>, "fiber_g": <num>,
-          "recipe_notes": "<1 sentence>"
-        }}
+{meals_example_block}
       ],
       "daily_totals": {{"calories": <num>, "protein_g": <num>, "carbs_g": <num>, "fat_g": <num>, "fiber_g": <num>}}
     }}

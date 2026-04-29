@@ -3508,20 +3508,62 @@ def _parse_diet_plan_response(
         expected_types.insert(3, "afternoon_snack")
     if expected_count >= 6:
         expected_types.append("evening_snack")
+
+    # Default snack templates when AI omits snack types
+    _snack_defaults = {
+        "morning_snack": ("Greek Yogurt & Mixed Berries", [
+            FoodItem(name="Greek yogurt", quantity=150, unit="g", calories=130, protein_g=15, carbs_g=8, fat_g=4),
+            FoodItem(name="Mixed berries", quantity=80, unit="g", calories=40, protein_g=0.5, carbs_g=9, fat_g=0.3),
+        ]),
+        "afternoon_snack": ("Apple & Almond Butter", [
+            FoodItem(name="Apple", quantity=1, unit="pcs", calories=95, protein_g=0.5, carbs_g=25, fat_g=0.3),
+            FoodItem(name="Almond butter", quantity=15, unit="g", calories=90, protein_g=3, carbs_g=3, fat_g=8),
+        ]),
+        "evening_snack": ("Cottage Cheese & Walnuts", [
+            FoodItem(name="Cottage cheese", quantity=100, unit="g", calories=98, protein_g=11, carbs_g=3, fat_g=4),
+            FoodItem(name="Walnuts", quantity=15, unit="g", calories=98, protein_g=2, carbs_g=1, fat_g=10),
+        ]),
+    }
     for day_plan in daily_plans:
         if len(day_plan.meals) < expected_count:
             existing_types = {m.meal_type.value for m in day_plan.meals}
             for mt_str in expected_types:
                 if mt_str not in existing_types and len(day_plan.meals) < expected_count:
-                    day_plan.meals.append(Meal(
-                        name="[AI omitted — use Suggest Alternative]",
-                        meal_type=MealType(mt_str),
-                    ))
-            logger.warning(
-                "Day %s had fewer meals than expected (%d), padded to %d",
-                day_plan.date, len(day_plan.meals) - (expected_count - len(day_plan.meals)),
-                len(day_plan.meals),
+                    default = _snack_defaults.get(mt_str)
+                    if default:
+                        sname, sfoods = default
+                        tcal = sum(f.calories for f in sfoods)
+                        tp = sum(f.protein_g for f in sfoods)
+                        tc = sum(f.carbs_g for f in sfoods)
+                        tf = sum(f.fat_g for f in sfoods)
+                        day_plan.meals.append(Meal(
+                            name=sname,
+                            meal_type=MealType(mt_str),
+                            foods=sfoods,
+                            total_calories=tcal,
+                            protein_g=tp,
+                            carbs_g=tc,
+                            fat_g=tf,
+                            recipe_notes="Default snack — tap Suggest Alternative for a personalised option.",
+                        ))
+                    else:
+                        day_plan.meals.append(Meal(
+                            name="Quick Snack",
+                            meal_type=MealType(mt_str),
+                            recipe_notes="Tap Suggest Alternative for a personalised option.",
+                        ))
+            # Re-sort meals to match expected type order
+            type_order = {t: i for i, t in enumerate(expected_types)}
+            day_plan.meals.sort(key=lambda m: type_order.get(m.meal_type.value, 99))
+            # Recalculate daily totals
+            day_plan.daily_totals = MacroTotals(
+                calories=sum(m.total_calories for m in day_plan.meals),
+                protein_g=sum(m.protein_g for m in day_plan.meals),
+                carbs_g=sum(m.carbs_g for m in day_plan.meals),
+                fat_g=sum(m.fat_g for m in day_plan.meals),
+                fiber_g=sum(m.fiber_g for m in day_plan.meals),
             )
+            logger.warning("Day %s had missing meal types, backfilled with defaults", day_plan.date)
 
     # Group days into weekly templates
     plan_weeks = max(1, profile.plan_weeks)
