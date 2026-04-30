@@ -68,11 +68,6 @@ class DailyMealPlan(BaseModel):
     adjustment_reason: str = ""
 
 
-class WeeklyMealTemplate(BaseModel):
-    week_number: int
-    days: list[DailyMealPlan] = Field(default_factory=list)
-
-
 class WeightEntry(BaseModel):
     date: date
     weight_kg: float
@@ -86,8 +81,6 @@ class DietProfile(BaseModel):
     goals: list[DietGoal] = Field(default_factory=list)
     target_weight_kg: float | None = None
     daily_meals_count: int = Field(default=3, ge=2, le=6)
-    plan_weeks: int = Field(default=1, ge=1, le=4)
-    start_date: date | None = None
     meal_sizes: dict[str, str] = Field(default_factory=dict)
     preferred_foods: list[str] = Field(default_factory=list)
     allergies: list[str] = Field(default_factory=list)
@@ -108,12 +101,10 @@ class DietPlan(BaseModel):
     created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
     plan_analysis: str = ""
     macro_targets: MacroTotals = Field(default_factory=MacroTotals)
-    weekly_templates: list[WeeklyMealTemplate] = Field(default_factory=list)
+    generated_days: list[DailyMealPlan] = Field(default_factory=list)
     weight_history: list[WeightEntry] = Field(default_factory=list)
     user_notes: list[UserNote] = Field(default_factory=list)
     active: bool = True
-    auto_adjust: bool = True
-    last_adjusted: str = ""
 
 
 class DietData(BaseModel):

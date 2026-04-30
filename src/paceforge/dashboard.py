@@ -6162,7 +6162,7 @@ def _diet_api(method: str, path: str, **kwargs) -> dict:
 with tab_diet:
     st.markdown('<div class="pf-section-header">Diet & Nutrition</div>', unsafe_allow_html=True)
 
-    diet_sub = st.tabs(["🍽️ Meal Plan", "📊 Macro Tracker", "⚖️ Weight Progress", "⚙️ Preferences"])
+    diet_sub = st.tabs(["� Nutrition Plan", "📊 Macro Tracker", "⚖️ Weight Progress", "⚙️ Preferences"])
 
     # ── Sub-tab: Preferences ──
     with diet_sub[3]:
@@ -6188,21 +6188,6 @@ with tab_diet:
             value=float(current_profile.get("target_weight_kg") or 0) or 70.0, step=0.5,
         )
         meals_count = st.slider("Meals per Day", 2, 6, current_profile.get("daily_meals_count", 3))
-        plan_weeks = st.slider("Plan Duration (weeks)", 1, 4, current_profile.get("plan_weeks", 1))
-
-        # Start date picker — default to saved value or next Monday
-        _today = date.today()
-        _saved_start = current_profile.get("start_date")
-        if _saved_start:
-            try:
-                _default_start = date.fromisoformat(_saved_start)
-                if _default_start < _today:
-                    _default_start = _today + timedelta(days=(7 - _today.weekday()) % 7 or 7)
-            except ValueError:
-                _default_start = _today + timedelta(days=(7 - _today.weekday()) % 7 or 7)
-        else:
-            _default_start = _today + timedelta(days=(7 - _today.weekday()) % 7 or 7)
-        start_date = st.date_input("Plan Start Date", value=_default_start, min_value=_today)
 
         # Meal size distribution
         st.markdown("**Meal Sizes** — control how calories are distributed across meals")
@@ -6255,8 +6240,6 @@ with tab_diet:
                     "goals": selected_goals,
                     "target_weight_kg": target_weight,
                     "daily_meals_count": meals_count,
-                    "plan_weeks": plan_weeks,
-                    "start_date": start_date.isoformat(),
                     "meal_sizes": meal_sizes,
                     "preferred_foods": [f.strip() for f in preferred.split(",") if f.strip()],
                     "allergies": [a.strip() for a in allergies.split(",") if a.strip()],
@@ -6267,39 +6250,8 @@ with tab_diet:
             except Exception as e:
                 st.error(f"Failed to save: {e}")
 
-    # ── Sub-tab: Meal Plan ──
+    # ── Sub-tab: Nutrition Plan ──
     with diet_sub[0]:
-        col_gen, col_regen, col_del = st.columns(3)
-        with col_gen:
-            if st.button("🤖 Generate New Plan", use_container_width=True):
-                with st.spinner("Generating your personalized meal plan..."):
-                    try:
-                        plan_data = _diet_api("POST", "/diet/generate")
-                        st.session_state["diet_plan"] = plan_data
-                        st.success("Meal plan generated!")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Generation failed: {e}")
-        with col_regen:
-            if st.button("🔄 Re-evaluate Plan", use_container_width=True):
-                with st.spinner("Adjusting your meal plan..."):
-                    try:
-                        plan_data = _diet_api("POST", "/diet/plan/regenerate")
-                        st.session_state["diet_plan"] = plan_data
-                        st.success("Plan adjusted!")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Adjustment failed: {e}")
-        with col_del:
-            if st.button("🗑️ Delete Plan", use_container_width=True):
-                try:
-                    _diet_api("DELETE", "/diet/plan")
-                    st.session_state["diet_plan"] = None
-                    st.success("Meal plan deleted.")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Delete failed: {e}")
-
         # Load plan
         if "diet_plan" not in st.session_state:
             try:
@@ -6309,103 +6261,140 @@ with tab_diet:
                 st.session_state["diet_plan"] = None
 
         plan = st.session_state.get("diet_plan")
-        if plan and plan.get("weekly_templates"):
-            # Show AI analysis if available
+
+        # ── Nutrition Analysis section ──
+        st.markdown("#### 🧠 Nutrition Analysis")
+        col_gen, col_del = st.columns([3, 1])
+        with col_gen:
+            if st.button("🤖 Generate Nutrition Analysis", use_container_width=True):
+                with st.spinner("Analysing your profile, activities, and goals..."):
+                    try:
+                        plan_data = _diet_api("POST", "/diet/generate")
+                        st.session_state["diet_plan"] = plan_data
+                        st.success("Nutrition analysis complete!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Generation failed: {e}")
+        with col_del:
+            if plan and st.button("🗑️ Delete Plan", use_container_width=True):
+                try:
+                    _diet_api("DELETE", "/diet/plan")
+                    st.session_state["diet_plan"] = None
+                    st.success("Plan deleted.")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Delete failed: {e}")
+
+        if plan:
+            # Show AI coaching analysis
             if plan.get("plan_analysis"):
-                st.markdown("#### 🧠 Plan Analysis")
                 st.info(plan["plan_analysis"])
 
-            # Build calendar events from meal plan
-            from streamlit_calendar import calendar as st_calendar
+            # Macro targets
+            mt = plan.get("macro_targets", {})
+            if mt:
+                t_cols = st.columns(5)
+                t_cols[0].metric("Calories", f"{mt.get('calories', 0):.0f}")
+                t_cols[1].metric("Protein", f"{mt.get('protein_g', 0):.0f}g")
+                t_cols[2].metric("Carbs", f"{mt.get('carbs_g', 0):.0f}g")
+                t_cols[3].metric("Fat", f"{mt.get('fat_g', 0):.0f}g")
+                t_cols[4].metric("Fiber", f"{mt.get('fiber_g', 0):.0f}g")
 
-            cal_events = []
-            _meal_colors = {
-                "breakfast": "#F59E0B", "morning_snack": "#FBBF24",
-                "lunch": "#10B981", "afternoon_snack": "#6EE7B7",
-                "dinner": "#3B82F6", "evening_snack": "#93C5FD",
-            }
-            all_days = []
-            for week in plan.get("weekly_templates", []):
-                for day in week.get("days", []):
-                    all_days.append(day)
-                    for meal in day.get("meals", []):
-                        mt = meal.get("meal_type", "lunch")
-                        cal_events.append({
-                            "title": f"{meal.get('name', 'Meal')} ({meal.get('total_calories', 0)} cal)",
-                            "start": day.get("date", ""),
-                            "end": day.get("date", ""),
-                            "backgroundColor": _meal_colors.get(mt, "#6B7280"),
-                            "borderColor": _meal_colors.get(mt, "#6B7280"),
-                        })
-
-            cal_options = {
-                "initialView": "dayGridWeek",
-                "initialDate": cal_events[0]["start"] if cal_events else None,
-                "headerToolbar": {"left": "prev,next today", "center": "title", "right": "dayGridWeek,dayGridMonth"},
-                "height": 350,
-                "editable": False,
-            }
-            st_calendar(events=cal_events, options=cal_options, key="diet_calendar")
-
-            # Day-by-day meal detail view
+            # ── On-demand day generation ──
             st.markdown("---")
-            if all_days:
-                day_labels = [f"{d.get('date', '')} ({['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][date.fromisoformat(d.get('date','2026-01-05')).weekday()]})" for d in all_days]
-                selected_day_idx = st.selectbox("Select day", range(len(day_labels)), format_func=lambda i: day_labels[i], key="diet_day_select")
-                day = all_days[selected_day_idx]
+            st.markdown("#### 🍽️ Today's Meals")
+            if st.button("🎲 Generate Day's Meals", use_container_width=True):
+                with st.spinner("Generating today's meals..."):
+                    try:
+                        day_data = _diet_api("POST", "/diet/generate-day")
+                        # Refresh the full plan from server
+                        plan_resp = _diet_api("GET", "/diet/plan")
+                        st.session_state["diet_plan"] = plan_resp if plan_resp.get("plan_id") else None
+                        st.success("Meals generated!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Generation failed: {e}")
 
-                # Daily totals banner
-                totals = day.get("daily_totals", {})
-                t_cols = st.columns(4)
-                t_cols[0].metric("Calories", f"{totals.get('calories', 0):.0f}")
-                t_cols[1].metric("Protein", f"{totals.get('protein_g', 0):.0f}g")
-                t_cols[2].metric("Carbs", f"{totals.get('carbs_g', 0):.0f}g")
-                t_cols[3].metric("Fat", f"{totals.get('fat_g', 0):.0f}g")
-
-                # Meal cards
-                _type_emoji = {
-                    "breakfast": "🌅", "morning_snack": "🍎",
-                    "lunch": "☀️", "afternoon_snack": "🥤",
-                    "dinner": "🌙", "evening_snack": "🍵",
-                }
-                _type_label = {
-                    "breakfast": "Breakfast", "morning_snack": "Morning Snack",
-                    "lunch": "Lunch", "afternoon_snack": "Afternoon Snack",
-                    "dinner": "Dinner", "evening_snack": "Evening Snack",
-                }
-                for meal_idx, meal in enumerate(day.get("meals", [])):
-                    mt = meal.get("meal_type", "lunch")
-                    emoji = _type_emoji.get(mt, "🍽️")
-                    label = _type_label.get(mt, mt.replace("_", " ").title())
-                    with st.expander(f"{emoji} **{label}: {meal.get('name', 'Meal')}** — {meal.get('total_calories', 0):.0f} cal | P:{meal.get('protein_g', 0):.0f}g C:{meal.get('carbs_g', 0):.0f}g F:{meal.get('fat_g', 0):.0f}g", expanded=True):
-                        for food in meal.get("foods", []):
-                            st.markdown(f"- **{food.get('name')}**: {food.get('quantity')}{food.get('unit', 'g')} — {food.get('calories', 0)} cal (P:{food.get('protein_g', 0)}g C:{food.get('carbs_g', 0)}g F:{food.get('fat_g', 0)}g)")
-                        if meal.get("recipe_notes"):
-                            st.info(f"📝 {meal['recipe_notes']}")
-                        if st.button(f"🔄 Suggest Alternative", key=f"regen_meal_{selected_day_idx}_{meal_idx}", use_container_width=True):
-                            with st.spinner(f"Finding alternative for {meal.get('name')}..."):
-                                try:
-                                    new_plan = _diet_api("POST", "/diet/meal/regenerate", json={"day_index": selected_day_idx, "meal_index": meal_idx})
-                                    st.session_state["diet_plan"] = new_plan
-                                    st.success("Meal updated!")
-                                    st.rerun()
-                                except Exception as e:
-                                    st.error(f"Failed: {e}")
+            # Show generated days (most recent first)
+            generated_days = plan.get("generated_days", [])
+            if generated_days:
+                for day_idx, day in enumerate(reversed(generated_days)):
+                    real_idx = len(generated_days) - 1 - day_idx
+                    day_date = day.get("date", "")
+                    totals = day.get("daily_totals", {})
+                    with st.expander(
+                        f"📅 {day_date} — {totals.get('calories', 0):.0f} cal | "
+                        f"P:{totals.get('protein_g', 0):.0f}g "
+                        f"C:{totals.get('carbs_g', 0):.0f}g "
+                        f"F:{totals.get('fat_g', 0):.0f}g",
+                        expanded=(day_idx == 0),
+                    ):
+                        _type_emoji = {
+                            "breakfast": "🌅", "morning_snack": "🍎",
+                            "lunch": "☀️", "afternoon_snack": "🥤",
+                            "dinner": "🌙", "evening_snack": "🍵",
+                        }
+                        _type_label = {
+                            "breakfast": "Breakfast", "morning_snack": "Morning Snack",
+                            "lunch": "Lunch", "afternoon_snack": "Afternoon Snack",
+                            "dinner": "Dinner", "evening_snack": "Evening Snack",
+                        }
+                        for meal_idx, meal in enumerate(day.get("meals", [])):
+                            mtype = meal.get("meal_type", "lunch")
+                            emoji = _type_emoji.get(mtype, "🍽️")
+                            label = _type_label.get(mtype, mtype.replace("_", " ").title())
+                            st.markdown(
+                                f"**{emoji} {label}: {meal.get('name', 'Meal')}** — "
+                                f"{meal.get('total_calories', 0):.0f} cal | "
+                                f"P:{meal.get('protein_g', 0):.0f}g "
+                                f"C:{meal.get('carbs_g', 0):.0f}g "
+                                f"F:{meal.get('fat_g', 0):.0f}g"
+                            )
+                            for food in meal.get("foods", []):
+                                st.markdown(
+                                    f"&nbsp;&nbsp;&nbsp;&nbsp;• **{food.get('name')}**: "
+                                    f"{food.get('quantity')}{food.get('unit', 'g')} — "
+                                    f"{food.get('calories', 0)} cal "
+                                    f"(P:{food.get('protein_g', 0)}g "
+                                    f"C:{food.get('carbs_g', 0)}g "
+                                    f"F:{food.get('fat_g', 0)}g)"
+                                )
+                            if meal.get("recipe_notes"):
+                                st.info(f"📝 {meal['recipe_notes']}")
+                            if st.button(
+                                "🔄 Suggest Alternative",
+                                key=f"regen_meal_{real_idx}_{meal_idx}",
+                                use_container_width=True,
+                            ):
+                                with st.spinner(f"Finding alternative for {meal.get('name')}..."):
+                                    try:
+                                        _diet_api("POST", "/diet/meal/regenerate", json={
+                                            "day_index": real_idx,
+                                            "meal_index": meal_idx,
+                                        })
+                                        plan_resp = _diet_api("GET", "/diet/plan")
+                                        st.session_state["diet_plan"] = plan_resp if plan_resp.get("plan_id") else None
+                                        st.success("Meal updated!")
+                                        st.rerun()
+                                    except Exception as e:
+                                        st.error(f"Failed: {e}")
+            else:
+                st.info("Press **Generate Day's Meals** to create a personalised meal plan for today.")
 
             # User feedback
             st.markdown("---")
-            st.subheader("Feedback & Adjustments")
+            st.subheader("Feedback")
             feedback = st.text_area("Tell the AI what to adjust (e.g., 'more protein at breakfast', 'I don't like fish')", key="diet_feedback")
             if st.button("📝 Send Feedback", use_container_width=True) and feedback:
                 try:
                     note_resp = _diet_api("POST", "/diet/note", json={"content": feedback})
                     if note_resp.get("ai_response"):
                         st.info(f"🤖 {note_resp['ai_response']}")
-                    st.success("Feedback recorded! Click 'Re-evaluate Plan' to apply changes.")
+                    st.success("Feedback recorded!")
                 except Exception as e:
                     st.error(f"Failed: {e}")
         else:
-            st.info("No active meal plan. Set your preferences in the ⚙️ tab, then generate a plan.")
+            st.info("No active nutrition plan. Set your preferences in the ⚙️ tab, then generate an analysis.")
 
     # ── Sub-tab: Macro Tracker ──
     with diet_sub[1]:
@@ -6448,7 +6437,7 @@ with tab_diet:
                 st.subheader("Calories Burned (Activities)")
                 st.bar_chart(daily_burn[["calories_burned"]])
         else:
-            st.info("Generate a meal plan to see macro tracking data.")
+            st.info("Generate a nutrition plan and some daily meals to see macro tracking data.")
 
     # ── Sub-tab: Weight Progress ──
     with diet_sub[2]:

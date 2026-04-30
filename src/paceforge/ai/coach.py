@@ -719,7 +719,7 @@ class Coach:
             parts.append(f"{mt}={size_label.get(sz, 'REGULAR')} ({size_pct.get(sz, '~20-25%')})")
         return f"CALORIE DISTRIBUTION: {', '.join(parts)} of daily calories.\n\n"
 
-    def generate_diet_plan(
+    def generate_macro_plan(
         self,
         diet_profile: dict,
         fitness_profile: UserFitnessProfile | None = None,
@@ -727,11 +727,10 @@ class Coach:
         weight_history: list[dict] | None = None,
         training_plan: TrainingPlan | None = None,
     ) -> str:
-        """Generate a personalised diet plan using AI (day-by-day).
+        """Generate a nutrition analysis with macro targets and coaching guidance.
 
-        Makes 1 call for macro targets + plan_analysis, then 7 separate calls
-        for each day's meals to guarantee variety and avoid truncation.
-        Returns a JSON string that the caller parses into DietPlan models.
+        Returns a JSON string with plan_analysis (detailed coaching explanation)
+        and macro_targets. No meals — those are generated on demand separately.
         """
         import json as _json
 
@@ -741,44 +740,69 @@ class Coach:
         meals_count = diet_profile.get("daily_meals_count", 3)
         meal_types = self._resolve_meal_types(meals_count)
 
-        # Phase 1: get macro targets + plan analysis
-        targets_data = self._generate_diet_targets(profile_context, meals_count, meal_types)
+        prompt = f"""{profile_context}
 
-        # Phase 2: generate each day's meals
-        proteins = ["chicken", "fish/seafood", "beef/pork", "eggs",
-                    "legumes/tofu", "turkey", "dairy/greek yogurt"]
-        used_meal_names: list[str] = []
-        days: list[dict] = []
+Analyse this athlete's body composition, training load, and goals. Then determine \
+their optimal daily nutrition targets for a {meals_count}-meal structure \
+({', '.join(meal_types)}).
 
-        meal_size_instruction = self._build_meal_size_instruction(
-            meal_types, diet_profile.get("meal_sizes", {}),
-        )
+Respond with ONLY valid JSON:
+{{
+  "plan_analysis": "<DETAILED coaching analysis (6-10 sentences). Include: \
+1) Body composition assessment based on weight, activity, and goals. \
+2) TDEE calculation breakdown (BMR × activity factor + exercise burn). \
+3) Why you chose these specific macro ratios for their goals. \
+4) How protein, carbs, and fats each support their training and recovery. \
+5) Practical guidance on meal timing around workouts. \
+6) What the athlete should focus on to achieve their goal. \
+7) Any adjustments to watch for based on progress.>",
+  "macro_targets": {{"calories": <num>, "protein_g": <num>, "carbs_g": <num>, \
+"fat_g": <num>, "fiber_g": <num>}}
+}}
 
-        for day_num in range(1, 8):
-            protein_focus = proteins[(day_num - 1) % len(proteins)]
-            day_data = self._generate_single_day_meals(
-                day_number=day_num,
-                protein_focus=protein_focus,
-                macro_targets=targets_data.get("macro_targets", {}),
-                meal_types=meal_types,
-                diet_profile=diet_profile,
-                used_meal_names=used_meal_names,
-                meal_size_instruction=meal_size_instruction,
+Rules:
+- TDEE: BMR (Mifflin-St Jeor) × activity factor, then apply goal adjustment
+- Weight loss: ~500 kcal deficit, protein 1.6-2.2g/kg bodyweight
+- Muscle gain: ~300-500 kcal surplus, protein 1.6-2.2g/kg bodyweight
+- Maintain: match TDEE, protein 1.4-1.8g/kg bodyweight
+- Body recomposition: slight deficit (~200 kcal), high protein 2.0-2.2g/kg
+- Include exercise calorie burn from recent activity data
+- Carbs: 3-7g/kg depending on training volume (higher for endurance athletes)
+- Fat: minimum 0.8g/kg, typically 25-35% of calories
+- Fiber: 25-35g/day"""
+
+        saved = self._conversation
+        self._conversation = [
+            {"role": "system", "content": _DIET_SYSTEM_PROMPT},
+            {"role": "user", "content": prompt},
+        ]
+        try:
+            reply = (
+                self._chat_openai_extended(max_tokens=1500, json_mode=True)
+                if self._provider != "anthropic"
+                else self._chat_anthropic()
             )
-            # Accumulate used meal names for variety enforcement
-            for m in day_data.get("meals", []):
-                name = m.get("name", "")
-                if name:
-                    used_meal_names.append(name)
-            days.append(day_data)
+        except Exception as e:
+            logger.error("Macro plan generation failed: %s", e, exc_info=True)
+            reply = _json.dumps({
+                "plan_analysis": "Could not generate analysis. Please try again.",
+                "macro_targets": {"calories": 2000, "protein_g": 120, "carbs_g": 250, "fat_g": 65, "fiber_g": 30},
+            })
+        finally:
+            self._conversation = saved
 
-        # Assemble full response in the same format the parser expects
-        result = {
-            "plan_analysis": targets_data.get("plan_analysis", ""),
-            "macro_targets": targets_data.get("macro_targets", {}),
-            "days": days,
-        }
-        return _json.dumps(result)
+        # Validate JSON
+        try:
+            parsed = _json.loads(reply)
+        except _json.JSONDecodeError:
+            from json_repair import loads as repair_loads
+            parsed = repair_loads(reply)
+            if not isinstance(parsed, dict):
+                parsed = {
+                    "plan_analysis": "Could not generate analysis. Please try again.",
+                    "macro_targets": {"calories": 2000, "protein_g": 120, "carbs_g": 250, "fat_g": 65, "fiber_g": 30},
+                }
+        return _json.dumps(parsed)
 
     @staticmethod
     def _resolve_meal_types(meals_count: int) -> list[str]:
@@ -854,60 +878,6 @@ class Coach:
             lines.append(f"- Total weeks: {training_plan.total_weeks}")
 
         return "\n".join(lines)
-
-    def _generate_diet_targets(
-        self, profile_context: str, meals_count: int, meal_types: list[str],
-    ) -> dict:
-        """AI call to get plan_analysis + macro_targets (no meals)."""
-        import json as _json
-
-        prompt = f"""{profile_context}
-
-Based on this athlete's profile, calculate their optimal daily nutrition targets \
-for a {meals_count}-meal plan ({', '.join(meal_types)}).
-
-Respond with ONLY valid JSON:
-{{
-  "plan_analysis": "<2-4 sentences explaining WHY you chose these macros, \
-calorie target, and approach for THIS specific athlete based on their weight, \
-goals, activity level, and preferences>",
-  "macro_targets": {{"calories": <num>, "protein_g": <num>, "carbs_g": <num>, \
-"fat_g": <num>, "fiber_g": <num>}}
-}}
-
-Rules:
-- TDEE: weight x activity factor, then apply goal deficit/surplus
-- Weight loss: ~500 kcal deficit, protein 1.6-2.2g/kg
-- Muscle gain: ~300-500 surplus, protein 1.6-2.2g/kg
-- Maintain: match TDEE, protein 1.4-1.8g/kg
-- Include exercise calorie burn in daily needs"""
-
-        saved = self._conversation
-        self._conversation = [
-            {"role": "system", "content": _DIET_SYSTEM_PROMPT},
-            {"role": "user", "content": prompt},
-        ]
-        try:
-            reply = (
-                self._chat_openai_extended(max_tokens=1000, json_mode=True)
-                if self._provider != "anthropic"
-                else self._chat_anthropic()
-            )
-        except Exception as e:
-            logger.error("Diet targets generation failed: %s", e, exc_info=True)
-            reply = '{"plan_analysis": "", "macro_targets": {"calories": 2000, "protein_g": 120, "carbs_g": 250, "fat_g": 65, "fiber_g": 30}}'
-        finally:
-            self._conversation = saved
-
-        try:
-            return _json.loads(reply)
-        except _json.JSONDecodeError:
-            from json_repair import loads as repair_loads
-            result = repair_loads(reply)
-            return result if isinstance(result, dict) else {
-                "plan_analysis": "",
-                "macro_targets": {"calories": 2000, "protein_g": 120, "carbs_g": 250, "fat_g": 65, "fiber_g": 30},
-            }
 
     def _generate_single_day_meals(
         self,
@@ -1036,124 +1006,6 @@ Respond with ONLY valid JSON for a single meal:
         except Exception as e:
             logger.error("Single meal generation failed: %s", e, exc_info=True)
             reply = f'{{"error": "Could not generate meal: {e}"}}'
-        self._conversation = saved
-        return reply
-
-    def adjust_diet_plan(
-        self,
-        current_plan_summary: dict,
-        weight_trend: list[dict],
-        activity_data: list[dict],
-        user_notes: list[dict] | None = None,
-        fitness_profile: UserFitnessProfile | None = None,
-    ) -> str:
-        """Re-evaluate and adjust an existing diet plan.
-
-        Returns JSON string with updated plan in the same format as generate_diet_plan.
-        """
-        lines: list[str] = []
-        lines.append("Re-evaluate and adjust this athlete's diet plan based on their progress.\n")
-
-        # Current plan
-        lines.append("## Current Plan")
-        targets = current_plan_summary.get("macro_targets", {})
-        lines.append(f"- Daily calorie target: {targets.get('calories', 'unknown')}")
-        lines.append(f"- Protein target: {targets.get('protein_g', 'unknown')}g")
-        lines.append(f"- Carbs target: {targets.get('carbs_g', 'unknown')}g")
-        lines.append(f"- Fat target: {targets.get('fat_g', 'unknown')}g")
-        goals = current_plan_summary.get("goals", [])
-        if goals:
-            lines.append(f"- Goals: {', '.join(goals)}")
-        preferred = current_plan_summary.get("preferred_foods", [])
-        if preferred:
-            lines.append(f"- Preferred foods: {', '.join(preferred)}")
-
-        # Weight progress
-        if weight_trend:
-            lines.append("\n## Weight Trend (recent)")
-            for w in weight_trend[-14:]:
-                bf = f" | Body fat: {w['body_fat_pct']}%" if w.get("body_fat_pct") else ""
-                lines.append(f"- {w['date']}: {w['weight_kg']} kg{bf}")
-            if len(weight_trend) >= 2:
-                first_w = weight_trend[0]["weight_kg"]
-                last_w = weight_trend[-1]["weight_kg"]
-                change = last_w - first_w
-                lines.append(f"- Change: {change:+.1f} kg over {len(weight_trend)} entries")
-
-        # Activity
-        if activity_data:
-            total_cal = sum(a.get("calories") or 0 for a in activity_data)
-            lines.append(f"\n## Recent Activity ({len(activity_data)} sessions)")
-            lines.append(f"- Total calories burned: {total_cal}")
-
-        # Athlete metrics
-        if fitness_profile and fitness_profile.weight_kg:
-            lines.append(f"\n## Current Metrics")
-            lines.append(f"- Weight: {fitness_profile.weight_kg} kg")
-
-        # User feedback
-        if user_notes:
-            lines.append("\n## Athlete Feedback")
-            for note in user_notes[-5:]:
-                lines.append(f"- [{note.get('date', '')}]: {note.get('content', '')}")
-
-        meals_count = current_plan_summary.get("daily_meals_count", 3)
-        meal_types = ["breakfast", "lunch", "dinner"]
-        if meals_count >= 4:
-            meal_types.insert(1, "morning_snack")
-        if meals_count >= 5:
-            meal_types.insert(3, "afternoon_snack")
-        if meals_count >= 6:
-            meal_types.append("evening_snack")
-
-        lines.append(f"""
-## Instructions
-
-Based on the athlete's progress and feedback, generate an adjusted 7-day meal plan.
-First explain in 2-3 sentences what you're changing and why (as "adjustment_reason"),
-then provide the new plan.
-
-Respond with ONLY valid JSON (no markdown fences) in this exact format:
-{{
-  "adjustment_reason": "<what changed and why>",
-  "macro_targets": {{"calories": <number>, "protein_g": <number>, "carbs_g": <number>, "fat_g": <number>, "fiber_g": <number>}},
-  "days": [
-    {{
-      "day_number": 1,
-      "meals": [
-        {{
-          "name": "<meal name>",
-          "meal_type": "<{'/'.join(meal_types)}>",
-          "foods": [
-            {{"name": "<food>", "quantity": <number>, "unit": "<g/ml/pcs/tbsp/cup>", "calories": <number>, "protein_g": <number>, "carbs_g": <number>, "fat_g": <number>}}
-          ],
-          "total_calories": <number>,
-          "protein_g": <number>,
-          "carbs_g": <number>,
-          "fat_g": <number>,
-          "fiber_g": <number>,
-          "recipe_notes": "<brief preparation notes>"
-        }}
-      ],
-      "daily_totals": {{"calories": <number>, "protein_g": <number>, "carbs_g": <number>, "fat_g": <number>, "fiber_g": <number>}}
-    }}
-  ]
-}}
-""")
-
-        saved = self._conversation
-        self._conversation = [
-            {"role": "system", "content": _DIET_SYSTEM_PROMPT},
-        ]
-
-        self._conversation.append({"role": "user", "content": "\n".join(lines)})
-
-        try:
-            reply = self._chat_openai_extended(max_tokens=8000, json_mode=True) if self._provider != "anthropic" else self._chat_anthropic()
-        except Exception as e:
-            logger.error("Diet plan adjustment failed: %s", e, exc_info=True)
-            reply = f'{{"error": "Could not adjust diet plan: {e}"}}'
-
         self._conversation = saved
         return reply
 
