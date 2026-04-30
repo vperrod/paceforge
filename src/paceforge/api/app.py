@@ -3120,20 +3120,51 @@ async def generate_day_meals(user: dict = Depends(get_current_user)):
             recipe_notes=m.get("recipe_notes", ""),
         ))
 
+    # Backfill any missing meal types the AI skipped
+    existing_types = {m.meal_type.value for m in meals}
+    _snack_defaults = {
+        "morning_snack": ("Greek Yogurt & Mixed Berries", [
+            FoodItem(name="Greek yogurt", quantity=150, unit="g", calories=130, protein_g=15, carbs_g=8, fat_g=4),
+            FoodItem(name="Mixed berries", quantity=80, unit="g", calories=40, protein_g=0.5, carbs_g=9, fat_g=0.3),
+        ]),
+        "afternoon_snack": ("Apple & Almond Butter", [
+            FoodItem(name="Apple", quantity=1, unit="pcs", calories=95, protein_g=0.5, carbs_g=25, fat_g=0.3),
+            FoodItem(name="Almond butter", quantity=15, unit="g", calories=90, protein_g=3, carbs_g=3, fat_g=8),
+        ]),
+        "evening_snack": ("Cottage Cheese & Walnuts", [
+            FoodItem(name="Cottage cheese", quantity=100, unit="g", calories=98, protein_g=11, carbs_g=3, fat_g=4),
+            FoodItem(name="Walnuts", quantity=15, unit="g", calories=98, protein_g=2, carbs_g=1, fat_g=10),
+        ]),
+    }
+    for mt_str in meal_types:
+        if mt_str not in existing_types:
+            default = _snack_defaults.get(mt_str)
+            if default:
+                sname, sfoods = default
+                tcal = sum(f.calories for f in sfoods)
+                tp = sum(f.protein_g for f in sfoods)
+                tc = sum(f.carbs_g for f in sfoods)
+                tf = sum(f.fat_g for f in sfoods)
+                meals.append(Meal(
+                    name=sname, meal_type=MealType(mt_str), foods=sfoods,
+                    total_calories=tcal, protein_g=tp, carbs_g=tc, fat_g=tf,
+                    recipe_notes="Default snack — tap Suggest Alternative for a personalised option.",
+                ))
+            logger.warning("AI omitted meal type %s, backfilled with default", mt_str)
+
     # Sort meals by expected type order
     type_order = {t: i for i, t in enumerate(meal_types)}
     meals.sort(key=lambda m: type_order.get(m.meal_type.value, 99))
 
-    dt = day_data.get("daily_totals", {})
     daily_plan = DailyMealPlan(
         date=today,
         meals=meals,
         daily_totals=MacroTotals(
-            calories=dt.get("calories", sum(m.total_calories for m in meals)),
-            protein_g=dt.get("protein_g", sum(m.protein_g for m in meals)),
-            carbs_g=dt.get("carbs_g", sum(m.carbs_g for m in meals)),
-            fat_g=dt.get("fat_g", sum(m.fat_g for m in meals)),
-            fiber_g=dt.get("fiber_g", sum(m.fiber_g for m in meals)),
+            calories=sum(m.total_calories for m in meals),
+            protein_g=sum(m.protein_g for m in meals),
+            carbs_g=sum(m.carbs_g for m in meals),
+            fat_g=sum(m.fat_g for m in meals),
+            fiber_g=sum(m.fiber_g for m in meals),
         ),
     )
 
