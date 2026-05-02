@@ -20,20 +20,24 @@ logger = logging.getLogger(__name__)
 def adapt_plan(
     plan: TrainingPlan,
     profile: UserFitnessProfile,
+    custom_paces: dict[str, float] | None = None,
 ) -> TrainingPlan:
     """Re-evaluate and adapt a plan based on latest fitness data.
 
     Adjustments:
-    1. Recalculate VDOT from new race/activity data → update all paces
+    1. Apply manual pace overrides (if provided), otherwise recalculate from VDOT
     2. Detect missed workouts → redistribute or skip
     3. Detect overtraining signals (low HRV, low readiness) → add recovery
     """
     today = date.today()
 
-    # 1. Recalculate paces from latest data
-    new_paces = _recalculate_paces(profile, plan)
-    if new_paces:
-        plan = _update_plan_paces(plan, new_paces)
+    # 1. Apply custom paces if provided, otherwise recalculate from fitness data
+    if custom_paces:
+        plan = _apply_custom_paces(plan, custom_paces)
+    else:
+        new_paces = _recalculate_paces(profile, plan)
+        if new_paces:
+            plan = _update_plan_paces(plan, new_paces)
 
     # 2. Check for overtraining signals
     needs_recovery = _check_recovery_needed(profile)
@@ -43,6 +47,48 @@ def adapt_plan(
     # 3. Detect missed workouts and adjust
     plan = _handle_missed_workouts(plan, profile, today)
 
+    return plan
+
+
+def _apply_custom_paces(plan: TrainingPlan, custom_paces: dict[str, float]) -> TrainingPlan:
+    """Apply manually-entered pace overrides to the plan and update future workout steps."""
+    today = date.today()
+
+    # Update plan-level pace fields
+    if "easy_pace" in custom_paces:
+        plan.easy_pace = custom_paces["easy_pace"]
+    if "marathon_pace" in custom_paces:
+        plan.marathon_pace = custom_paces["marathon_pace"]
+    if "threshold_pace" in custom_paces:
+        plan.threshold_pace = custom_paces["threshold_pace"]
+    if "interval_pace" in custom_paces:
+        plan.interval_pace = custom_paces["interval_pace"]
+
+    # Build a TrainingPaces-compatible object to reuse _update_step_pace
+    paces = TrainingPaces(
+        vdot=plan.vdot or 0,
+        easy_low=plan.easy_pace or 0,
+        easy_high=(plan.easy_pace or 0) + 15,  # ~15s range for easy zone
+        marathon=plan.marathon_pace or 0,
+        threshold=plan.threshold_pace or 0,
+        interval=plan.interval_pace or 0,
+        repetition=plan.repetition_pace or (plan.interval_pace or 0) - 10,
+    )
+
+    for week in plan.weeks:
+        for workout in week.workouts:
+            if workout.scheduled_date and workout.scheduled_date <= today:
+                continue
+            for step in workout.steps:
+                if step.target_type == IntensityTarget.PACE:
+                    _update_step_pace(step, paces)
+                if step.steps:
+                    for sub in step.steps:
+                        if sub.target_type == IntensityTarget.PACE:
+                            _update_step_pace(sub, paces)
+
+    plan.pace_source = "Manual override"
+    logger.info("Applied custom paces: %s", custom_paces)
     return plan
 
 

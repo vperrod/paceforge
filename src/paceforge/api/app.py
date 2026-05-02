@@ -575,6 +575,13 @@ class AnalyzeWorkoutRequest(BaseModel):
     scheduled_date: str
 
 
+class AdaptPlanRequest(BaseModel):
+    easy_pace: float | None = None
+    marathon_pace: float | None = None
+    threshold_pace: float | None = None
+    interval_pace: float | None = None
+
+
 class WorkoutFeedbackRequest(BaseModel):
     plan_id: str
     workout_name: str
@@ -1605,7 +1612,11 @@ async def regenerate_weekly_overview(user: dict = Depends(get_current_user)):
 
 
 @app.post("/plan/adapt", response_model=TrainingPlan)
-async def adapt_current_plan(plan_id: str | None = None, user: dict = Depends(get_current_user)):
+async def adapt_current_plan(
+    plan_id: str | None = None,
+    body: AdaptPlanRequest | None = None,
+    user: dict = Depends(get_current_user),
+):
     uid = user["id"]
     garmin = _ensure_garmin(uid)
     if not garmin:
@@ -1620,8 +1631,14 @@ async def adapt_current_plan(plan_id: str | None = None, user: dict = Depends(ge
     if not plan:
         raise HTTPException(404, "No plan found")
     _user_profile[uid] = garmin.get_fitness_profile()
+    # Build custom paces dict from request body (only non-None values)
+    custom_paces: dict[str, float] | None = None
+    if body:
+        cp = {k: v for k, v in body.model_dump().items() if v is not None}
+        if cp:
+            custom_paces = cp
     idx = plans.index(plan)
-    adapted = adapt_plan(plan, _user_profile[uid])
+    adapted = adapt_plan(plan, _user_profile[uid], custom_paces=custom_paces)
     adapted.accepted = False
     plans[idx] = adapted
     _save_plans(uid)

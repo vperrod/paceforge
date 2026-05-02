@@ -4165,9 +4165,17 @@ with tab_plan:
                             st.error(f"Error: {_error_detail(r)}")
         with btn_cols[1]:
             if st.button("Adapt Plan", use_container_width=True, key=f"adapt_{plan_id}"):
+                # Collect manually edited paces from number inputs
+                _adapt_body: dict = {}
+                for _pk in ["easy_pace", "marathon_pace", "threshold_pace", "interval_pace"]:
+                    _mk = f"pace_min_{plan_id}_{_pk}"
+                    _sk = f"pace_sec_{plan_id}_{_pk}"
+                    if _mk in st.session_state and _sk in st.session_state:
+                        _adapt_body[_pk] = st.session_state[_mk] * 60 + st.session_state[_sk]
                 with st.spinner("Adapting plan based on latest fitness..."):
                     r = requests.post(
                         f"{API_BASE}/plan/adapt?plan_id={plan_id}",
+                        json=_adapt_body if _adapt_body else None,
                         headers=_auth_headers(),
                         timeout=30,
                     )
@@ -4196,24 +4204,45 @@ with tab_plan:
                     else:
                         st.error(f"Error: {_error_detail(r)}")
 
-        # ── Training Paces ──
-        paces = {}
-        for key in ["easy_pace", "marathon_pace", "threshold_pace", "interval_pace"]:
-            val = plan.get(key)
-            if val:
-                pm, ps = divmod(int(val), 60)
-                paces[key.replace("_pace", "").title()] = f"{pm}:{ps:02d}"
-
-        if paces:
-            pace_cols = st.columns(len(paces))
-            for i, (zone, val) in enumerate(paces.items()):
+        # ── Training Paces (editable) ──
+        _pace_keys = ["easy_pace", "marathon_pace", "threshold_pace", "interval_pace"]
+        _pace_labels = {"easy_pace": "Easy", "marathon_pace": "Marathon", "threshold_pace": "Threshold", "interval_pace": "Interval"}
+        _has_paces = any(plan.get(k) for k in _pace_keys)
+        if _has_paces:
+            pace_cols = st.columns(len(_pace_keys))
+            for i, key in enumerate(_pace_keys):
+                val = plan.get(key)
+                if not val:
+                    continue
+                zone = _pace_labels[key]
                 color = _PACE_COLORS.get(zone, "#10B981")
+                pm, ps = divmod(int(val), 60)
                 with pace_cols[i]:
                     st.markdown(
-                        f'<div class="pf-pace-card">'
-                        f'<div class="pf-pace-zone" style="color:{color};">{zone}</div>'
-                        f'<div class="pf-pace-value">{val}<span class="pf-metric-unit">/km</span></div>'
-                        f'</div>',
+                        f'<div style="text-align:center;margin-bottom:4px;">'
+                        f'<span style="color:{color};font-size:0.7rem;font-weight:600;'
+                        f'text-transform:uppercase;letter-spacing:0.06em;">{zone}</span></div>',
+                        unsafe_allow_html=True,
+                    )
+                    mc1, mc2 = st.columns(2)
+                    with mc1:
+                        new_min = st.number_input(
+                            "min", 0, 15, pm,
+                            key=f"pace_min_{plan_id}_{key}",
+                            label_visibility="collapsed",
+                            help=f"{zone} min/km",
+                        )
+                    with mc2:
+                        new_sec = st.number_input(
+                            "sec", 0, 59, ps,
+                            key=f"pace_sec_{plan_id}_{key}",
+                            label_visibility="collapsed",
+                            help=f"{zone} sec",
+                        )
+                    st.markdown(
+                        f'<div style="text-align:center;font-family:var(--font-mono);'
+                        f'font-size:1.1rem;font-weight:700;color:var(--pf-text);">{new_min}:{new_sec:02d}'
+                        f'<span style="font-size:0.7rem;color:var(--pf-text-secondary);">/km</span></div>',
                         unsafe_allow_html=True,
                     )
 
@@ -4645,6 +4674,7 @@ with tab_calendar:
                     events=cal_events,
                     options=cal_options,
                     custom_css=cal_css,
+                    callbacks=["eventClick", "eventChange"],
                     key="plan_calendar",
                 )
 
@@ -4946,7 +4976,10 @@ with tab_calendar:
                                 for k in ("easy_pace", "marathon_pace", "threshold_pace", "interval_pace", "repetition_pace")
                             }
 
-                        # Show completion status header
+                        # Show workout type badge + completion status header
+                        _wtype = props.get("workout_type", "")
+                        _wtype_color = _WORKOUT_COLORS.get(_wtype, "#607D8B")
+                        _wtype_label = _wtype.replace("_", " ").title() if _wtype else "Workout"
                         _act_ids_json_hdr = props.get("matched_activity_ids", "[]")
                         try:
                             _act_ids_hdr = json.loads(_act_ids_json_hdr) if isinstance(_act_ids_json_hdr, str) else (_act_ids_json_hdr or [])
@@ -4962,11 +4995,15 @@ with tab_calendar:
                             )
 
                         st.markdown(
-                            _render_workout_detail(workout_dict, plan_paces),
+                            f'<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.25rem;">'
+                            f'<span style="background:{_wtype_color}22;color:{_wtype_color};padding:3px 10px;'
+                            f'border-radius:10px;font-size:0.75rem;font-weight:600;">{_wtype_label}</span>'
+                            f'<span style="color:#8B95AD;font-size:0.75rem;">{ev_date}</span>'
+                            f'</div>',
                             unsafe_allow_html=True,
                         )
                         st.markdown(
-                            f'<div style="color:#8B95AD;font-size:0.75rem;margin-top:0.5rem;">Scheduled: {ev_date}</div>',
+                            _render_workout_detail(workout_dict, plan_paces),
                             unsafe_allow_html=True,
                         )
 
