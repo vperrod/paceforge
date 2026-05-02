@@ -38,5 +38,6 @@ cd mobile && npm ci && npx expo start    # Mobile app
 - `.db` files are gitignored. Docker uses `/home/data/paceforge.db` for persistence.
 - `E402` import rule is ignored — some imports are deferred after config setup.
 - `streamlit-calendar`: must pass `callbacks=["eventClick", "eventChange"]` — never include `eventsSet` (fires every rerender, overwrites click/drag events).
-- Training paces in dashboard are editable inputs. Edited values are sent to `/plan/adapt` as `AdaptPlanRequest` body. Session state keys: `pace_min_{plan_id}_{key}`, `pace_sec_{plan_id}_{key}`.
+- Training paces in dashboard are editable `st.text_input` fields showing `M:SS` format. Session state keys: `pace_{plan_id}_{key}` (e.g. `pace_abc123_easy_pace`). Parsed to seconds when sent to `/plan/adapt`.
+- `/plan/adapt` preserves `plan.accepted` state — never reset it to `False` after adaptation.
 - `adapt_plan()` in `engine/adaptation.py` accepts optional `custom_paces` dict. When provided, manual paces override VDOT auto-calculation.

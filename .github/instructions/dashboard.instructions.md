@@ -35,8 +35,8 @@ Monolithic Streamlit file (~6500 lines). All UI lives here with tab-based naviga
 
 ### Editable Paces
 
-Pace cards (Easy, Marathon, Threshold, Interval) are editable `st.number_input` fields (min + sec columns). Session state keys: `pace_min_{plan_id}_{pace_key}`, `pace_sec_{plan_id}_{pace_key}`. When "Adapt Plan" is clicked, the current input values are collected and sent as JSON body to `/plan/adapt`. If no inputs were changed, body is `None` and the API falls back to VDOT auto-calculation.
+Pace zones (Easy, Marathon, Threshold, Interval) are editable `st.text_input` fields displaying `M:SS` format (e.g. `5:30`). Session state keys: `pace_{plan_id}_{pace_key}` (e.g. `pace_abc123_easy_pace`). When "Adapt Plan" is clicked, the M:SS values are parsed to seconds and sent as JSON body to `/plan/adapt`. If parsing fails or values haven't changed, the API falls back to VDOT auto-calculation. The API preserves `plan.accepted` state on adaptation.
 
 ### Calendar Tab
 
-`st_calendar()` must use `callbacks=["eventClick", "eventChange"]` — do NOT include `eventsSet` (it fires on every rerender since streamlit-calendar 1.3.2 and overwrites click/drag events). Planned workout detail panel shows a color-coded workout type badge from `_WORKOUT_COLORS`.
+`st_calendar()` must use `callbacks=["eventClick", "eventChange"]` — do NOT include `eventsSet` (it fires on every rerender since streamlit-calendar 1.3.2 and overwrites click/drag events). Planned workout detail panel shows a color-coded workout type badge from `_WORKOUT_COLORS`. Calendar event colors and `editable` flag depend on `plan.accepted` — accepted plan events get workout-type colors and are draggable, pending plans are muted grey (`#3E4455`) and non-draggable.

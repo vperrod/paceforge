@@ -19,7 +19,7 @@ Monolithic FastAPI file (~3500 lines). All endpoints live here, grouped by secti
 
 ### `/plan/adapt` Endpoint
 
-Accepts `plan_id` query param + optional `AdaptPlanRequest` JSON body. When body contains pace values (sec/km), those override VDOT auto-calculation in `adapt_plan()`. Otherwise, paces are recalculated from latest fitness data.
+Accepts `plan_id` query param + optional `AdaptPlanRequest` JSON body. When body contains pace values (sec/km), those override VDOT auto-calculation in `adapt_plan()`. Otherwise, paces are recalculated from latest fitness data. **Preserves `plan.accepted` state** — never resets it to `False`.
 | 593 | Garmin endpoints | `/garmin/*` — sync activities, push workouts |
 | 658 | Protected endpoints | Plan generation, profile, activity details |
 | 1505 | Weekly Overview | Weekly training summary/analysis |
