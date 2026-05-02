@@ -1638,8 +1638,9 @@ async def adapt_current_plan(
         if cp:
             custom_paces = cp
     idx = plans.index(plan)
+    was_accepted = plan.accepted
     adapted = adapt_plan(plan, _user_profile[uid], custom_paces=custom_paces)
-    adapted.accepted = False
+    adapted.accepted = was_accepted
     plans[idx] = adapted
     _save_plans(uid)
     return adapted

@@ -4165,13 +4165,16 @@ with tab_plan:
                             st.error(f"Error: {_error_detail(r)}")
         with btn_cols[1]:
             if st.button("Adapt Plan", use_container_width=True, key=f"adapt_{plan_id}"):
-                # Collect manually edited paces from number inputs
+                # Collect manually edited paces from text inputs (M:SS format)
                 _adapt_body: dict = {}
                 for _pk in ["easy_pace", "marathon_pace", "threshold_pace", "interval_pace"]:
-                    _mk = f"pace_min_{plan_id}_{_pk}"
-                    _sk = f"pace_sec_{plan_id}_{_pk}"
-                    if _mk in st.session_state and _sk in st.session_state:
-                        _adapt_body[_pk] = st.session_state[_mk] * 60 + st.session_state[_sk]
+                    _tk = f"pace_{plan_id}_{_pk}"
+                    if _tk in st.session_state:
+                        try:
+                            _parts = st.session_state[_tk].strip().split(":")
+                            _adapt_body[_pk] = int(_parts[0]) * 60 + int(_parts[1])
+                        except (ValueError, IndexError):
+                            pass
                 with st.spinner("Adapting plan based on latest fitness..."):
                     r = requests.post(
                         f"{API_BASE}/plan/adapt?plan_id={plan_id}",
@@ -4218,32 +4221,11 @@ with tab_plan:
                 color = _PACE_COLORS.get(zone, "#10B981")
                 pm, ps = divmod(int(val), 60)
                 with pace_cols[i]:
-                    st.markdown(
-                        f'<div style="text-align:center;margin-bottom:4px;">'
-                        f'<span style="color:{color};font-size:0.7rem;font-weight:600;'
-                        f'text-transform:uppercase;letter-spacing:0.06em;">{zone}</span></div>',
-                        unsafe_allow_html=True,
-                    )
-                    mc1, mc2 = st.columns(2)
-                    with mc1:
-                        new_min = st.number_input(
-                            "min", 0, 15, pm,
-                            key=f"pace_min_{plan_id}_{key}",
-                            label_visibility="collapsed",
-                            help=f"{zone} min/km",
-                        )
-                    with mc2:
-                        new_sec = st.number_input(
-                            "sec", 0, 59, ps,
-                            key=f"pace_sec_{plan_id}_{key}",
-                            label_visibility="collapsed",
-                            help=f"{zone} sec",
-                        )
-                    st.markdown(
-                        f'<div style="text-align:center;font-family:var(--font-mono);'
-                        f'font-size:1.1rem;font-weight:700;color:var(--pf-text);">{new_min}:{new_sec:02d}'
-                        f'<span style="font-size:0.7rem;color:var(--pf-text-secondary);">/km</span></div>',
-                        unsafe_allow_html=True,
+                    st.text_input(
+                        zone,
+                        value=f"{pm}:{ps:02d}",
+                        key=f"pace_{plan_id}_{key}",
+                        help=f"{zone} pace in M:SS per km",
                     )
 
         # ── Weekly Breakdown ──
