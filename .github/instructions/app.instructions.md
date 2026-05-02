@@ -10,6 +10,16 @@ Monolithic FastAPI file (~3500 lines). All endpoints live here, grouped by secti
 | 460 | Admin endpoints | User approval, listing, admin operations |
 | 505 | Request/Response models | Inline Pydantic models for endpoint payloads |
 | 586 | Garmin helpers | `_token_dir_for()`, `_ensure_garmin()` |
+
+### Notable Request Models
+
+- `GeneratePlanRequest` — plan generation with optional custom paces
+- `AdaptPlanRequest` — optional manual pace overrides (easy/marathon/threshold/interval) sent with `/plan/adapt`
+- `AcceptPlanRequest`, `RescheduleRequest`, `MatchWorkoutRequest` — plan lifecycle
+
+### `/plan/adapt` Endpoint
+
+Accepts `plan_id` query param + optional `AdaptPlanRequest` JSON body. When body contains pace values (sec/km), those override VDOT auto-calculation in `adapt_plan()`. Otherwise, paces are recalculated from latest fitness data.
 | 593 | Garmin endpoints | `/garmin/*` — sync activities, push workouts |
 | 658 | Protected endpoints | Plan generation, profile, activity details |
 | 1505 | Weekly Overview | Weekly training summary/analysis |

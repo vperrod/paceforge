@@ -30,3 +30,13 @@ Monolithic Streamlit file (~6500 lines). All UI lives here with tab-based naviga
 - Session state keys: `st.session_state.jwt`, `st.session_state.user_name`, `st.session_state.role`
 - Charts use Plotly (`plotly.graph_objects` / `plotly.express`)
 - New tabs: add name to `tab_names` list (~line 2042), unpack in `st.tabs()`, add `with tab_xxx:` block
+
+## Training Plan Tab
+
+### Editable Paces
+
+Pace cards (Easy, Marathon, Threshold, Interval) are editable `st.number_input` fields (min + sec columns). Session state keys: `pace_min_{plan_id}_{pace_key}`, `pace_sec_{plan_id}_{pace_key}`. When "Adapt Plan" is clicked, the current input values are collected and sent as JSON body to `/plan/adapt`. If no inputs were changed, body is `None` and the API falls back to VDOT auto-calculation.
+
+### Calendar Tab
+
+`st_calendar()` must use `callbacks=["eventClick", "eventChange"]` — do NOT include `eventsSet` (it fires on every rerender since streamlit-calendar 1.3.2 and overwrites click/drag events). Planned workout detail panel shows a color-coded workout type badge from `_WORKOUT_COLORS`.
