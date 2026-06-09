@@ -16,7 +16,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
+from paceforge.ai.cache import AICache
 from paceforge.ai.coach import Coach
+from paceforge.ai.llm_client import LLMClientFactory, ModelTier
 from paceforge.api.config import settings
 from paceforge.auth.database import (
     add_comment,
@@ -97,6 +99,16 @@ _user_garmin: dict[str, GarminClient] = {}
 _user_profile: dict[str, UserFitnessProfile] = {}
 _user_plans: dict[str, list[TrainingPlan]] = {}
 _user_coach: dict[str, Coach] = {}
+
+_llm_factory = LLMClientFactory(
+    anthropic_api_key=settings.anthropic_api_key,
+    anthropic_model=settings.anthropic_model,
+    anthropic_model_cheap=settings.anthropic_model_cheap,
+    openai_api_key=settings.openai_api_key,
+    openai_model=settings.openai_model,
+    provider=settings.llm_provider,
+)
+_ai_cache = AICache(settings.db_path)
 
 
 def _meters_per_sec_to_sec_per_km(speed: float | None) -> float | None:
@@ -897,14 +909,15 @@ async def analyze_activity(activity_id: int, user: dict = Depends(get_current_us
     return {"analysis": analysis}
 
 
-def _get_or_create_coach(uid: str) -> Coach:
-    """Get or create a Coach instance for a user."""
-    if uid not in _user_coach:
-        coach_key = settings.anthropic_api_key or settings.openai_api_key
-        coach_model = settings.anthropic_model if settings.anthropic_api_key else settings.openai_model
-        coach_provider = "anthropic" if settings.anthropic_api_key else "openai"
-        _user_coach[uid] = Coach(api_key=coach_key, model=coach_model, provider=coach_provider)
-    return _user_coach[uid]
+def _get_or_create_coach(uid: str, tier: ModelTier = ModelTier.CHEAP) -> Coach:
+    """Get or create a Coach instance for a user at the specified model tier."""
+    cache_key = f"{uid}:{tier.value}"
+    if cache_key not in _user_coach:
+        provider, key, model = _llm_factory.resolve(tier)
+        _user_coach[cache_key] = Coach(
+            api_key=key, model=model, provider=provider, cache=_ai_cache,
+        )
+    return _user_coach[cache_key]
 
 
 def _extract_compact_splits(completion_metrics: dict | None) -> list[dict] | None:
@@ -1455,38 +1468,17 @@ async def delete_plan(plan_id: str, user: dict = Depends(get_current_user)):
 async def coach_chat(req: ChatRequest, user: dict = Depends(get_current_user)):
     uid = user["id"]
 
-    # Resolve which LLM to use for coaching
-    if settings.llm_provider == "anthropic" and settings.anthropic_api_key:
-        coach_key = settings.anthropic_api_key
-        coach_model = settings.anthropic_model
-        coach_provider = "anthropic"
-    elif settings.llm_provider == "openai" and settings.openai_api_key:
-        coach_key = settings.openai_api_key
-        coach_model = settings.openai_model
-        coach_provider = "openai"
-    elif settings.anthropic_api_key:
-        coach_key = settings.anthropic_api_key
-        coach_model = settings.anthropic_model
-        coach_provider = "anthropic"
-    elif settings.openai_api_key:
-        coach_key = settings.openai_api_key
-        coach_model = settings.openai_model
-        coach_provider = "openai"
-    else:
+    try:
+        provider, coach_key, coach_model = _llm_factory.resolve(ModelTier.CHEAP)
+    except ValueError:
         return ChatResponse(
-            reply=(
-                "AI coaching is not configured. "
-                "Set PACEFORGE_ANTHROPIC_API_KEY or PACEFORGE_OPENAI_API_KEY to enable."
-            )
+            reply="AI coaching is not configured. "
+            "Set PACEFORGE_ANTHROPIC_API_KEY or PACEFORGE_OPENAI_API_KEY to enable."
         )
 
     coach = _user_coach.get(uid)
-    if coach is None or getattr(coach, "_provider", None) != coach_provider:
-        coach = Coach(
-            api_key=coach_key,
-            model=coach_model,
-            provider=coach_provider,
-        )
+    if coach is None or getattr(coach, "_provider", None) != provider:
+        coach = Coach(api_key=coach_key, model=coach_model, provider=provider, cache=_ai_cache)
         _user_coach[uid] = coach
 
     # Load profile/plan from DB if not in memory (mobile web SPA)
@@ -1530,19 +1522,12 @@ def _get_weekly_overview(uid: str, *, force: bool = False) -> dict:
             except (json.JSONDecodeError, TypeError):
                 pass
 
-    # Resolve LLM
-    if settings.llm_provider == "anthropic" and settings.anthropic_api_key:
-        coach_key, coach_model, coach_provider = settings.anthropic_api_key, settings.anthropic_model, "anthropic"
-    elif settings.llm_provider == "openai" and settings.openai_api_key:
-        coach_key, coach_model, coach_provider = settings.openai_api_key, settings.openai_model, "openai"
-    elif settings.anthropic_api_key:
-        coach_key, coach_model, coach_provider = settings.anthropic_api_key, settings.anthropic_model, "anthropic"
-    elif settings.openai_api_key:
-        coach_key, coach_model, coach_provider = settings.openai_api_key, settings.openai_model, "openai"
-    else:
+    try:
+        provider, coach_key, coach_model = _llm_factory.resolve(ModelTier.CHEAP)
+    except ValueError:
         raise HTTPException(503, "AI not configured. Set PACEFORGE_ANTHROPIC_API_KEY or PACEFORGE_OPENAI_API_KEY.")
 
-    coach = Coach(api_key=coach_key, model=coach_model, provider=coach_provider)
+    coach = Coach(api_key=coach_key, model=coach_model, provider=provider, cache=_ai_cache)
 
     # Load profile
     profile = _user_profile.get(uid)
@@ -1892,11 +1877,9 @@ async def ai_review_plan(plan_id: str | None = None, user: dict = Depends(get_cu
         raise HTTPException(400, "No completed workouts to review")
 
     # Build review prompt for coach
-    coach_key = settings.anthropic_api_key or settings.openai_api_key
-    coach_model = settings.anthropic_model if settings.anthropic_api_key else settings.openai_model
-    coach_provider = "anthropic" if settings.anthropic_api_key else "openai"
+    coach_provider, coach_key, coach_model = _llm_factory.resolve(ModelTier.CHEAP)
     if uid not in _user_coach:
-        _user_coach[uid] = Coach(api_key=coach_key, model=coach_model, provider=coach_provider)
+        _user_coach[uid] = Coach(api_key=coach_key, model=coach_model, provider=coach_provider, cache=_ai_cache)
 
     review_prompt = (
         "Review the athlete's completed workouts and provide:\n"
