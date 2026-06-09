@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
+from paceforge.ai.cache import TTL_DIET_PLAN, AICache
 from paceforge.models.plan import TrainingPlan
 from paceforge.models.profile import UserFitnessProfile
 
@@ -51,12 +52,14 @@ class Coach:
         model: str = "gpt-4o-mini",
         base_url: str | None = None,
         provider: str = "openai",
+        cache: AICache | None = None,
     ) -> None:
         self._api_key = api_key
         self._model = model
         self._base_url = base_url
         self._provider = provider
         self._conversation: list[dict[str, str]] = []
+        self._cache = cache
 
     def _build_context(
         self,
@@ -213,6 +216,21 @@ class Coach:
             temperature=0.7,
         )
         return response.content[0].text
+
+    def _cached_chat(self, cache_key: str | None, ttl: int = TTL_DIET_PLAN) -> str:
+        """Chat with optional cache lookup."""
+        if cache_key and self._cache:
+            cached = self._cache.get(cache_key)
+            if cached is not None:
+                logger.debug("Cache hit for %s", cache_key[:12])
+                return cached
+
+        reply = self._chat_anthropic() if self._provider == "anthropic" else self._chat_openai()
+
+        if cache_key and self._cache:
+            self._cache.set(cache_key, reply, model=self._model, ttl_seconds=ttl)
+
+        return reply
 
     def reset_conversation(self) -> None:
         """Clear conversation history for a fresh session."""
@@ -777,11 +795,10 @@ Rules:
             {"role": "user", "content": prompt},
         ]
         try:
-            reply = (
-                self._chat_openai_extended(max_tokens=1500, json_mode=True)
-                if self._provider != "anthropic"
-                else self._chat_anthropic()
-            )
+            cache_key = AICache.make_key(
+                _DIET_SYSTEM_PROMPT, prompt, self._model
+            ) if self._cache else None
+            reply = self._cached_chat(cache_key, ttl=TTL_DIET_PLAN)
         except Exception as e:
             logger.error("Macro plan generation failed: %s", e, exc_info=True)
             reply = _json.dumps({
@@ -937,11 +954,10 @@ Respond with ONLY valid JSON:
             {"role": "user", "content": prompt},
         ]
         try:
-            reply = (
-                self._chat_openai_extended(max_tokens=2500, json_mode=True)
-                if self._provider != "anthropic"
-                else self._chat_anthropic()
-            )
+            cache_key = AICache.make_key(
+                _DIET_SYSTEM_PROMPT, prompt, self._model
+            ) if self._cache else None
+            reply = self._cached_chat(cache_key, ttl=TTL_DIET_PLAN)
         except Exception as e:
             logger.error("Day %d meal generation failed: %s", day_number, e, exc_info=True)
             reply = f'{{"error": "Could not generate day {day_number}: {e}"}}'
