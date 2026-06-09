@@ -13,6 +13,7 @@ import json
 import logging
 from dataclasses import dataclass
 
+from paceforge.ai.cache import TTL_PLAN_GENERATION, AICache
 from paceforge.engine.vdot import TrainingPaces
 from paceforge.models.profile import TrainingGoal, UserFitnessProfile
 
@@ -231,6 +232,7 @@ def generate_blueprint(
     model: str = "gpt-4o-mini",
     provider: str = "openai",
     paces: TrainingPaces | None = None,
+    cache: AICache | None = None,
 ) -> PlanBlueprint:
     """Call the LLM to generate a fully detailed plan blueprint.
 
@@ -252,9 +254,9 @@ def generate_blueprint(
     for attempt in range(3):
         try:
             if provider == "anthropic":
-                raw_text = _call_anthropic(api_key, model, athlete_context)
+                raw_text = _call_anthropic(api_key, model, athlete_context, cache=cache)
             else:
-                raw_text = _call_openai(api_key, model, athlete_context)
+                raw_text = _call_openai(api_key, model, athlete_context, cache=cache)
 
             data = _parse_blueprint_json(raw_text)
             if data is not None:
@@ -341,8 +343,15 @@ def _parse_blueprint_json(raw_text: str) -> dict | None:
 
     return data
 
-def _call_openai(api_key: str, model: str, athlete_context: str) -> str:
-    """Call OpenAI chat completions API."""
+def _call_openai(api_key: str, model: str, athlete_context: str, cache: AICache | None = None) -> str:
+    """Call OpenAI chat completions API with optional caching."""
+    cache_key = AICache.make_key(SYSTEM_PROMPT, athlete_context, model) if cache else None
+    if cache_key and cache:
+        cached = cache.get(cache_key)
+        if cached is not None:
+            logger.info("AI plan cache hit")
+            return cached
+
     from openai import OpenAI
 
     client = OpenAI(api_key=api_key)
@@ -356,11 +365,23 @@ def _call_openai(api_key: str, model: str, athlete_context: str) -> str:
         temperature=0.7,
         max_tokens=16000,
     )
-    return response.choices[0].message.content or "{}"
+    raw = response.choices[0].message.content or "{}"
+
+    if cache_key and cache:
+        cache.set(cache_key, raw, model=model, ttl_seconds=TTL_PLAN_GENERATION)
+
+    return raw
 
 
-def _call_anthropic(api_key: str, model: str, athlete_context: str) -> str:
-    """Call Anthropic Messages API."""
+def _call_anthropic(api_key: str, model: str, athlete_context: str, cache: AICache | None = None) -> str:
+    """Call Anthropic Messages API with optional caching."""
+    cache_key = AICache.make_key(SYSTEM_PROMPT, athlete_context, model) if cache else None
+    if cache_key and cache:
+        cached = cache.get(cache_key)
+        if cached is not None:
+            logger.info("AI plan cache hit")
+            return cached
+
     import anthropic
 
     client = anthropic.Anthropic(api_key=api_key)
@@ -372,4 +393,8 @@ def _call_anthropic(api_key: str, model: str, athlete_context: str) -> str:
         temperature=0.7,
     )
     raw = response.content[0].text
+
+    if cache_key and cache:
+        cache.set(cache_key, raw, model=model, ttl_seconds=TTL_PLAN_GENERATION)
+
     return raw
