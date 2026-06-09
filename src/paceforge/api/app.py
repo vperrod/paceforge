@@ -1784,6 +1784,10 @@ async def analyze_workout_endpoint(req: AnalyzeWorkoutRequest, user: dict = Depe
     if not any(v for v in activity_data.values() if v is not None):
         raise HTTPException(400, "No activity data available \u2014 try syncing activities from Garmin first")
 
+    # Return cached analysis if it exists and no force-refresh requested
+    if workout.completion_analysis and not getattr(req, "force", False):
+        return {"ok": True, "analysis": workout.completion_analysis}
+
     coach = _get_or_create_coach(uid)
 
     profile = _user_profile.get(uid)
