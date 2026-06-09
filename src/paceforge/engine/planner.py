@@ -16,6 +16,7 @@ from pathlib import Path
 
 import yaml
 
+from paceforge.ai.cache import AICache
 from paceforge.engine.vdot import (
     RACE_DISTANCES,
     TrainingPaces,
@@ -117,6 +118,7 @@ def generate_plan(
     anthropic_api_key: str | None = None,
     anthropic_model: str = "claude-sonnet-4-20250514",
     llm_provider: str = "",
+    cache: AICache | None = None,
 ) -> TrainingPlan:
     """Generate a full training plan from a user profile and goal.
 
@@ -165,7 +167,8 @@ def generate_plan(
     if api_key:
         try:
             plan = _generate_ai_plan(profile, goal, paces, api_key, model, provider,
-                                     pace_source=pace_source, athlete_summary=athlete_summary)
+                                     pace_source=pace_source, athlete_summary=athlete_summary,
+                                     cache=cache)
             if plan:
                 return plan
         except Exception as e:
@@ -207,6 +210,7 @@ def _generate_ai_plan(
     *,
     pace_source: str = "",
     athlete_summary: str = "",
+    cache: AICache | None = None,
 ) -> TrainingPlan:
     """Generate a fully AI-designed plan with detailed per-day workouts.
 
@@ -218,7 +222,7 @@ def _generate_ai_plan(
     blueprint = generate_blueprint(
         profile, goal,
         api_key=api_key, model=model, provider=provider,
-        paces=paces,
+        paces=paces, cache=cache,
     )
 
     # Compute plan start
