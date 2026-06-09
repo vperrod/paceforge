@@ -210,6 +210,9 @@ async def lifespan(app: FastAPI):
         if deleted:
             logger.info("Cleaned up %d junk feed events from broken code", deleted)
         conn.commit()
+    removed = _ai_cache.cleanup()
+    if removed:
+        logger.info("Cleaned %d expired AI cache entries", removed)
     yield
 
 
