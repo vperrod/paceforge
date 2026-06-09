@@ -208,10 +208,15 @@ class Coach:
                 system_parts.append(msg["content"])
             else:
                 messages.append(msg)
+        # Prompt caching: 90% input token discount on repeated system prompts
+        system_text = "\n\n".join(system_parts)
+        system_with_cache = [
+            {"type": "text", "text": system_text, "cache_control": {"type": "ephemeral"}},
+        ]
         response = client.messages.create(
             model=self._model,
             max_tokens=1000,
-            system="\n\n".join(system_parts),
+            system=system_with_cache,
             messages=messages,
             temperature=0.7,
         )

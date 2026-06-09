@@ -385,10 +385,14 @@ def _call_anthropic(api_key: str, model: str, athlete_context: str, cache: AICac
     import anthropic
 
     client = anthropic.Anthropic(api_key=api_key)
+    # Prompt caching: 90% input token discount on repeated system prompts
+    system_with_cache = [
+        {"type": "text", "text": SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}},
+    ]
     response = client.messages.create(
         model=model,
         max_tokens=16000,
-        system=SYSTEM_PROMPT,
+        system=system_with_cache,
         messages=[{"role": "user", "content": athlete_context}],
         temperature=0.7,
     )

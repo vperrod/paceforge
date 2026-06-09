@@ -1512,35 +1512,7 @@ def _get_weekly_overview(uid: str, *, force: bool = False) -> dict:
     today = date.today()
     monday = today - timedelta(days=today.weekday())
 
-    # Check cache
-    if not force:
-        cached = load_user_data(settings.db_path, uid)
-        if cached and cached.get("weekly_overview_json"):
-            try:
-                overview = json.loads(cached["weekly_overview_json"])
-                cached_monday = overview.get("week_start")
-                cached_date = overview.get("generated_at", "")[:10]
-                if cached_monday == monday.isoformat() and cached_date == today.isoformat():
-                    return overview
-            except (json.JSONDecodeError, TypeError):
-                pass
-
-    try:
-        provider, coach_key, coach_model = _llm_factory.resolve(ModelTier.CHEAP)
-    except ValueError:
-        raise HTTPException(503, "AI not configured. Set PACEFORGE_ANTHROPIC_API_KEY or PACEFORGE_OPENAI_API_KEY.")
-
-    coach = Coach(api_key=coach_key, model=coach_model, provider=provider, cache=_ai_cache)
-
-    # Load profile
-    profile = _user_profile.get(uid)
-    if not profile:
-        cached_data = load_user_data(settings.db_path, uid)
-        if cached_data and cached_data.get("profile_json"):
-            profile = UserFitnessProfile.model_validate_json(cached_data["profile_json"])
-            _user_profile[uid] = profile
-
-    # Load activities and filter to this week
+    # Load activities for this week (needed for both cache check and generation)
     week_activities: list[dict] = []
     cached_data = load_user_data(settings.db_path, uid)
     if cached_data and cached_data.get("activities_json"):
@@ -1555,6 +1527,36 @@ def _get_weekly_overview(uid: str, *, force: bool = False) -> dict:
                         week_activities.append(act)
         except (json.JSONDecodeError, TypeError):
             pass
+
+    # Check cache — skip re-analysis if same week AND no new activities since last run
+    if not force:
+        cached = cached_data
+        if cached and cached.get("weekly_overview_json"):
+            try:
+                overview = json.loads(cached["weekly_overview_json"])
+                cached_monday = overview.get("week_start")
+                cached_activity_count = overview.get("activity_count", -1)
+                if (
+                    cached_monday == monday.isoformat()
+                    and cached_activity_count == len(week_activities)
+                ):
+                    return overview
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+    try:
+        provider, coach_key, coach_model = _llm_factory.resolve(ModelTier.CHEAP)
+    except ValueError:
+        raise HTTPException(503, "AI not configured. Set PACEFORGE_ANTHROPIC_API_KEY or PACEFORGE_OPENAI_API_KEY.")
+
+    coach = Coach(api_key=coach_key, model=coach_model, provider=provider, cache=_ai_cache)
+
+    # Load profile
+    profile = _user_profile.get(uid)
+    if not profile:
+        if cached_data and cached_data.get("profile_json"):
+            profile = UserFitnessProfile.model_validate_json(cached_data["profile_json"])
+            _user_profile[uid] = profile
 
     # Load plan
     if uid not in _user_plans:
@@ -1579,6 +1581,7 @@ def _get_weekly_overview(uid: str, *, force: bool = False) -> dict:
     overview = {
         "week_start": monday.isoformat(),
         "generated_at": datetime.now(UTC).isoformat(),
+        "activity_count": len(week_activities),
         "content": sections,
     }
 
@@ -2980,6 +2983,7 @@ async def save_diet_profile(req: DietProfileRequest, user: dict = Depends(get_cu
 @app.post("/diet/generate")
 async def generate_nutrition_plan(user: dict = Depends(get_current_user)):
     """Generate AI nutrition analysis with macro targets (no meals)."""
+    raise HTTPException(503, "Diet AI features are temporarily disabled to reduce API costs")
     uid = user["id"]
     data = _load_diet_data(uid)
 
@@ -3056,6 +3060,7 @@ async def get_diet_plan(user: dict = Depends(get_current_user)):
 @app.post("/diet/generate-day")
 async def generate_day_meals(user: dict = Depends(get_current_user)):
     """Generate a single day's meals on demand."""
+    raise HTTPException(503, "Diet AI features are temporarily disabled to reduce API costs")
     uid = user["id"]
     data = _load_diet_data(uid)
 
@@ -3196,6 +3201,7 @@ async def regenerate_single_meal(
     user: dict = Depends(get_current_user),
 ):
     """Regenerate a single meal in a generated day."""
+    raise HTTPException(503, "Diet AI features are temporarily disabled to reduce API costs")
     uid = user["id"]
     data = _load_diet_data(uid)
     if not data.active_plan:
