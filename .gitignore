@@ -50,3 +50,4 @@ mobile/.expo/
 mobile/dist/
 mobile/*.tsbuildinfo
 CLAUDE_PROJECT_CONTEXT.md
+.venv/

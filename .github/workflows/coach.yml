@@ -1,0 +1,54 @@
+name: coach
+
+# Claude as the coach. Weekly auto-review (cron) + on-demand actions you trigger
+# from github.com (Run workflow → type an instruction, e.g. "reschedule Thursday's
+# tempo to Saturday"). Runs on your Claude subscription token — no LLM API bill.
+on:
+  schedule:
+    - cron: "0 7 * * 1"  # Monday 07:00 UTC — weekly review
+  workflow_dispatch:
+    inputs:
+      instruction:
+        description: "What should the coach do?"
+        required: false
+        default: "Review last week and write week-review.md."
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: paceforge-data
+  cancel-in-progress: false
+
+jobs:
+  coach:
+    runs-on: ubuntu-latest
+    env:
+      PACEFORGE_GARMIN_EMAIL: ${{ secrets.PACEFORGE_GARMIN_EMAIL }}
+      GARMIN_TOKEN: ${{ secrets.GARMIN_TOKEN }}
+      STRAVA_CLIENT_ID: ${{ secrets.STRAVA_CLIENT_ID }}
+      STRAVA_CLIENT_SECRET: ${{ secrets.STRAVA_CLIENT_SECRET }}
+      STRAVA_REFRESH_TOKEN: ${{ secrets.STRAVA_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: pip install -e .
+
+      - name: Sync from Garmin
+        run: paceforge sync || echo "sync failed — continuing with existing data"
+
+      - name: Run coach
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            Use the coach skill in .claude/skills/coach/.
+            Task: ${{ github.event.inputs.instruction || 'Review last week and write week-review.md.' }}
+            Then run `paceforge validate`, regenerate plan.md if the plan changed, and
+            commit any changes to data/, plan.md, and week-review.md.

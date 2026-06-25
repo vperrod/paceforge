@@ -1,43 +1,53 @@
 # PaceForge
 
-AI-enhanced running plan generator for Garmin watches. Python 3.11+ / FastAPI / Streamlit / Expo React Native.
+A single-user, serverless running coach. No backend, no database, no LLM API
+key — **Claude is the coach** (see `.claude/skills/coach/`), the `paceforge`
+Python package does the deterministic maths and the Garmin/Strava I/O, and
+`data/*.json` (git-tracked) is the only state.
 
 ## Commands
 
 ```bash
-pip install -e ".[dev]"              # Install with dev deps
-ruff check src/ tests/               # Lint (must pass before commit)
-pytest tests/ -x --tb=short          # Tests (must pass before push)
-uvicorn paceforge.api.app:app --reload   # API on :8000
-streamlit run src/paceforge/dashboard.py # Dashboard on :8501
-cd mobile && npm ci && npx expo start    # Mobile app
+python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"   # one-time setup
+.venv/bin/ruff check src/ tests/        # lint (must pass before commit)
+.venv/bin/pytest tests/ -q              # tests (must pass before push)
+
+.venv/bin/paceforge login               # one-time Garmin auth (MFA) → GARMIN_TOKEN
+.venv/bin/paceforge sync                # Garmin metrics+activities → data/*.json
+.venv/bin/paceforge analyze             # full analytics over the stored profile
+.venv/bin/paceforge plan --goal MARATHON --date 2026-10-04 --level intermediate
+.venv/bin/paceforge validate            # check data/plan.json against the rules
+.venv/bin/paceforge push [--week N] [--dry-run]   # upload a plan week to Garmin
+.venv/bin/paceforge-mcp                 # stdio MCP server (Claude desktop app)
 ```
 
 ## Architecture
 
-- **`api/app.py`** — monolithic FastAPI (~3500 lines). All endpoints in one file, grouped by `# ── Section ──` comments. Auth via `Depends(get_current_user)` on every protected endpoint.
-- **`dashboard.py`** — monolithic Streamlit (~6500 lines). 8 tabs + admin panel. API calls via `requests` to `http://localhost:8000` with `_auth_headers()`.
-- **`auth/database.py`** — SQLite with thread lock, WAL mode. User data stored as JSON blobs. Migrations via `ALTER TABLE ADD COLUMN` with `try/except`.
-- **`ai/coach.py`** — LLM integration (gpt-4o-mini). JSON responses parsed with `json.loads()` + `json_repair` fallback. Always validate/backfill AI output.
-- **`engine/`** — VDOT calculator, plan generator, workout templates.
-- **`models/`** — Pydantic v2 models. Use `model_dump(mode="json")` / `model_validate_json()`.
-- **`mobile/`** — Expo SDK 54 / React Native app (TypeScript).
+- **`data/*.json`** — the database. `profile.json` (UserFitnessProfile),
+  `plan.json` (TrainingPlan), `activities.json` (list). Git is the history.
+  Override the dir with `PACEFORGE_DATA_DIR`.
+- **`store.py`** — load/save the JSON files via Pydantic. No DB.
+- **`actions.py`** — all behaviour (sync, scaffold, analyze, validate, push,
+  status, strava, Garmin auth). The CLI and MCP server are thin wrappers over it.
+- **`cli.py`** / **`mcp_server.py`** — two entrypoints, same logic.
+- **`engine/`** — VDOT maths (`vdot.py`), workout factory (`workouts.py`),
+  template planner (`planner.py`, LLM-free), `adaptation.py`, `analytics.py`
+  (the health/running analysis), and `validate.py` (plan rule checks).
+- **`garmin/client.py`** — reads metrics, uploads structured workouts (`garth`).
+- **`strava/client.py`** — OAuth + activity push.
+- **`hyrox/`** — race-result analyzer vs field benchmarks.
+
+## The AI / validation split
+Deterministic facts stay in code; judgement is Claude's. Claude **proposes** a
+plan (guided by the coach skill), `engine/validate.py` **checks** it. Never ask
+the model to compute paces a formula does exactly — scaffold with
+`paceforge plan`, then personalise and re-validate.
+
+## Auth & secrets (env)
+`PACEFORGE_GARMIN_EMAIL`, `GARMIN_TOKEN` (base64 token from `paceforge login`),
+`PACEFORGE_GARMIN_TOKEN_DIR` (default `~/.garminconnect`),
+`STRAVA_CLIENT_ID` / `STRAVA_CLIENT_SECRET` / `STRAVA_REFRESH_TOKEN`. None are committed.
 
 ## Style
-
-- Ruff, 100-char line length. See `pyproject.toml` `[tool.ruff.lint]` for rules.
-- `from __future__ import annotations` at top of every module.
-- `contextlib.suppress()` over bare `try/except/pass`.
-- Commit messages: `area: short description` (e.g. `diet: backfill missing meal types`).
-
-## Gotchas
-
-- `app.py` and `dashboard.py` are very large single files. Navigate by section headers.
-- AI/LLM output is unreliable — always backfill missing fields, never trust counts.
-- SQLite `user_data` columns are JSON blobs (`plan_json`, `activities_json`, `diet_json`, `health_json`, etc.).
-- `.db` files are gitignored. Docker uses `/home/data/paceforge.db` for persistence.
-- `E402` import rule is ignored — some imports are deferred after config setup.
-- `streamlit-calendar`: must pass `callbacks=["eventClick", "eventChange"]` — never include `eventsSet` (fires every rerender, overwrites click/drag events).
-- Training paces in dashboard are editable `st.text_input` fields showing `M:SS` format. Session state keys: `pace_{plan_id}_{key}` (e.g. `pace_abc123_easy_pace`). Parsed to seconds when sent to `/plan/adapt`.
-- `/plan/adapt` preserves `plan.accepted` state — never reset it to `False` after adaptation.
-- `adapt_plan()` in `engine/adaptation.py` accepts optional `custom_paces` dict. When provided, manual paces override VDOT auto-calculation.
+- Ruff, 100-char lines (see `pyproject.toml`). `from __future__ import annotations` at top.
+- Named exports, verb-first functions. Commit messages: `area: short description`.

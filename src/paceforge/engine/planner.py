@@ -8,7 +8,6 @@ Supports two modes:
 
 from __future__ import annotations
 
-import contextlib
 import logging
 import uuid
 from datetime import date, timedelta
@@ -16,7 +15,6 @@ from pathlib import Path
 
 import yaml
 
-from paceforge.ai.cache import AICache
 from paceforge.engine.vdot import (
     RACE_DISTANCES,
     TrainingPaces,
@@ -112,18 +110,12 @@ _FOCUS_TAPER = [
 def generate_plan(
     profile: UserFitnessProfile,
     goal: TrainingGoal,
-    *,
-    openai_api_key: str | None = None,
-    openai_model: str = "gpt-4o-mini",
-    anthropic_api_key: str | None = None,
-    anthropic_model: str = "claude-sonnet-4-20250514",
-    llm_provider: str = "",
-    cache: AICache | None = None,
 ) -> TrainingPlan:
-    """Generate a full training plan from a user profile and goal.
+    """Generate a deterministic template-based training plan.
 
-    Uses AI Plan Architect when an LLM API key is available.
-    Falls back to template-based generation only if no key is configured.
+    Derives training paces from the athlete's metrics and fills a periodised
+    template. Smart/adaptive plan design is done by Claude separately (guided by
+    the coach skill) and checked by ``engine.validate.validate_plan``.
     """
 
     # 1. Determine training paces
@@ -158,277 +150,8 @@ def generate_plan(
     # Build athlete summary for plan context
     athlete_summary = _build_athlete_summary(profile, pace_source)
 
-    # 2. Resolve LLM provider and key
-    provider, api_key, model = _resolve_llm(
-        llm_provider, openai_api_key, openai_model, anthropic_api_key, anthropic_model,
-    )
-
-    # 3. Try AI-powered plan generation
-    if api_key:
-        try:
-            plan = _generate_ai_plan(profile, goal, paces, api_key, model, provider,
-                                     pace_source=pace_source, athlete_summary=athlete_summary,
-                                     cache=cache)
-            if plan:
-                return plan
-        except Exception as e:
-            logger.error("AI plan generation failed (%s/%s): %s", provider, model, e, exc_info=True)
-            raise  # Let the caller see the real error
-
-    # 4. Fallback: template-based generation (no API key configured)
-    logger.info("No LLM API key configured — using template plan")
+    # 2. Fill the periodised template with derived paces.
     return _generate_template_plan(profile, goal, paces, pace_source=pace_source, athlete_summary=athlete_summary)
-
-
-def _resolve_llm(
-    llm_provider: str,
-    openai_api_key: str | None,
-    openai_model: str,
-    anthropic_api_key: str | None,
-    anthropic_model: str,
-) -> tuple[str, str | None, str]:
-    """Return (provider, api_key, model) based on config and available keys."""
-    if llm_provider == "anthropic" and anthropic_api_key:
-        return "anthropic", anthropic_api_key, anthropic_model
-    if llm_provider == "openai" and openai_api_key:
-        return "openai", openai_api_key, openai_model
-    # Auto-detect: prefer anthropic if key is available
-    if anthropic_api_key:
-        return "anthropic", anthropic_api_key, anthropic_model
-    if openai_api_key:
-        return "openai", openai_api_key, openai_model
-    return "none", None, ""
-
-
-def _generate_ai_plan(
-    profile: UserFitnessProfile,
-    goal: TrainingGoal,
-    paces: TrainingPaces | None,
-    api_key: str,
-    model: str,
-    provider: str = "openai",
-    *,
-    pace_source: str = "",
-    athlete_summary: str = "",
-    cache: AICache | None = None,
-) -> TrainingPlan:
-    """Generate a fully AI-designed plan with detailed per-day workouts.
-
-    The AI creates every workout with specific paces, distances, steps,
-    and coaching notes — producing unique, non-repetitive training plans.
-    """
-    from paceforge.engine.ai_planner import generate_blueprint
-
-    blueprint = generate_blueprint(
-        profile, goal,
-        api_key=api_key, model=model, provider=provider,
-        paces=paces, cache=cache,
-    )
-
-    # Compute plan start
-    if goal.start_date:
-        plan_start = goal.start_date
-        plan_start = plan_start - timedelta(days=plan_start.weekday())
-    else:
-        plan_start = goal.target_date - timedelta(weeks=blueprint.total_weeks)
-        plan_start = plan_start - timedelta(days=plan_start.weekday())
-
-    _DAY_OFFSETS = {
-        "monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3,
-        "friday": 4, "saturday": 5, "sunday": 6,
-    }
-
-    weeks: list[TrainingWeek] = []
-    for wk_data in blueprint.weeks:
-        wk_num = wk_data.get("week_number", len(weeks) + 1)
-        wk_idx = wk_num - 1
-        week_start = plan_start + timedelta(weeks=wk_idx)
-        phase = wk_data.get("phase", "Build")
-        focus = wk_data.get("focus", "")
-
-        ai_workouts = wk_data.get("workouts", [])
-        workouts: list[Workout] = []
-
-        # Build set of days the AI assigned workouts to
-        ai_days: set[str] = set()
-        for wk_wo in ai_workouts:
-            day_name = wk_wo.get("day", "").lower()
-            ai_days.add(day_name)
-
-        # Generate 7-day week: AI workouts on assigned days, rest on others
-        all_days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
-        for day_name in all_days:
-            workout_date = week_start + timedelta(days=_DAY_OFFSETS[day_name])
-
-            # Find AI workout for this day
-            ai_wo = next((w for w in ai_workouts if w.get("day", "").lower() == day_name), None)
-
-            if ai_wo:
-                workout = _parse_ai_workout(ai_wo, paces, workout_date)
-            else:
-                workout = Workout(
-                    workout_type=WorkoutType.REST,
-                    name="Rest Day",
-                    scheduled_date=workout_date,
-                )
-            workouts.append(workout)
-
-        actual_km = round(sum(
-            (w.estimated_distance_meters or 0) / 1000
-            for w in workouts
-            if w.workout_type != WorkoutType.REST
-        ), 1)
-
-        weeks.append(TrainingWeek(
-            week_number=wk_num,
-            phase=phase,
-            total_distance_km=actual_km,
-            workouts=workouts,
-            focus=focus,
-        ))
-
-    return TrainingPlan(
-        plan_id=str(uuid.uuid4())[:8],
-        name=blueprint.plan_name,
-        goal_type=goal.goal_type.value,
-        target_date=goal.target_date,
-        target_time_seconds=goal.target_time_seconds,
-        total_weeks=blueprint.total_weeks,
-        weeks=weeks,
-        easy_pace=paces.easy_low if paces else None,
-        marathon_pace=paces.marathon if paces else None,
-        threshold_pace=paces.threshold if paces else None,
-        interval_pace=paces.interval if paces else None,
-        repetition_pace=paces.repetition if paces else None,
-        vdot=paces.vdot if paces else None,
-        pace_source=pace_source,
-        rationale=blueprint.rationale,
-        tips=blueprint.tips,
-        athlete_summary=athlete_summary,
-    )
-
-
-def _parse_ai_workout(
-    ai_wo: dict,
-    paces: TrainingPaces | None,
-    workout_date: date,
-) -> Workout:
-    """Parse an AI-generated workout dict into a Workout model."""
-    # Map workout_type string to enum
-    wtype_str = ai_wo.get("workout_type", "easy_run").lower()
-    try:
-        wtype = WorkoutType(wtype_str)
-    except ValueError:
-        # Map common AI variations
-        _TYPE_MAP = {
-            "easy": WorkoutType.EASY_RUN,
-            "long": WorkoutType.LONG_RUN,
-            "interval": WorkoutType.INTERVALS,
-            "vo2_max": WorkoutType.VO2MAX,
-            "vo2": WorkoutType.VO2MAX,
-            "threshold_cruise": WorkoutType.THRESHOLD,
-            "cruise_intervals": WorkoutType.THRESHOLD,
-            "hill_repeats": WorkoutType.HILLS,
-            "hill": WorkoutType.HILLS,
-            "speed_work": WorkoutType.SPEED,
-            "race": WorkoutType.RACE_PACE,
-            "recovery": WorkoutType.RECOVERY,
-        }
-        wtype = _TYPE_MAP.get(wtype_str, WorkoutType.EASY_RUN)
-
-    # Map purpose string to enum
-    purpose = None
-    purpose_str = ai_wo.get("purpose", "")
-    if purpose_str:
-        with contextlib.suppress(ValueError):
-            purpose = TrainingPurpose(purpose_str)
-
-    # Parse steps
-    steps: list[WorkoutStep] = []
-    for step_data in ai_wo.get("steps", []):
-        steps.extend(_parse_ai_step(step_data, paces))
-
-    dist_km = ai_wo.get("estimated_distance_km", 0)
-    dur_min = ai_wo.get("estimated_duration_minutes", 0)
-
-    return Workout(
-        workout_type=wtype,
-        name=ai_wo.get("name", "Workout"),
-        description=ai_wo.get("description", ""),
-        scheduled_date=workout_date,
-        estimated_distance_meters=round(dist_km * 1000) if dist_km else None,
-        estimated_duration_seconds=round(dur_min * 60) if dur_min else None,
-        steps=steps,
-        notes=ai_wo.get("notes", ""),
-        purpose=purpose,
-    )
-
-
-def _parse_ai_step(step_data: dict, paces: TrainingPaces | None) -> list[WorkoutStep]:
-    """Parse a single AI step dict into WorkoutStep(s).
-
-    Handles repeat_count by creating a repeat group step.
-    """
-    try:
-        stype = WorkoutStepType(step_data.get("step_type", "active").lower())
-    except ValueError:
-        stype = WorkoutStepType.ACTIVE
-
-    # Resolve pace from zone name
-    pace_zone = step_data.get("pace_zone", "")
-    pace_low, pace_high = _resolve_pace_zone(pace_zone, paces)
-
-    dist_km = step_data.get("distance_km")
-    dur_min = step_data.get("duration_minutes")
-
-    base_step = WorkoutStep(
-        step_type=stype,
-        description=step_data.get("description", ""),
-        distance_meters=round(dist_km * 1000) if dist_km else None,
-        duration_seconds=round(dur_min * 60) if dur_min else None,
-        target_type=IntensityTarget.PACE if pace_low else IntensityTarget.OPEN,
-        target_low=pace_low,
-        target_high=pace_high,
-    )
-
-    repeat_count = step_data.get("repeat_count")
-    if repeat_count and repeat_count > 1:
-        # Create a repeat group: N × (interval + recovery)
-        recovery_step = WorkoutStep(
-            step_type=WorkoutStepType.RECOVERY,
-            description="Recovery jog",
-            duration_seconds=step_data.get("recovery_seconds", 90),
-            target_type=IntensityTarget.OPEN,
-        )
-        return [WorkoutStep(
-            step_type=WorkoutStepType.INTERVAL,
-            description=f"{repeat_count}× {base_step.description}",
-            repeat_count=repeat_count,
-            steps=[base_step, recovery_step],
-        )]
-
-    return [base_step]
-
-
-def _resolve_pace_zone(
-    zone: str,
-    paces: TrainingPaces | None,
-) -> tuple[float | None, float | None]:
-    """Convert a pace zone name to (low, high) sec/km values."""
-    if not paces or not zone:
-        return None, None
-    zone = zone.lower().strip()
-    if zone == "easy":
-        return paces.easy_low, paces.easy_high
-    elif zone == "marathon":
-        return paces.marathon - 3, paces.marathon + 3
-    elif zone == "threshold":
-        return paces.threshold - 3, paces.threshold + 3
-    elif zone in ("interval", "vo2max"):
-        return paces.interval - 3, paces.interval + 3
-    elif zone in ("repetition", "rep", "speed"):
-        return paces.repetition - 3, paces.repetition + 3
-    return None, None
 
 
 def _get_peak_km(goal_type: str, level: str) -> float:
