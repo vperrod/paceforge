@@ -28,6 +28,7 @@ from paceforge.models.profile import (
     RecentActivity,
     UserFitnessProfile,
 )
+from paceforge.engine.analytics import _normalize_lt_speed
 
 logger = logging.getLogger(__name__)
 
@@ -295,7 +296,9 @@ class GarminClient:
                 shr = lt_data.get("speed_and_heart_rate") or lt_data.get("speedAndHeartRate") or {}
                 if isinstance(shr, dict):
                     lt_hr = shr.get("heartRate")
-                    lt_speed = shr.get("speed")  # m/s
+                    # Garmin returns LT speed in inconsistent units — normalize to m/s
+                    # at ingestion so the stored profile is correct everywhere.
+                    lt_speed = _normalize_lt_speed(shr.get("speed"))
         except Exception:
             logger.warning("Could not fetch lactate threshold", exc_info=True)
 
@@ -565,8 +568,10 @@ class GarminClient:
             garmin_display_name=stats.get("displayName"),
             vo2_max=vo2,
             resting_hr=hr_data.get("restingHeartRate"),
+            # Ignore sensor-glitch spikes (e.g. a 230 bpm cadence-lock) when taking
+            # the observed max — they corrupt HR-zone and training-load maths downstream.
             max_hr=max(
-                (a.max_hr for a in activities if a.max_hr),
+                (a.max_hr for a in activities if a.max_hr and a.max_hr <= 210),
                 default=None,
             ) or hr_data.get("maxHeartRate") or stats.get("maxAvgHeartRate"),
             hr_zones=zones,
