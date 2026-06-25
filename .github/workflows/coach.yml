@@ -63,11 +63,13 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Owner-gated CI job — let the coach actually run paceforge/git and write files.
+          claude_args: '--allowedTools "Bash,Read,Write,Edit,MultiEdit,Glob,Grep,TodoWrite"'
           prompt: |
             Use the coach skill in .claude/skills/coach/.
             The athlete's request is in the COACH_TASK environment variable — read it and do it.
             Then run `paceforge validate`, regenerate plan.md if the plan changed, and
-            commit any changes to data/, plan.md, and week-review.md.
+            commit any changes to data/, plan.md, and week-review.md and push to master.
 
       - name: Acknowledge the issue
         if: github.event_name == 'issues'
