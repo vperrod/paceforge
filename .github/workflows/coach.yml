@@ -69,6 +69,10 @@ jobs:
             Then run `paceforge validate`, regenerate plan.md if the plan changed, and
             commit any changes to data/, plan.md, and week-review.md.
 
+      - name: Debug — surface the Claude execution result
+        if: always()
+        run: cat "${RUNNER_TEMP}/claude-execution-output.json" 2>/dev/null | tail -c 4000 || echo "no execution output file"
+
       - name: Acknowledge the issue
         if: github.event_name == 'issues'
         env:
