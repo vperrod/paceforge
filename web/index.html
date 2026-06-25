@@ -1636,11 +1636,15 @@ async function renderCalendar(page) {
     (calEntries[d] ||= []).push({ type:'activity', title: act.name || act.activity_type || 'Activity', sub, color: isRun ? 'var(--emerald)' : 'var(--violet)', activity: act });
   }
 
+  const todayISO = new Date().toISOString().slice(0, 10);
   if (plan && plan.accepted) {
     for (const w of plan.weeks || []) {
       for (const wo of w.workouts || []) {
         if (!wo.scheduled_date) continue;
         const matchedAct = (wo.matched_activity_ids || []).map(id => actById[id]).find(Boolean) || null;
+        // A past planned workout that wasn't completed is noise next to the actual
+        // activities — show planned entries only for today and upcoming days.
+        if (!matchedAct && wo.scheduled_date < todayISO) continue;
         const distKm = wo.estimated_distance_meters ? (wo.estimated_distance_meters/1000).toFixed(1) + ' km' : '';
         let sub = [wo.workout_type?.replace(/_/g,' '), distKm].filter(Boolean).join(' · ');
         if (matchedAct && matchedAct.distance_meters && matchedAct.duration_seconds) {
