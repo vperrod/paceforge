@@ -45,7 +45,7 @@ jobs:
         run: |
           mkdir -p _site/data
           cp web/index.html _site/index.html
-          cp data/*.json _site/data/
+          cp -r data/. _site/data/   # includes details/ + analyses/ subdirs
 
       - uses: actions/upload-pages-artifact@v3
         with:

@@ -24,6 +24,8 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("login", help="one-time Garmin login (handles MFA)")
     p_sync = sub.add_parser("sync", help="pull Garmin metrics + activities")
     p_sync.add_argument("--lookback-days", type=int, default=90)
+    p_sync.add_argument("--details", type=int, default=40,
+                        help="fetch splits for the N most recent activities (0 to skip)")
     p_plan = sub.add_parser("plan", help="scaffold a deterministic baseline plan")
     p_plan.add_argument("--goal", required=True,
                         choices=["5K", "10K", "HALF_MARATHON", "MARATHON", "HYROX"])
@@ -51,7 +53,7 @@ def main(argv: list[str] | None = None) -> int:
             print(token)
             return 0
         if args.cmd == "sync":
-            _emit(actions.sync(lookback_days=args.lookback_days))
+            _emit(actions.sync(lookback_days=args.lookback_days, details_limit=args.details))
         elif args.cmd == "plan":
             _emit(actions.scaffold({
                 "goal_type": args.goal,

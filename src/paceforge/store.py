@@ -80,3 +80,23 @@ def save_activities(activities: list[RecentActivity]) -> None:
     merged = sorted(by_id.values(), key=lambda a: str(a.start_time or ""), reverse=True)
     payload = json.dumps([a.model_dump(mode="json") for a in merged], indent=2)
     _write(_path("activities.json"), payload)
+
+
+# ── Per-activity detail (splits/HR/weather for the web charts) ────────
+
+
+def _detail_path(activity_id: int | str) -> Path:
+    return _path("details") / f"{activity_id}.json"
+
+
+def has_detail(activity_id: int | str) -> bool:
+    return _detail_path(activity_id).exists()
+
+
+def load_detail(activity_id: int | str) -> dict | None:
+    p = _detail_path(activity_id)
+    return json.loads(p.read_text()) if p.exists() else None
+
+
+def save_detail(activity_id: int | str, detail: dict) -> None:
+    _write(_detail_path(activity_id), json.dumps(detail, indent=2, default=str))

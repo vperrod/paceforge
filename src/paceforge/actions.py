@@ -14,6 +14,7 @@ from __future__ import annotations
 import base64
 import getpass
 import io
+import logging
 import os
 import tarfile
 from datetime import date
@@ -24,6 +25,8 @@ from paceforge.engine.analytics import compute_all
 from paceforge.engine.validate import validate_plan
 from paceforge.garmin.client import GarminClient
 from paceforge.models.plan import TrainingPlan, TrainingWeek
+
+logger = logging.getLogger(__name__)
 
 # ── Garmin auth ──────────────────────────────────────────────────────
 
@@ -80,19 +83,92 @@ def login() -> str:
 # ── Sync / analyse / push ────────────────────────────────────────────
 
 
-def sync(lookback_days: int = 90) -> dict:
-    """Pull metrics + activities from Garmin into data/*.json."""
+def sync(lookback_days: int = 90, details_limit: int = 40) -> dict:
+    """Pull metrics + activities from Garmin into data/*.json (+ recent splits)."""
     client = garmin_connect()
     profile = client.get_fitness_profile(lookback_days=lookback_days)
     store.save_profile(profile)
     store.save_activities(profile.recent_activities)
+    new_details = _sync_details(client, limit=details_limit)
     return {
         "vo2_max": profile.vo2_max,
         "training_readiness": profile.training_readiness,
         "hrv_status": profile.hrv_status,
         "training_status": profile.training_status,
         "activities": len(profile.recent_activities),
+        "new_details": new_details,
     }
+
+
+def _trim_detail(detail: dict) -> dict:
+    """Reduce a raw ``get_activity_detail`` blob to the lean shape the web charts use."""
+    out: dict = {"activity_id": detail.get("activity_id")}
+
+    splits = detail.get("splits") or {}
+    laps = splits.get("lapDTOs") if isinstance(splits, dict) else (
+        splits if isinstance(splits, list) else [])
+    segs = []
+    for i, lap in enumerate(laps or [], start=1):
+        if not isinstance(lap, dict):
+            continue
+        dist = lap.get("distance") or 0
+        dur = lap.get("duration") or lap.get("movingDuration") or 0
+        segs.append({
+            "n": i,
+            "distance_m": round(dist, 1) if dist else None,
+            "duration_s": round(dur, 1) if dur else None,
+            "pace_sec": round(dur / (dist / 1000), 1) if dist and dur else None,
+            "avg_hr": lap.get("averageHR"),
+            "max_hr": lap.get("maxHR"),
+            "elev_gain": lap.get("elevationGain"),
+            "avg_cadence": (lap.get("averageRunCadence")
+                            or lap.get("averageRunningCadenceInStepsPerMinute")),
+        })
+    out["splits"] = segs
+
+    hz = detail.get("hr_zones")
+    if isinstance(hz, list):
+        out["hr_zones"] = [
+            {"zone": z.get("zoneNumber"), "secs": z.get("secsInZone")}
+            for z in hz if isinstance(z, dict)
+        ]
+
+    w = detail.get("weather")
+    if isinstance(w, dict) and w:
+        wt = w.get("weatherTypeDTO") if isinstance(w.get("weatherTypeDTO"), dict) else {}
+        out["weather"] = {
+            "temp_c": w.get("temp"),
+            "feels_c": w.get("apparentTemp"),
+            "humidity": w.get("relativeHumidity"),
+            "desc": wt.get("desc"),
+        }
+    return out
+
+
+def _sync_details(client: GarminClient, limit: int = 40) -> int:
+    """Fetch + store per-activity splits for the recent ``limit`` activities plus any
+    matched by the current plan. Incremental (skips stored ids); best-effort per
+    activity so one bad fetch never fails the whole sync. Returns count newly stored.
+    """
+    ids: list = [a.activity_id for a in store.load_activities()[:limit]]
+    plan = store.load_plan()
+    if plan is not None:
+        for wk in plan.weeks:
+            for wo in wk.workouts:
+                ids.extend(wo.matched_activity_ids or [])
+
+    seen: set = set()
+    fetched = 0
+    for aid in ids:
+        if aid is None or aid in seen or store.has_detail(aid):
+            continue
+        seen.add(aid)
+        try:
+            store.save_detail(aid, _trim_detail(client.get_activity_detail(aid)))
+            fetched += 1
+        except Exception:
+            logger.warning("activity detail fetch failed for %s", aid, exc_info=True)
+    return fetched
 
 
 def scaffold(goal: dict) -> dict:

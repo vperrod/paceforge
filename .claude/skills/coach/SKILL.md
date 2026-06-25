@@ -65,3 +65,15 @@ changed week (it deletes and re-creates the week's Garmin workouts to avoid dupe
 3. For each completed workout, compare planned vs actual (distance, pace, HR, cadence).
 4. Write `week-review.md` with: summary, plan adherence, performance, recovery
    (HRV/readiness/sleep/body-battery), concerns, and 2–4 concrete improvement tips.
+
+## Per-activity analysis → `data/analyses/{activity_id}.md`
+The web detail view renders a Markdown analysis per activity. Generate them so the
+meaningful sessions already have one:
+1. For every plan workout that is `completed` with `matched_activity_ids` and has **no**
+   `data/analyses/{id}.md` yet, write one (this is the "auto for planned workouts" path).
+2. When asked on-demand (a `Coach: analyze activity {id}` issue), analyse that specific id.
+3. For each: read the activity in `data/activities.json`, its splits in
+   `data/details/{id}.json` (per-km pace/HR, weather), the matched planned workout, and
+   `data/profile.json`. Write `data/analyses/{id}.md` with these `##` sections:
+   **Session summary**, **Versus the plan**, **Effect on your profile**, **What to
+   improve** — concrete and specific (pace/HR/fade numbers, not platitudes). Commit it.
