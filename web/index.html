@@ -328,6 +328,17 @@ a{color:var(--emerald);text-decoration:none}
 .splits-tbl th{text-align:left;color:var(--text-3);font-weight:600;font-size:.66rem;text-transform:uppercase;letter-spacing:.06em;padding:6px 8px;border-bottom:1px solid var(--border)}
 .splits-tbl td{padding:6px 8px;border-bottom:1px solid var(--border-s)}
 .act-analysis{font-size:.9rem;color:var(--text-2);line-height:1.65}
+.zbars{display:flex;flex-direction:column;gap:7px}
+.zrow{display:grid;grid-template-columns:96px 1fr 78px;align-items:center;gap:10px}
+.zlbl{font-size:.78rem;font-weight:700;font-family:var(--font-m)}
+.zlbl span{font-weight:500;color:var(--text-3);font-family:var(--font);font-size:.72rem}
+.ztrack{height:9px;background:var(--elevated);border-radius:5px;overflow:hidden}
+.zfill{height:100%;border-radius:5px}
+.zval{font-size:.74rem;color:var(--text-2);text-align:right;font-family:var(--font-m)}
+.hist{display:flex;align-items:flex-end;gap:3px;height:96px;padding-top:6px}
+.hbar{flex:1;display:flex;align-items:flex-end;height:100%}
+.hfill{width:100%;background:linear-gradient(180deg,var(--sky),rgba(56,160,224,.35));border-radius:3px 3px 0 0;min-height:2px}
+.hist-x{display:flex;justify-content:space-between;font-size:.7rem;color:var(--text-3);font-family:var(--font-m);margin-top:4px}
 .act-analysis b{color:var(--text)}
 .detail-item{text-align:center;padding:12px 6px;background:var(--elevated);border-radius:var(--r-sm)}
 .detail-item .d-val{font-family:var(--font-m);font-size:.95rem;font-weight:600}
@@ -1761,6 +1772,37 @@ function miniChart(values, { color, invert = false, fmt = v => v, height = 140 }
   </svg>`;
 }
 
+const ZONE_COLORS = ['#3FB6E0', '#22C55E', '#EAB308', '#F97316', '#EF4444']; // Z1..Z5
+const ZONE_LABELS = ['Recovery', 'Easy', 'Aerobic', 'Threshold', 'Max'];
+
+// Time-in-HR-zone as labelled horizontal bars. Works for any activity with hr_zones.
+function hrZoneBars(zones) {
+  const z = (zones || []).filter(x => x && x.secs);
+  if (!z.length) return '';
+  const total = z.reduce((a, b) => a + (b.secs || 0), 0) || 1;
+  return `<div class="zbars">` + z.map(x => {
+    const pct = Math.round((x.secs / total) * 100);
+    const c = ZONE_COLORS[(x.zone || 1) - 1] || 'var(--text-3)';
+    return `<div class="zrow"><div class="zlbl">Z${x.zone} <span>${ZONE_LABELS[(x.zone || 1) - 1] || ''}</span></div>
+      <div class="ztrack"><div class="zfill" style="width:${Math.max(pct, 1)}%;background:${c}"></div></div>
+      <div class="zval">${Math.round(x.secs / 60)}m · ${pct}%</div></div>`;
+  }).join('') + `</div>`;
+}
+
+// Histogram of values (e.g. per-km paces) into bins — the "distribution" view.
+function paceHistogram(values, { fmt = v => v } = {}) {
+  const vals = values.filter(v => v != null && !isNaN(v));
+  if (vals.length < 3) return '';
+  const mn = Math.min(...vals), mx = Math.max(...vals), span = (mx - mn) || 1;
+  const BINS = Math.min(10, Math.max(5, Math.round(vals.length / 2)));
+  const w = span / BINS, counts = new Array(BINS).fill(0);
+  vals.forEach(v => { counts[Math.min(BINS - 1, Math.floor((v - mn) / w))]++; });
+  const peak = Math.max(...counts) || 1;
+  return `<div class="hist">` + counts.map((c, i) =>
+    `<div class="hbar" title="${fmt(mn + i * w)} (${c})"><div class="hfill" style="height:${Math.round((c / peak) * 100)}%"></div></div>`
+  ).join('') + `</div><div class="hist-x"><span>${fmt(mn)}</span><span>${fmt(mx)}</span></div>`;
+}
+
 function matchedWorkout(plan, activityId) {
   if (!plan || !plan.weeks) return null;
   const idStr = String(activityId);
@@ -1814,16 +1856,36 @@ function activityDetailBody(act, detail, analysisMd, match) {
   const duration = act.duration_seconds ? formatSeconds(act.duration_seconds) : '—';
   const pace = act.avg_pace_sec_per_km ? formatPace(act.avg_pace_sec_per_km) + '/km' : '—';
   const splits = (detail && detail.splits) || [];
+  const series = (detail && detail.series) || [];
+  const runSplits = splits.filter(s => s.pace_sec != null);
+  const hrOverTime = series.map(s => s.hr);
+  const paceOverTime = series.map(s => s.pace);
+  const sec = (title, body) => body ? `<div class="act-sec"><div class="eyebrow" style="margin-bottom:6px">${title}</div>${body}</div>` : '';
 
-  const charts = splits.length >= 2 ? `
-    <div class="act-sec"><div class="eyebrow" style="margin-bottom:6px">Pace per km</div>${miniChart(splits.map(s => s.pace_sec), { color: 'var(--sky)', invert: true, fmt: v => formatPace(v) })}</div>
-    ${splits.some(s => s.avg_hr) ? `<div class="act-sec"><div class="eyebrow" style="margin-bottom:6px">Heart rate per km</div>${miniChart(splits.map(s => s.avg_hr), { color: 'var(--rose)', fmt: v => Math.round(v) + ' bpm', height: 120 })}</div>` : ''}
-    <div class="act-sec"><div class="eyebrow" style="margin-bottom:8px">Splits</div>
+  let charts = '';
+  // Heart rate over time (cardio + running); fall back to per-km HR when no series.
+  if (hrOverTime.filter(v => v != null).length >= 3)
+    charts += sec('Heart rate over time', miniChart(hrOverTime, { color: 'var(--rose)', fmt: v => Math.round(v) + ' bpm', height: 120 }));
+  else if (splits.some(s => s.avg_hr))
+    charts += sec('Heart rate per km', miniChart(splits.map(s => s.avg_hr), { color: 'var(--rose)', fmt: v => Math.round(v) + ' bpm', height: 120 }));
+  // Pace over time (running); fall back to per-km pace.
+  if (paceOverTime.filter(v => v != null).length >= 3)
+    charts += sec('Pace over time', miniChart(paceOverTime, { color: 'var(--sky)', invert: true, fmt: v => formatPace(v) }));
+  else if (runSplits.length >= 2)
+    charts += sec('Pace per km', miniChart(splits.map(s => s.pace_sec), { color: 'var(--sky)', invert: true, fmt: v => formatPace(v) }));
+  // Time-in-HR-zone distribution (cardio + running).
+  charts += sec('Heart-rate zones', hrZoneBars(detail && detail.hr_zones));
+  // Pace distribution (running).
+  if (runSplits.length >= 3)
+    charts += sec('Pace distribution', paceHistogram(runSplits.map(s => s.pace_sec), { fmt: v => formatPace(v) }));
+  // Per-km splits table (running).
+  if (runSplits.length >= 2)
+    charts += `<div class="act-sec"><div class="eyebrow" style="margin-bottom:8px">Splits</div>
       <table class="splits-tbl"><thead><tr><th>#</th><th>km</th><th>Pace</th><th>HR</th><th>Elev</th></tr></thead><tbody>
       ${splits.map(s => `<tr><td>${s.n}</td><td>${s.distance_m ? (s.distance_m / 1000).toFixed(2) : '—'}</td><td class="mono">${s.pace_sec ? formatPace(s.pace_sec) : '—'}</td><td class="mono">${s.avg_hr ?? '—'}</td><td>${s.elev_gain != null ? Math.round(s.elev_gain) + 'm' : '—'}</td></tr>`).join('')}
-      </tbody></table>
-    </div>`
-    : `<div class="act-sec" style="padding:10px 12px;background:var(--elevated);border-radius:var(--r-sm);font-size:.84rem;color:var(--text-2)">No per-km splits for this activity yet — they appear after the next sync (recent activities only).</div>`;
+      </tbody></table></div>`;
+  if (!charts)
+    charts = `<div class="act-sec" style="padding:10px 12px;background:var(--elevated);border-radius:var(--r-sm);font-size:.84rem;color:var(--text-2)">No chart data for this activity yet — it appears after the next sync (recent activities only).</div>`;
 
   const planHtml = match ? `<div class="act-sec"><div class="eyebrow" style="margin-bottom:8px">Planned vs actual</div>
     <div class="detail-grid">
