@@ -132,6 +132,10 @@ def _extract_series(metrics: dict, max_points: int = 120) -> list | None:
     idx = {d.get("key"): d.get("metricsIndex") for d in descs if isinstance(d, dict)}
     hr_i, sp_i, t_i = (idx.get("directHeartRate"), idx.get("directSpeed"),
                        idx.get("sumElapsedDuration"))
+    # Cadence (steps/min, both feet) + stride length — the running-economy channels.
+    cad_i = idx.get("directDoubleCadence")
+    cad_single = idx.get("directRunCadence") if cad_i is None else None
+    str_i = idx.get("directStrideLength")
     if hr_i is None and sp_i is None:
         return None
     step = max(1, -(-len(rows) // max_points))  # ceil division → never exceed max_points
@@ -143,18 +147,25 @@ def _extract_series(metrics: dict, max_points: int = 120) -> list | None:
         def at(i):
             return m[i] if (i is not None and i < len(m)) else None
         hr, sp, t = at(hr_i), at(sp_i), at(t_i)
+        cad = at(cad_i)
+        if cad is None and cad_single is not None:  # single-foot cadence → double it
+            sc = at(cad_single)
+            cad = sc * 2 if sc is not None else None
+        stride = at(str_i)  # metres (Garmin) — normalize to cm in the UI
         # speed (m/s) → pace (s/km); ignore near-standstill so pace doesn't blow up.
         pace = round(1000 / sp, 1) if sp and sp > 0.3 else None
         series.append({
             "t": round(t) if t is not None else None,
             "hr": round(hr) if hr is not None else None,
             "pace": pace,
+            "cad": round(cad) if cad else None,
+            "stride": round(stride, 2) if stride else None,
         })
     return series or None
 
 
 # Bump when _trim_detail's shape changes so sync re-fetches older stored details.
-_DETAIL_VERSION = 2
+_DETAIL_VERSION = 3  # v3 adds cadence + stride-length to the time-series
 
 
 def _trim_detail(detail: dict) -> dict:
