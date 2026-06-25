@@ -339,6 +339,27 @@ a{color:var(--emerald);text-decoration:none}
 .hbar{flex:1;display:flex;align-items:flex-end;height:100%}
 .hfill{width:100%;background:linear-gradient(180deg,var(--sky),rgba(56,160,224,.35));border-radius:3px 3px 0 0;min-height:2px}
 .hist-x{display:flex;justify-content:space-between;font-size:.7rem;color:var(--text-3);font-family:var(--font-m);margin-top:4px}
+.mb{margin-bottom:16px}
+.coach-take{border:1px solid rgba(19,200,146,.35);background:linear-gradient(180deg,rgba(19,200,146,.06),transparent)}
+.coach-headline{font-size:1.05rem;font-weight:600;color:var(--text);line-height:1.4}
+.lim-row{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border-s)}
+.lim-row:last-child{border-bottom:none}
+.lim-rank{width:24px;height:24px;flex-shrink:0;border-radius:50%;background:var(--emerald-d);color:var(--emerald);font-weight:700;font-size:.8rem;display:flex;align-items:center;justify-content:center}
+.lim-name{font-weight:700;font-size:.92rem}
+.lim-area{font-weight:500;color:var(--text-3);font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;margin-left:6px}
+.lim-ev{font-size:.82rem;color:var(--text-2);margin-top:2px}
+.lim-rec{font-size:.84rem;color:var(--emerald);margin-top:5px;display:flex;gap:6px;align-items:flex-start}
+.lim-rec svg{width:14px;height:14px;flex-shrink:0;margin-top:2px}
+.week-list{margin:0;padding-left:18px;font-size:.86rem;color:var(--text-2);line-height:1.7}
+.gap-note{margin-top:14px;padding:9px 11px;background:var(--elevated);border-radius:var(--r-sm);font-size:.82rem;color:var(--text-2);display:flex;gap:7px;align-items:center}
+.gap-note svg{width:15px;height:15px;flex-shrink:0;color:var(--sky)}
+.fx-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+.fx-metric{background:var(--elevated);border-radius:var(--r-sm);padding:11px 13px}
+.fx-m-label{font-size:.68rem;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.fx-m-val{font-size:1.25rem;font-weight:700;font-family:var(--font-m);margin-top:3px}
+.fx-m-sub{font-size:.72rem;color:var(--text-3);margin-top:2px}
+.bm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.bm-field label{display:block;font-size:.74rem;color:var(--text-3);margin-bottom:4px}
 .act-analysis b{color:var(--text)}
 .detail-item{text-align:center;padding:12px 6px;background:var(--elevated);border-radius:var(--r-sm)}
 .detail-item .d-val{font-family:var(--font-m);font-size:.95rem;font-weight:600}
@@ -1090,20 +1111,23 @@ function currentWeekIndex(plan) {
 // VIEW: FITNESS (sub-sections — renderers preserved)
 // ═══════════════════════════════════════════════════════
 async function renderFitness(page) {
-  const analytics = await cached('analytics', () => apiJson('/profile/analytics').catch(() => null));
-  if (!analytics) {
+  const [analytics, fitness] = await Promise.all([
+    cached('analytics', () => apiJson('/profile/analytics').catch(() => null)),
+    cached('fitness', () => loadJSON('fitness.json').catch(() => null)),
+  ]);
+  if (!analytics && !fitness) {
     page.innerHTML = `<div class="fade-in">${emptyState('No analytics data', 'Sync from Garmin first.', icons.fitness)}</div>`;
     return;
   }
   const subTabs = [
-    ['weekly', 'Weekly'], ['snapshot', 'Snapshot'], ['aerobic', 'Aerobic'],
-    ['economy', 'Economy'], ['load', 'Load'], ['races', 'Races'],
-    ['training', 'Training'], ['hyrox_p', 'HYROX'],
+    ['engine', 'Engine'], ['durability', 'Durability'], ['recovery', 'Recovery'],
+    ['strength', 'Strength'], ['economy', 'Economy'], ['races', 'Races'], ['hyrox_p', 'HYROX'],
   ];
-  let activeSub = 'snapshot';
+  let activeSub = 'engine';
 
   function draw() {
     page.innerHTML = `<div class="fade-in">
+      ${fitness ? renderCoachTake(fitness) : ''}
       <div class="sub-tabs">${subTabs.map(([id,l]) => `<button class="sub-tab ${activeSub===id?'active':''}" data-sub="${id}">${l}</button>`).join('')}</div>
       <div id="fitness-content"></div>
     </div>`;
@@ -1117,19 +1141,227 @@ async function renderFitness(page) {
   function drawContent() {
     const el = document.getElementById('fitness-content');
     if (!el) return;
-    el.className = 'grid cols-auto';
+    el.className = '';
     switch (activeSub) {
-      case 'weekly': el.className = ''; renderWeeklyOverview(el); break;
-      case 'snapshot': el.innerHTML = renderSnapshot(analytics); break;
-      case 'aerobic': el.innerHTML = renderAerobic(analytics); break;
-      case 'economy': el.innerHTML = renderEconomy(analytics); break;
-      case 'load': el.innerHTML = renderLoadRecovery(analytics); break;
-      case 'races': el.innerHTML = renderRaces(analytics); break;
-      case 'training': el.innerHTML = renderTraining(analytics); break;
-      case 'hyrox_p': el.innerHTML = renderHyroxProfile(analytics); break;
+      case 'engine': el.innerHTML = fitness ? renderEngine(fitness) : emptyState('No data', ''); break;
+      case 'durability': el.innerHTML = fitness ? renderDurability(fitness) : emptyState('No data', ''); break;
+      case 'recovery': el.innerHTML = fitness ? renderRecovery(fitness) : emptyState('No data', ''); break;
+      case 'strength': el.innerHTML = fitness ? renderStrength(fitness) : emptyState('No data', ''); bindBenchmarkForm(el, draw); break;
+      case 'economy': el.className = 'grid cols-auto'; el.innerHTML = renderEconomy(analytics); break;
+      case 'races': el.className = 'grid cols-auto'; el.innerHTML = renderRaces(analytics); break;
+      case 'hyrox_p': el.className = 'grid cols-auto'; el.innerHTML = renderHyroxProfile(analytics); break;
     }
   }
   draw();
+}
+
+// ── Fitness 2.0 renderers (consume data/fitness.json) ──────────────────────
+const _GRADE_COLOR = { strong: 'var(--emerald)', good: 'var(--emerald)', moderate: 'var(--amber)',
+  developing: 'var(--amber)', weak: 'var(--rose)', too_hard: 'var(--rose)', too_much_mid: 'var(--rose)',
+  needs_work: 'var(--rose)', high: 'var(--amber)', low: 'var(--amber)' };
+function gradeColor(g) { return _GRADE_COLOR[(g || '').toLowerCase()] || 'var(--text-2)'; }
+function paceOrDash(sec) { return sec ? formatPace(sec) + '/km' : '—'; }
+function metricCard(label, value, sub, accent) {
+  return `<div class="fx-metric"><div class="fx-m-label">${label}</div><div class="fx-m-val" style="${accent ? `color:${accent}` : ''}">${value}</div>${sub ? `<div class="fx-m-sub">${sub}</div>` : ''}</div>`;
+}
+function fxCard(title, icon, body) {
+  return `<div class="card mb"><div class="card-h"><div class="card-title"><span class="ico">${icon || icons.fitness}</span>${title}</div></div>${body}</div>`;
+}
+
+function renderCoachTake(f) {
+  const limiters = f.limiters || [];
+  const week = f.this_week || [];
+  const gaps = f.data_gaps || [];
+  const rd = (f.coach_input && f.coach_input.readiness) || {};
+  const band = rd.band || 'unknown';
+  const bandColor = band === 'low' ? 'var(--rose)' : band === 'moderate' ? 'var(--amber)' : 'var(--emerald)';
+  const limHtml = limiters.length ? limiters.map((l, i) => `
+    <div class="lim-row">
+      <div class="lim-rank">${i + 1}</div>
+      <div style="min-width:0">
+        <div class="lim-name">${escHtml(l.name)} <span class="lim-area">${escHtml(l.area)}</span></div>
+        <div class="lim-ev">${escHtml(l.evidence)}</div>
+        <div class="lim-rec">${icons.spark} ${escHtml(l.recommendation)}</div>
+      </div>
+    </div>`).join('') : `<div style="color:var(--text-3);font-size:.88rem">No clear limiter — keep building consistently.</div>`;
+  return `<div class="card coach-take mb">
+    <div class="card-h"><div class="card-title"><span class="ico">${icons.spark}</span>Coach's Take</div>
+      <span class="conn-status" style="background:${bandColor}22;color:${bandColor}"><span class="dotmark"></span>Readiness ${rd.score != null ? Math.round(rd.score) : '—'} · ${band}</span></div>
+    <div class="coach-headline">${escHtml(f.headline || '')}</div>
+    <div class="eyebrow" style="margin:14px 0 8px">Your top limiters</div>
+    ${limHtml}
+    ${week.length ? `<div class="eyebrow" style="margin:16px 0 8px">This week</div><ul class="week-list">${week.map(w => `<li>${escHtml(w.action)}</li>`).join('')}</ul>` : ''}
+    ${gaps.length ? `<div class="gap-note">${icons.info} Unlock more: ${gaps.map(g => escHtml(g)).join(', ')} — add them in the <b>Strength</b> tab.</div>` : ''}
+  </div>`;
+}
+
+function _trendChart(series, key, opts) {
+  const vals = (series || []).map(p => p[key]);
+  if (vals.filter(v => v != null).length < 2) return '<div class="hint">Not enough history yet.</div>';
+  return miniChart(vals, opts);
+}
+
+function renderEngine(f) {
+  const r = f.running || {};
+  const cs = r.critical_speed || {}, ef = r.efficiency_factor || {}, vv = r.vvo2max || {};
+  const an = f.strength && f.strength.anaerobic_capacity || {};
+  const csCard = cs.available ? fxCard('Critical Speed & reserve', icons.spark, `
+    <div class="fx-grid">
+      ${metricCard('Critical Speed', paceOrDash(cs.cs_pace_sec_per_km), `${cs.cs_mps} m/s · ${cs.confidence} conf`, 'var(--sky)')}
+      ${metricCard("Anaerobic reserve D′", (cs.d_prime_m != null ? Math.round(cs.d_prime_m) + ' m' : '—'), 'burst above CS')}
+      ${metricCard('vVO2max', paceOrDash(vv.pace_sec_per_km), vv.source || '')}
+      ${cs.cp_available ? metricCard('Critical Power', (cs.cp_watts ? Math.round(cs.cp_watts) + ' W' : '—'), "W′ " + (cs.w_prime_j ? Math.round(cs.w_prime_j/1000) + ' kJ' : '—')) : ''}
+    </div>
+    <div class="hint" style="margin-top:8px">CS is your true sustainable speed — the master endurance number. R²=${cs.r2 ?? '—'}.</div>`) : '';
+  const efCard = ef.available ? fxCard('Efficiency Factor (are you getting fitter?)', icons.fitness, `
+    <div class="fx-grid">
+      ${metricCard('EF now', ef.current ?? '—', 'speed per heartbeat')}
+      ${metricCard('Trend', (ef.trend_per_week > 0 ? '↑ improving' : ef.trend_per_week < 0 ? '↓ declining' : 'flat'), `${ef.n} easy runs`, ef.trend_per_week > 0 ? 'var(--emerald)' : 'var(--text-2)')}
+    </div>
+    ${_trendChart(ef.series, 'ef', { color: 'var(--emerald)', fmt: v => v.toFixed(2) })}`) : '';
+  const anCard = an.anaerobic_te_sessions_28d != null ? fxCard('Anaerobic stimulus', icons.spark, `
+    <div class="fx-grid">
+      ${metricCard('Hard sessions / 28d', an.anaerobic_te_sessions_28d, 'TE-anaerobic ≥ 3')}
+      ${metricCard('Signal', (an.signal || '—').replace(/_/g, ' '), '', an.signal === 'under-stimulated' ? 'var(--rose)' : 'var(--emerald)')}
+    </div>`) : '';
+  return (csCard + efCard + anCard) || emptyState('Engine metrics need more run detail', 'They appear after a sync.');
+}
+
+function renderDurability(f) {
+  const r = f.running || {};
+  const dec = r.decoupling || {}, comp = r.compromised_run || {}, hrr = r.hrr || {},
+        idist = r.intensity_distribution || {}, pac = r.pacing || {}, raceFade = (f.strength || {}).compromised_run_race || {};
+  const decCard = dec.available ? fxCard('Aerobic decoupling', icons.heart, `
+    <div class="fx-grid">
+      ${metricCard('Avg decoupling', (dec.average_pct != null ? dec.average_pct + '%' : '—'), '<5% = strong base', gradeColor(dec.grade))}
+      ${metricCard('Latest', (dec.latest_pct != null ? dec.latest_pct + '%' : '—'), `${dec.n} steady runs`)}
+      ${metricCard('Grade', dec.grade || '—', '', gradeColor(dec.grade))}
+    </div>
+    <div class="hint" style="margin-top:8px">How much efficiency fades within a run — the durability signature.</div>`) : '';
+  const fadePct = raceFade.available ? raceFade.fade_pct : comp.mean_fade_pct;
+  const fadeGrade = raceFade.available ? raceFade.grade : comp.grade;
+  const compCard = (fadePct != null) ? fxCard('Compromised running (fade under fatigue)', icons.run, `
+    <div class="fx-grid">
+      ${metricCard('Run fade', fadePct + '%', raceFade.available ? 'across the 8 HYROX runs' : 'within a session', gradeColor(fadeGrade))}
+      ${metricCard('Grade', (fadeGrade || '—').replace(/_/g, ' '), '', gradeColor(fadeGrade))}
+    </div>
+    <div class="hint" style="margin-top:8px">The single biggest HYROX determinant — holding pace as you tire.</div>`) : '';
+  const distCard = idist.available ? fxCard('Training intensity (80/20)', icons.fitness, `
+    ${hrZoneLikeBar('Easy (Z1–2)', idist.low_pct, 'var(--emerald)')}
+    ${hrZoneLikeBar('Moderate (Z3)', idist.mid_pct, 'var(--amber)')}
+    ${hrZoneLikeBar('Hard (Z4–5)', idist.high_pct, 'var(--rose)')}
+    <div class="hint" style="margin-top:8px">Target ≈ 80% easy, minimal Z3. You're <b style="color:${gradeColor(idist.adherence)}">${(idist.adherence || '').replace(/_/g, ' ')}</b> over ${Math.round(idist.total_minutes || 0)} min.</div>`) : '';
+  const hrrCard = hrr.available ? fxCard('Heart-rate recovery', icons.heart, `
+    <div class="fx-grid">
+      ${metricCard('Best HRR60', (hrr.best_hrr60 != null ? hrr.best_hrr60 + ' bpm' : '—'), '>30 = strong', gradeColor(hrr.grade))}
+      ${metricCard('Pacing', (pac.tendency || '—'), pac.mean_ratio ? 'ratio ' + pac.mean_ratio : '', pac.tendency === 'positive' ? 'var(--rose)' : 'var(--emerald)')}
+    </div>`) : '';
+  return (decCard + compCard + distCard + hrrCard) || emptyState('Durability metrics need run time-series', 'They appear after a sync.');
+}
+function hrZoneLikeBar(label, pct, color) {
+  pct = pct || 0;
+  return `<div class="zrow"><div class="zlbl" style="width:120px">${label}</div><div class="ztrack"><div class="zfill" style="width:${Math.max(pct, 1)}%;background:${color}"></div></div><div class="zval">${Math.round(pct)}%</div></div>`;
+}
+
+function renderRecovery(f) {
+  const l = f.load || {};
+  const pmc = l.ctl_atl_tsb || {}, hrv = l.hrv || {}, sleep = l.sleep || {},
+        rd = l.readiness_composite || {}, gn = l.garmin_native || {}, ot = l.overtraining_composite || {},
+        ms = l.monotony_strain || {}, spike = l.injury_spike || {};
+  const acc = (b) => b && b.availability && b.availability.status === 'accumulating'
+    ? `<div class="hint">Accumulating — ${b.availability.have_days}/${b.availability.need_days} days.</div>` : '';
+  const pmcCard = fxCard('Fitness · Fatigue · Form', icons.fitness, `
+    <div class="fx-grid">
+      ${metricCard('Fitness (CTL)', pmc.ctl ?? '—', 'chronic load')}
+      ${metricCard('Fatigue (ATL)', pmc.atl ?? '—', 'acute load')}
+      ${metricCard('Form (TSB)', pmc.tsb ?? '—', pmc.friel_band || '', pmc.tsb < -30 ? 'var(--rose)' : pmc.tsb > 5 ? 'var(--sky)' : 'var(--emerald)')}
+    </div>
+    ${_trendChart(pmc.series, 'tsb', { color: 'var(--sky)', fmt: v => Math.round(v) })}`);
+  const rdCard = fxCard('Readiness', icons.heart, `
+    <div class="fx-grid">
+      ${metricCard('Readiness', (rd.score != null ? Math.round(rd.score) : '—'), rd.band || '', rd.band === 'low' ? 'var(--rose)' : rd.band === 'moderate' ? 'var(--amber)' : 'var(--emerald)')}
+      ${metricCard('Overtraining', (ot.level || '—'), '', ot.level === 'deload' ? 'var(--rose)' : ot.level === 'caution' ? 'var(--amber)' : 'var(--emerald)')}
+      ${metricCard('Garmin', escHtml(gn.training_status || '—'), escHtml(gn.training_status_label || ''))}
+    </div>
+    <div class="hint" style="margin-top:6px">${rd.dominant_driver ? 'Driver: ' + rd.dominant_driver : ''}</div>`);
+  const hrvCard = fxCard('HRV & recovery signals', icons.heart, `
+    <div class="fx-grid">
+      ${metricCard('HRV status', (hrv.status || '—'), hrv.status === 'below' ? 'below your range' : 'vs your baseline', hrv.status === 'below' ? 'var(--rose)' : 'var(--emerald)')}
+      ${metricCard('Sleep debt', (sleep.sleep_debt != null ? (sleep.sleep_debt / 3600).toFixed(1) + ' h' : '—'), '14-day')}
+      ${metricCard('Deep sleep', (sleep.deep_pct != null ? Math.round(sleep.deep_pct) + '%' : '—'), '13–23% ideal')}
+    </div>${acc(hrv)}`);
+  const loadCard = fxCard('Load guardrails', icons.alert, `
+    <div class="fx-grid">
+      ${metricCard('ACWR', (l.acwr && l.acwr.ratio != null ? l.acwr.ratio : '—'), '0.8–1.3 sweet spot', (l.acwr && l.acwr.ratio >= 1.5) ? 'var(--rose)' : 'var(--text-2)')}
+      ${metricCard('Monotony', (ms.monotony != null ? ms.monotony : (ms.concerning ? 'high' : '—')), '<2 preferred', ms.concerning ? 'var(--rose)' : 'var(--text-2)')}
+      ${metricCard('Injury spikes', (spike.spikes ? spike.spikes.length : 0), 'runs > 30d max')}
+    </div>`);
+  return pmcCard + rdCard + hrvCard + loadCard;
+}
+
+function renderStrength(f) {
+  const s = f.strength || {};
+  const hb = s.hybrid_balance || {}, sp = s.station_percentiles || {}, rox = s.transition_cost || {};
+  const balCard = fxCard('Hybrid balance', icons.dumbbell, `
+    <div class="fx-grid">
+      ${metricCard('Run engine', (hb.run_index != null ? Math.round(hb.run_index) : '—'), '/100')}
+      ${metricCard('Strength', (hb.strength_index != null ? Math.round(hb.strength_index) : '—'), hb.confidence === 'low' ? 'estimate' : '/100', hb.confidence === 'low' ? 'var(--amber)' : '')}
+      ${metricCard('Balance', (hb.balance || 'unknown').replace(/-/g, ' '), hb.lagging_side ? hb.lagging_side + ' lags' : '')}
+    </div>`);
+  let stationCard = '';
+  if (sp.available) {
+    const stations = sp.stations || sp.per_station || {};
+    const rows = Object.entries(stations).map(([name, d]) =>
+      hrZoneLikeBar(name.replace(/_/g, ' '), (d.percentile || 0), (d.percentile || 0) < 40 ? 'var(--rose)' : (d.percentile || 0) < 60 ? 'var(--amber)' : 'var(--emerald)')).join('');
+    const weak = (sp.weakest || sp.weakest_3 || []).map(w => String(w).replace(/_/g, ' ')).join(', ');
+    stationCard = fxCard('HYROX stations vs the field', icons.hyrox, `${rows}
+      ${weak ? `<div class="hint" style="margin-top:8px">Weakest: <b style="color:var(--rose)">${escHtml(weak)}</b> · roxzone ${rox.roxzone_sec ? Math.round(rox.roxzone_sec / 60) + ':' + String(Math.round(rox.roxzone_sec % 60)).padStart(2, '0') : '—'}</div>` : ''}`);
+  }
+  return balCard + stationCard + benchmarkForm(f);
+}
+
+function benchmarkForm(f) {
+  const bm = (() => { try { return JSON.parse(localStorage.getItem('pf_benchmarks') || '{}'); } catch { return {}; } })();
+  const fld = (id, label, ph, val) => `<div class="bm-field"><label for="bm-${id}">${label}</label><input id="bm-${id}" type="number" inputmode="decimal" placeholder="${ph}" value="${val ?? ''}" class="mono-input"></div>`;
+  return fxCard('Strength benchmarks', icons.edit, `
+    <div class="hint" style="margin-bottom:10px">Enter a few one-time benchmarks (re-test every 6–8 weeks) to unlock the strength assessment. HR from a gym session can't measure strength — these can.</div>
+    <div class="bm-grid">
+      ${fld('wall_balls_max', 'Wall balls (max unbroken)', '50', bm.wall_balls_max)}
+      ${fld('sandbag_lunges_max', 'Sandbag lunges (max)', '40', bm.sandbag_lunges_max)}
+      ${fld('row_500m_sec', '500m row (sec)', '95', bm.row_500m_sec)}
+      ${fld('ski_500m_sec', '500m SkiErg (sec)', '100', bm.ski_500m_sec)}
+      ${fld('station_60s_reps', '60s max station reps', '40', bm.station_60s_reps)}
+      ${fld('bodyweight_kg', 'Bodyweight (kg)', '75', bm.bodyweight_kg)}
+    </div>
+    <button class="btn btn-primary btn-sm" id="bm-save" style="margin-top:12px">${icons.check} Save benchmarks</button>
+    <div class="hint" id="bm-status" style="margin-top:8px"></div>`);
+}
+
+function bindBenchmarkForm(container, redraw) {
+  const btn = container.querySelector('#bm-save');
+  if (!btn) return;
+  btn.addEventListener('click', () => withBusy(btn, 'Saving…', async () => {
+    const fields = ['wall_balls_max', 'sandbag_lunges_max', 'row_500m_sec', 'ski_500m_sec', 'station_60s_reps', 'bodyweight_kg'];
+    const bm = {};
+    fields.forEach(id => { const v = container.querySelector('#bm-' + id)?.value; if (v !== '' && v != null) bm[id] = Number(v); });
+    try { localStorage.setItem('pf_benchmarks', JSON.stringify(bm)); } catch {}
+    const status = container.querySelector('#bm-status');
+    if (!githubToken.has()) { status.innerHTML = 'Saved locally. Add a GitHub token in Settings to sync and unlock the full strength assessment.'; return; }
+    status.textContent = 'Committing…';
+    await commitJsonFile('data/benchmarks.json', bm, 'data: update strength benchmarks');
+    status.innerHTML = 'Saved &amp; committed — your strength assessment refreshes after the next site build (~1 min); reload then.';
+  }));
+}
+
+// Commit a JSON file to the repo via the GitHub contents API (uses the Settings token).
+async function commitJsonFile(path, obj, message) {
+  const url = `https://api.github.com/repos/${REPO}/contents/${path}`;
+  let sha;
+  try { const r = await fetch(`${url}?ref=${REF}`, { headers: ghHeaders() }); if (r.ok) sha = (await r.json()).sha; } catch {}
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(obj, null, 2))));
+  const res = await fetch(url, { method: 'PUT', headers: ghHeaders(),
+    body: JSON.stringify({ message, content, sha, branch: REF }) });
+  if (!res.ok) throw new Error(await ghError(res));
 }
 
 function renderWeeklyOverview(el) {
