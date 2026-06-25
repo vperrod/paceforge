@@ -90,6 +90,7 @@ def sync(lookback_days: int = 90, details_limit: int = 40) -> dict:
     store.save_profile(profile)
     store.save_activities(profile.recent_activities)
     new_details = _sync_details(client, limit=details_limit)
+    matched = _match_plan()
     return {
         "vo2_max": profile.vo2_max,
         "training_readiness": profile.training_readiness,
@@ -97,7 +98,21 @@ def sync(lookback_days: int = 90, details_limit: int = 40) -> dict:
         "training_status": profile.training_status,
         "activities": len(profile.recent_activities),
         "new_details": new_details,
+        "newly_matched": matched,
     }
+
+
+def _match_plan() -> int:
+    """Re-match stored activities to the active plan's workouts. Returns count changed."""
+    from paceforge.engine.matching import match_plan_to_activities
+
+    plan = store.load_plan()
+    if not plan:
+        return 0
+    changed = match_plan_to_activities(plan, store.load_activities())
+    if changed:
+        store.save_plan(plan)
+    return changed
 
 
 def _trim_detail(detail: dict) -> dict:
