@@ -1,0 +1,173 @@
+{
+  "activity_id": 23002985376,
+  "splits": [
+    {
+      "n": 1,
+      "distance_m": 1000.0,
+      "duration_s": 358.3,
+      "pace_sec": 358.3,
+      "avg_hr": 123.0,
+      "max_hr": 138.0,
+      "elev_gain": null,
+      "avg_cadence": 157.671875
+    },
+    {
+      "n": 2,
+      "distance_m": 678.1,
+      "duration_s": 241.7,
+      "pace_sec": 356.4,
+      "avg_hr": 138.0,
+      "max_hr": 139.0,
+      "elev_gain": null,
+      "avg_cadence": 158.15625
+    },
+    {
+      "n": 3,
+      "distance_m": 862.7,
+      "duration_s": 300.0,
+      "pace_sec": 347.7,
+      "avg_hr": 142.0,
+      "max_hr": 145.0,
+      "elev_gain": null,
+      "avg_cadence": 158.890625
+    },
+    {
+      "n": 4,
+      "distance_m": 31.5,
+      "duration_s": 10.9,
+      "pace_sec": 346.5,
+      "avg_hr": 141.0,
+      "max_hr": 142.0,
+      "elev_gain": null,
+      "avg_cadence": 159.453125
+    },
+    {
+      "n": 5,
+      "distance_m": 2.9,
+      "duration_s": 0.7,
+      "pace_sec": 236.9,
+      "avg_hr": 141.0,
+      "max_hr": 141.0,
+      "elev_gain": null,
+      "avg_cadence": 157.0
+    },
+    {
+      "n": 6,
+      "distance_m": 2.9,
+      "duration_s": 1.0,
+      "pace_sec": 359.4,
+      "avg_hr": 142.0,
+      "max_hr": 142.0,
+      "elev_gain": null,
+      "avg_cadence": 157.0
+    },
+    {
+      "n": 7,
+      "distance_m": 2.9,
+      "duration_s": 1.0,
+      "pace_sec": 333.9,
+      "avg_hr": 141.0,
+      "max_hr": 141.0,
+      "elev_gain": null,
+      "avg_cadence": 159.0
+    },
+    {
+      "n": 8,
+      "distance_m": 2.8,
+      "duration_s": 1.0,
+      "pace_sec": 359.6,
+      "avg_hr": 141.0,
+      "max_hr": 141.0,
+      "elev_gain": null,
+      "avg_cadence": 160.0
+    },
+    {
+      "n": 9,
+      "distance_m": 2.3,
+      "duration_s": 1.1,
+      "pace_sec": 475.2,
+      "avg_hr": 141.0,
+      "max_hr": 141.0,
+      "elev_gain": null,
+      "avg_cadence": 160.0
+    },
+    {
+      "n": 10,
+      "distance_m": 4.2,
+      "duration_s": 2.4,
+      "pace_sec": 573.6,
+      "avg_hr": 142.0,
+      "max_hr": 142.0,
+      "elev_gain": null,
+      "avg_cadence": 160.5
+    },
+    {
+      "n": 11,
+      "distance_m": 2.1,
+      "duration_s": 1.2,
+      "pace_sec": 579.1,
+      "avg_hr": 141.0,
+      "max_hr": 141.0,
+      "elev_gain": null,
+      "avg_cadence": 167.0
+    },
+    {
+      "n": 12,
+      "distance_m": 6.4,
+      "duration_s": 2.5,
+      "pace_sec": 394.1,
+      "avg_hr": 141.0,
+      "max_hr": 141.0,
+      "elev_gain": null,
+      "avg_cadence": 167.0
+    },
+    {
+      "n": 13,
+      "distance_m": 1000.0,
+      "duration_s": 348.7,
+      "pace_sec": 348.7,
+      "avg_hr": 144.0,
+      "max_hr": 148.0,
+      "elev_gain": null,
+      "avg_cadence": 159.1875
+    },
+    {
+      "n": 14,
+      "distance_m": 563.8,
+      "duration_s": 195.3,
+      "pace_sec": 346.4,
+      "avg_hr": 148.0,
+      "max_hr": 151.0,
+      "elev_gain": null,
+      "avg_cadence": 158.921875
+    }
+  ],
+  "hr_zones": [
+    {
+      "zone": 1,
+      "secs": 7.0
+    },
+    {
+      "zone": 2,
+      "secs": 61.999
+    },
+    {
+      "zone": 3,
+      "secs": 1094.784
+    },
+    {
+      "zone": 4,
+      "secs": 245.984
+    },
+    {
+      "zone": 5,
+      "secs": 0.0
+    }
+  ],
+  "weather": {
+    "temp_c": null,
+    "feels_c": null,
+    "humidity": null,
+    "desc": null
+  }
+}

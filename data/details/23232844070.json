@@ -1,0 +1,83 @@
+{
+  "activity_id": 23232844070,
+  "splits": [
+    {
+      "n": 1,
+      "distance_m": 1000.0,
+      "duration_s": 296.5,
+      "pace_sec": 296.5,
+      "avg_hr": 120.0,
+      "max_hr": 134.0,
+      "elev_gain": null,
+      "avg_cadence": 153.5
+    },
+    {
+      "n": 2,
+      "distance_m": 1000.0,
+      "duration_s": 279.3,
+      "pace_sec": 279.3,
+      "avg_hr": 131.0,
+      "max_hr": 134.0,
+      "elev_gain": null,
+      "avg_cadence": 158.859375
+    },
+    {
+      "n": 3,
+      "distance_m": 1000.0,
+      "duration_s": 284.1,
+      "pace_sec": 284.1,
+      "avg_hr": 133.0,
+      "max_hr": 135.0,
+      "elev_gain": null,
+      "avg_cadence": 156.3125
+    },
+    {
+      "n": 4,
+      "distance_m": 1000.0,
+      "duration_s": 285.2,
+      "pace_sec": 285.2,
+      "avg_hr": 133.0,
+      "max_hr": 135.0,
+      "elev_gain": null,
+      "avg_cadence": 155.734375
+    },
+    {
+      "n": 5,
+      "distance_m": 314.5,
+      "duration_s": 88.8,
+      "pace_sec": 282.4,
+      "avg_hr": 134.0,
+      "max_hr": 135.0,
+      "elev_gain": null,
+      "avg_cadence": 156.0
+    }
+  ],
+  "hr_zones": [
+    {
+      "zone": 1,
+      "secs": 13.999
+    },
+    {
+      "zone": 2,
+      "secs": 47.999
+    },
+    {
+      "zone": 3,
+      "secs": 1135.272
+    },
+    {
+      "zone": 4,
+      "secs": 0.0
+    },
+    {
+      "zone": 5,
+      "secs": 0.0
+    }
+  ],
+  "weather": {
+    "temp_c": null,
+    "feels_c": null,
+    "humidity": null,
+    "desc": null
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "activity_id": 22983664134,
+  "splits": [
+    {
+      "n": 1,
+      "distance_m": null,
+      "duration_s": 2867.9,
+      "pace_sec": null,
+      "avg_hr": 140.0,
+      "max_hr": 190.0,
+      "elev_gain": null,
+      "avg_cadence": null
+    }
+  ],
+  "hr_zones": [
+    {
+      "zone": 1,
+      "secs": 251.002
+    },
+    {
+      "zone": 2,
+      "secs": 144.996
+    },
+    {
+      "zone": 3,
+      "secs": 1203.0
+    },
+    {
+      "zone": 4,
+      "secs": 874.999
+    },
+    {
+      "zone": 5,
+      "secs": 279.129
+    }
+  ],
+  "weather": {
+    "temp_c": null,
+    "feels_c": null,
+    "humidity": null,
+    "desc": null
+  }
+}
