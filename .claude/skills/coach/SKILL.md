@@ -59,12 +59,28 @@ Editing the plan = edit `data/plan.json` (move a workout's `scheduled_date`, swa
 type), `paceforge validate`, update `plan.md`, then `paceforge push` to re-upload the
 changed week (it deletes and re-creates the week's Garmin workouts to avoid dupes).
 
+## Fitness assessment & limiters → read `data/fitness.json`
+`scripts/build_site_data.py` runs `actions.fitness()`, which writes the full Fitness 2.0
+assessment (running engine/durability, load/recovery, strength/HYROX) plus a ranked
+**limiter** list and a compact `coach_input` contract. To regenerate it yourself run
+`python -c "from paceforge import actions, store; import json; print(json.dumps(actions.fitness()))"`
+(or read the committed `data/fitness.json`). **Ground your coaching in this, not raw data.**
+Use `coach_input.ranked_limiters`, `coach_input.key_metrics`, and `coach_input.readiness`.
+
+Rules: prefer the precomputed `ranked_limiters` over re-deriving; **readiness gates intensity**
+— never prescribe new hard work when readiness band is low or overtraining is `deload`; address
+at most 3 limiters; cite the metric evidence so the athlete trusts it; honestly surface
+`data_gaps` as a call-to-action (which benchmarks to enter). Mind concurrent-training interference
+(separate hard strength and hard endurance by ≥6 h / non-consecutive days).
+
 ## Weekly review → `week-review.md`
-1. `paceforge sync`, then read `data/activities.json` and `data/profile.json`.
-2. `paceforge analyze` for the metrics.
+1. `paceforge sync`, then read `data/activities.json`, `data/profile.json` and `data/fitness.json`.
+2. `paceforge analyze` for legacy metrics; the limiters/assessment come from `data/fitness.json`.
 3. For each completed workout, compare planned vs actual (distance, pace, HR, cadence).
-4. Write `week-review.md` with: summary, plan adherence, performance, recovery
-   (HRV/readiness/sleep/body-battery), concerns, and 2–4 concrete improvement tips.
+4. Write `week-review.md` with these sections: **Headline diagnosis** (the #1 limiter in plain
+   language) · **Top limiters** (≤3, each with the metric evidence) · **This week** (1–2 named
+   sessions with pace/HR targets, readiness-gated) · **This block** (theme + re-test date) ·
+   **What we can't see yet** (data gaps → benchmarks to enter) · **One thing to NOT do** (a guardrail).
 
 ## Per-activity analysis → `data/analyses/{activity_id}.md`
 The web detail view renders a Markdown analysis per activity. Generate them so the
