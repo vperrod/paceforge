@@ -51,6 +51,54 @@ def save_profile(profile: UserFitnessProfile) -> None:
     _write(_path("profile.json"), profile.model_dump_json(indent=2))
 
 
+# Slim daily-wellness fields persisted to history.jsonl for trend metrics
+# (CTL/ATL/TSB, HRV baseline, sleep debt) — profile.json only ever holds "today".
+_HISTORY_FIELDS = (
+    "vo2_max", "resting_hr", "max_hr", "hrv_status", "hrv_last_night",
+    "training_readiness", "training_status", "training_load_7day", "load_focus",
+    "body_battery_current", "body_battery_high", "body_battery_low",
+    "sleep_score", "sleep_duration_seconds", "sleep_deep_seconds",
+    "sleep_rem_seconds", "sleep_light_seconds", "stress_avg", "stress_high",
+    "weekly_mileage_km",
+)
+
+
+def append_daily_history(profile: UserFitnessProfile) -> None:
+    """Append one slim wellness snapshot for the profile's date to history.jsonl.
+
+    Upserts by date (a re-sync the same day overwrites that day's row). Trend
+    metrics need this daily series — every day not stored is permanently lost.
+    """
+    p = profile.model_dump()
+    date = p.get("profile_date")
+    if not date:
+        return
+    date = str(date)
+    row = {"date": date, **{f: p.get(f) for f in _HISTORY_FIELDS}}
+    rows = [r for r in load_history() if r.get("date") != date]
+    rows.append(row)
+    rows.sort(key=lambda r: r.get("date") or "")
+    _write(_path("history.jsonl"),
+           "\n".join(json.dumps(r, default=str) for r in rows) + "\n")
+
+
+def load_history() -> list[dict]:
+    """All stored daily wellness snapshots, oldest first."""
+    p = _path("history.jsonl")
+    if not p.exists():
+        return []
+    out: list[dict] = []
+    for line in p.read_text().splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            out.append(json.loads(line))
+        except json.JSONDecodeError:
+            pass
+    return out
+
+
 def load_plan() -> TrainingPlan | None:
     p = _path("plan.json")
     return TrainingPlan.model_validate_json(p.read_text()) if p.exists() else None

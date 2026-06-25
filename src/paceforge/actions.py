@@ -88,6 +88,7 @@ def sync(lookback_days: int = 90, details_limit: int = 40) -> dict:
     client = garmin_connect()
     profile = client.get_fitness_profile(lookback_days=lookback_days)
     store.save_profile(profile)
+    store.append_daily_history(profile)
     store.save_activities(profile.recent_activities)
     new_details = _sync_details(client, limit=details_limit)
     matched = _match_plan()
