@@ -98,12 +98,12 @@ def sync(lookback_days: int = 90, details_limit: int = 40) -> dict:
         "training_status": profile.training_status,
         "activities": len(profile.recent_activities),
         "new_details": new_details,
-        "newly_matched": matched,
+        "matched_workouts": matched,
     }
 
 
 def _match_plan() -> int:
-    """Re-match stored activities to the active plan's workouts. Returns count changed."""
+    """Re-match stored activities to the active plan's workouts. Returns matched count."""
     from paceforge.engine.matching import match_plan_to_activities
 
     plan = store.load_plan()

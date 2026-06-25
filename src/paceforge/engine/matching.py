@@ -20,12 +20,12 @@ def _is_run(act: RecentActivity) -> bool:
 
 
 def match_plan_to_activities(plan: TrainingPlan, activities: list[RecentActivity]) -> int:
-    """Link run activities to scheduled run workouts within ±1 day, preferring the
-    nearest date then nearest distance. Each activity matches at most one workout.
+    """Link run activities to scheduled run workouts, preferring an exact-date match
+    and falling back to ±1 day. Each activity matches at most ONE workout.
 
-    Sets matched_activity_ids + completed on each matched workout. Workouts are
-    processed in date order so an earlier session claims a shared-day run first.
-    Returns the number of workouts whose match changed.
+    Authoritative: clears existing matches first and recomputes, so an activity can
+    never end up attached to two workouts. Sets matched_activity_ids + completed.
+    Returns the number of matched workouts.
     """
     runs = [a for a in activities if _is_run(a)]
     workouts = sorted(
@@ -33,25 +33,29 @@ def match_plan_to_activities(plan: TrainingPlan, activities: list[RecentActivity
          if wo.scheduled_date and wo.workout_type != "rest"),
         key=lambda wo: wo.scheduled_date,
     )
+    for wo in workouts:
+        wo.matched_activity_ids = []
+        wo.completed = False
 
     used: set[int] = set()
-    changed = 0
-    for wo in workouts:
-        target = wo.estimated_distance_meters or 0
-        candidates = [
-            a for a in runs
-            if a.activity_id not in used
-            and abs((a.start_time.date() - wo.scheduled_date).days) <= _DAY_TOLERANCE
-        ]
-        if not candidates:
-            continue
-        best = min(candidates, key=lambda a: (
-            abs((a.start_time.date() - wo.scheduled_date).days),
-            abs((a.distance_meters or 0) - target),
-        ))
-        used.add(best.activity_id)
-        if wo.matched_activity_ids != [best.activity_id]:
+    matched = 0
+    # Exact date first (tol=0), then ±1 day — so a run lands on its own day before a
+    # neighbouring workout can claim it.
+    for tol in (0, _DAY_TOLERANCE):
+        for wo in workouts:
+            if wo.matched_activity_ids:
+                continue
+            target = wo.estimated_distance_meters or 0
+            candidates = [
+                a for a in runs
+                if a.activity_id not in used
+                and abs((a.start_time.date() - wo.scheduled_date).days) <= tol
+            ]
+            if not candidates:
+                continue
+            best = min(candidates, key=lambda a: abs((a.distance_meters or 0) - target))
+            used.add(best.activity_id)
             wo.matched_activity_ids = [best.activity_id]
-            changed += 1
-        wo.completed = True
-    return changed
+            wo.completed = True
+            matched += 1
+    return matched
