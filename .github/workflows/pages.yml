@@ -11,6 +11,11 @@ on:
       - data/**
       - scripts/build_site_data.py
       - .github/workflows/pages.yml
+  # Redeploy after sync/coach commit fresh data. (Their GITHUB_TOKEN pushes don't
+  # fire the `push` trigger above, so we react to their completion instead.)
+  workflow_run:
+    workflows: [sync, coach]
+    types: [completed]
   workflow_dispatch:
 
 permissions:
