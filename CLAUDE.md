@@ -2,7 +2,7 @@
 
 A single-user, serverless running coach. No backend, no database, no LLM API
 key — **Claude is the coach** (see `.claude/skills/coach/`), the `paceforge`
-Python package does the deterministic maths and the Garmin/Strava I/O, and
+Python package does the deterministic maths and the Garmin I/O, and
 `data/*.json` (git-tracked) is the only state.
 
 ## Commands
@@ -28,13 +28,12 @@ python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"   # one-time setup
   Override the dir with `PACEFORGE_DATA_DIR`.
 - **`store.py`** — load/save the JSON files via Pydantic. No DB.
 - **`actions.py`** — all behaviour (sync, scaffold, analyze, validate, push,
-  status, strava, Garmin auth). The CLI and MCP server are thin wrappers over it.
+  status, Garmin auth). The CLI and MCP server are thin wrappers over it.
 - **`cli.py`** / **`mcp_server.py`** — two entrypoints, same logic.
 - **`engine/`** — VDOT maths (`vdot.py`), workout factory (`workouts.py`),
   template planner (`planner.py`, LLM-free), `adaptation.py`, `analytics.py`
   (the health/running analysis), and `validate.py` (plan rule checks).
-- **`garmin/client.py`** — reads metrics, uploads structured workouts (`garth`).
-- **`strava/client.py`** — OAuth + activity push.
+- **`garmin/client.py`** — reads metrics, uploads structured workouts.
 - **`hyrox/`** — race-result analyzer vs field benchmarks.
 
 ## The AI / validation split
@@ -45,8 +44,7 @@ the model to compute paces a formula does exactly — scaffold with
 
 ## Auth & secrets (env)
 `PACEFORGE_GARMIN_EMAIL`, `GARMIN_TOKEN` (base64 token from `paceforge login`),
-`PACEFORGE_GARMIN_TOKEN_DIR` (default `~/.garminconnect`),
-`STRAVA_CLIENT_ID` / `STRAVA_CLIENT_SECRET` / `STRAVA_REFRESH_TOKEN`. None are committed.
+`PACEFORGE_GARMIN_TOKEN_DIR` (default `~/.garminconnect`). None are committed.
 
 ## Style
 - Ruff, 100-char lines (see `pyproject.toml`). `from __future__ import annotations` at top.

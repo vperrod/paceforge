@@ -6,8 +6,6 @@
     paceforge analyze               # full analytics over the stored profile
     paceforge validate              # check data/plan.json against the rules
     paceforge push [--week N] [--dry-run]   # push a plan week to Garmin
-    paceforge strava-recent [--limit N]
-    paceforge strava-set-description --activity-id ID --text "..."
 """
 
 from __future__ import annotations
@@ -44,12 +42,6 @@ def main(argv: list[str] | None = None) -> int:
     p_push.add_argument("--week", type=int, default=None)
     p_push.add_argument("--dry-run", action="store_true")
 
-    p_sr = sub.add_parser("strava-recent", help="list recent Strava activities")
-    p_sr.add_argument("--limit", type=int, default=10)
-    p_sd = sub.add_parser("strava-set-description", help="set a Strava activity description")
-    p_sd.add_argument("--activity-id", type=int, required=True)
-    p_sd.add_argument("--text", required=True)
-
     args = parser.parse_args(argv)
 
     try:
@@ -83,10 +75,6 @@ def main(argv: list[str] | None = None) -> int:
             print("valid")
         elif args.cmd == "push":
             _emit(actions.push(week=args.week, dry_run=args.dry_run))
-        elif args.cmd == "strava-recent":
-            _emit(actions.strava_recent(limit=args.limit))
-        elif args.cmd == "strava-set-description":
-            _emit(actions.strava_update_description(args.activity_id, args.text))
     except (RuntimeError, KeyError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 1

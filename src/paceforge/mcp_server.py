@@ -63,18 +63,6 @@ def garmin_push_workout(week: int | None = None, dry_run: bool = False) -> dict:
 
 
 @mcp.tool()
-def strava_recent(limit: int = 10) -> list[dict]:
-    """List recent Strava activities."""
-    return actions.strava_recent(limit=limit)
-
-
-@mcp.tool()
-def strava_push(activity_id: int, description: str) -> dict:
-    """Set a Strava activity's description (e.g. push Claude's workout analysis)."""
-    return actions.strava_update_description(activity_id, description)
-
-
-@mcp.tool()
 def hyrox_analyze(race: dict) -> dict:
     """Analyze a HYROX race result (running fade, station breakdown vs field benchmarks).
 

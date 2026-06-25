@@ -193,30 +193,3 @@ def status() -> dict:
             "accepted": plan.accepted,
         },
     }
-
-
-# ── Strava (push descriptions / analysis to matched activities) ───────
-
-
-def _strava():
-    from paceforge.strava.client import StravaClient
-
-    cid = os.environ["STRAVA_CLIENT_ID"]
-    csec = os.environ["STRAVA_CLIENT_SECRET"]
-    refresh = os.environ["STRAVA_REFRESH_TOKEN"]
-    client = StravaClient(client_id=cid, client_secret=csec)
-    token, _ = client.ensure_valid_token(
-        {"access_token": "", "refresh_token": refresh, "expires_at": 0}
-    )
-    return client, token
-
-
-def strava_recent(limit: int = 10) -> list[dict]:
-    client, token = _strava()
-    return client.list_activities(token)[:limit]
-
-
-def strava_update_description(activity_id: int, description: str) -> dict:
-    """Set a Strava activity's description (e.g. Claude's workout analysis)."""
-    client, token = _strava()
-    return client.update_activity(token, activity_id, description=description)
