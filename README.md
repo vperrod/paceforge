@@ -4,10 +4,11 @@ A personal, serverless running coach for Garmin. Pulls your Garmin Connect fitne
 data, builds and adapts training plans, pushes structured workouts to your watch,
 and reviews your training — with **no backend, no database, and no LLM API bill**.
 
-It runs three ways, all free beyond a Claude subscription:
+It runs four ways, all free beyond a Claude subscription:
+- a **web dashboard** on GitHub Pages — **[vperrod.github.io/paceforge](https://vperrod.github.io/paceforge/)** (single-user, static, reads the committed `data/*.json`),
 - **Claude Code** in this repo (run the CLI directly),
 - the **Claude desktop app** via a local MCP server,
-- **GitHub Actions** — a daily Garmin sync and a weekly auto-review.
+- **GitHub Actions** — a daily Garmin sync, an auto-analysis of completed workouts, and a weekly auto-review.
 
 ## How it works
 
@@ -19,6 +20,41 @@ It runs three ways, all free beyond a Claude subscription:
 
 Claude **proposes** a plan; the engine **validates** it (paces ordered, no back-to-back
 intense days, sane volume ramps) before anything reaches your watch.
+
+## Web dashboard
+
+A desktop-first static dashboard ([vperrod.github.io/paceforge](https://vperrod.github.io/paceforge/)),
+deployed by `pages.yml` and re-deployed automatically after each sync:
+
+- **Overview** — recent activities, this week's plan, key stats.
+- **Calendar** — compact month grid; click a day to see the session inline (no popups);
+  past days show what you actually did, upcoming days show the plan.
+- **Activity detail** — opens as a page with **pace / heart-rate / cadence / stride-length**
+  charts over time (with an efficient-range band on cadence & stride), an HR-zone
+  distribution, a pace histogram, per-km splits, planned-vs-actual, and a Claude-written
+  coaching analysis.
+- **Fitness** — the full assessment (below).
+- Edit the plan, trigger a Sync / Push-to-Garmin, or request a coach analysis straight
+  from the browser via a GitHub fine-grained token (stored only in your browser).
+
+## What it measures — Fitness 2.0
+
+Deterministic engines (`paceforge/engine/`) compute a complete athlete assessment from the
+Garmin time-series, then a **limiter-ranking** engine turns it into prioritised, readiness-gated
+guidance the coach writes up. The Fitness page leads with **Coach's Take** — your top-3 limiters,
+each with the metric evidence and a concrete "this week" action.
+
+- **Engine** (`engine/durability.py`): Critical Speed / D′ (+ Critical Power / W′), efficiency-factor
+  trend, vVO2max, aerobic decoupling, compromised-run fade, HR-recovery, 80/20 intensity distribution,
+  pacing, economy-vs-pace.
+- **Load & recovery** (`engine/load.py`): TRIMP load, CTL/ATL/TSB (fitness-fatigue-form), ACWR,
+  monotony/strain, injury-spike guardrail, HRV baseline/CV, sleep debt/architecture, an overtraining
+  early-warning composite, and a daily readiness score — alongside Garmin's native status.
+- **Strength / HYROX** (`engine/strength.py`): station percentiles vs the field, in-race run fade,
+  hybrid (run-vs-strength) balance — unlocked by a few one-time benchmarks entered on the Strength tab.
+
+Activity-derived metrics work from existing data immediately; wellness trends fill in over ~6 weeks as
+`data/history.jsonl` accumulates a daily snapshot.
 
 ## Setup
 
