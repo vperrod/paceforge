@@ -1,1 +1,0 @@
-Coach write+commit verified.
