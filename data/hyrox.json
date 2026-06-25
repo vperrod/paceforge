@@ -1,0 +1,511 @@
+{
+  "search_name": "Perez Rodriguez",
+  "search_firstname": "Victor",
+  "search_gender": "M",
+  "results": [
+    {
+      "rank": "5470",
+      "rank_gender": "5470",
+      "rank_age_group": "496",
+      "name": "Perez Rodriguez, Victor",
+      "nationality": "ESP",
+      "city": "Dublin",
+      "event_date": "Dublin 2025",
+      "division": "HYROX",
+      "age_group": "40-44",
+      "total_time_seconds": 3826.0,
+      "total_time_display": "01:03:46",
+      "splits": [
+        {
+          "name": "Running_1",
+          "time_seconds": 156.0
+        },
+        {
+          "name": "Running_2",
+          "time_seconds": 270.0
+        },
+        {
+          "name": "Running_3",
+          "time_seconds": 283.0
+        },
+        {
+          "name": "Running_4",
+          "time_seconds": 286.0
+        },
+        {
+          "name": "Running_5",
+          "time_seconds": 286.0
+        },
+        {
+          "name": "Running_6",
+          "time_seconds": 284.0
+        },
+        {
+          "name": "Running_7",
+          "time_seconds": 282.0
+        },
+        {
+          "name": "Running_8",
+          "time_seconds": 201.0
+        },
+        {
+          "name": "SkiErg_1000m",
+          "time_seconds": 232.0
+        },
+        {
+          "name": "Sled_Push_50m",
+          "time_seconds": 120.0
+        },
+        {
+          "name": "Sled_Pull_50m",
+          "time_seconds": 203.0
+        },
+        {
+          "name": "Burpee_Broad_Jump_80m",
+          "time_seconds": 189.0
+        },
+        {
+          "name": "Row_1000m",
+          "time_seconds": 269.0
+        },
+        {
+          "name": "Farmers_Carry_200m",
+          "time_seconds": 107.0
+        },
+        {
+          "name": "Sandbag_Lunges_100m",
+          "time_seconds": 223.0
+        },
+        {
+          "name": "Wall_Balls",
+          "time_seconds": 250.0
+        },
+        {
+          "name": "Roxzone_Time",
+          "time_seconds": 192.0
+        }
+      ],
+      "athlete_url": "?content=detail&fpid=list_overall&pid=list_overall&idp=LR3MS4JI40A094OV&lang=EN_CAP&event=H_HYROXOVERALL&pidp=ranking_nav&search%5Bname%5D=Perez+Rodriguez&search%5Bsex%5D=M&search%5Bfirstname%5D=Victor&search_event=H_HYROXOVERALL"
+    },
+    {
+      "rank": "10945",
+      "rank_gender": "10945",
+      "rank_age_group": "2144",
+      "name": "Perez Rodriguez, Victor",
+      "nationality": "ESP",
+      "city": "Bilbao",
+      "event_date": "Bilbao 2025",
+      "division": "HYROX",
+      "age_group": "35-39",
+      "total_time_seconds": 3977.0,
+      "total_time_display": "01:06:17",
+      "splits": [
+        {
+          "name": "Running_1",
+          "time_seconds": 262.0
+        },
+        {
+          "name": "Running_2",
+          "time_seconds": 249.0
+        },
+        {
+          "name": "Running_3",
+          "time_seconds": 261.0
+        },
+        {
+          "name": "Running_4",
+          "time_seconds": 264.0
+        },
+        {
+          "name": "Running_5",
+          "time_seconds": 270.0
+        },
+        {
+          "name": "Running_6",
+          "time_seconds": 260.0
+        },
+        {
+          "name": "Running_7",
+          "time_seconds": 259.0
+        },
+        {
+          "name": "Running_8",
+          "time_seconds": 265.0
+        },
+        {
+          "name": "SkiErg_1000m",
+          "time_seconds": 224.0
+        },
+        {
+          "name": "Sled_Push_50m",
+          "time_seconds": 154.0
+        },
+        {
+          "name": "Sled_Pull_50m",
+          "time_seconds": 232.0
+        },
+        {
+          "name": "Burpee_Broad_Jump_80m",
+          "time_seconds": 222.0
+        },
+        {
+          "name": "Row_1000m",
+          "time_seconds": 251.0
+        },
+        {
+          "name": "Farmers_Carry_200m",
+          "time_seconds": 97.0
+        },
+        {
+          "name": "Sandbag_Lunges_100m",
+          "time_seconds": 234.0
+        },
+        {
+          "name": "Wall_Balls",
+          "time_seconds": 227.0
+        },
+        {
+          "name": "Roxzone_Time",
+          "time_seconds": 255.0
+        }
+      ],
+      "athlete_url": "?content=detail&fpid=list_overall&pid=list_overall&idp=JGDMS4JI237DF7OV&lang=EN_CAP&event=H_HYROXOVERALL&pidp=ranking_nav&search%5Bname%5D=Perez+Rodriguez&search%5Bsex%5D=M&search%5Bfirstname%5D=Victor&search_event=H_HYROXOVERALL"
+    },
+    {
+      "rank": "11498",
+      "rank_gender": "11498",
+      "rank_age_group": "1162",
+      "name": "Perez Rodriguez, Victor",
+      "nationality": "ESP",
+      "city": "Valencia",
+      "event_date": "Valencia 2025",
+      "division": "HYROX",
+      "age_group": "40-44",
+      "total_time_seconds": 3990.0,
+      "total_time_display": "01:06:30",
+      "splits": [
+        {
+          "name": "Running_1",
+          "time_seconds": 259.0
+        },
+        {
+          "name": "Running_2",
+          "time_seconds": 255.0
+        },
+        {
+          "name": "Running_3",
+          "time_seconds": 261.0
+        },
+        {
+          "name": "Running_4",
+          "time_seconds": 258.0
+        },
+        {
+          "name": "Running_5",
+          "time_seconds": 265.0
+        },
+        {
+          "name": "Running_6",
+          "time_seconds": 266.0
+        },
+        {
+          "name": "Running_7",
+          "time_seconds": 260.0
+        },
+        {
+          "name": "Running_8",
+          "time_seconds": 287.0
+        },
+        {
+          "name": "SkiErg_1000m",
+          "time_seconds": 240.0
+        },
+        {
+          "name": "Sled_Push_50m",
+          "time_seconds": 143.0
+        },
+        {
+          "name": "Sled_Pull_50m",
+          "time_seconds": 214.0
+        },
+        {
+          "name": "Burpee_Broad_Jump_80m",
+          "time_seconds": 193.0
+        },
+        {
+          "name": "Row_1000m",
+          "time_seconds": 257.0
+        },
+        {
+          "name": "Farmers_Carry_200m",
+          "time_seconds": 109.0
+        },
+        {
+          "name": "Sandbag_Lunges_100m",
+          "time_seconds": 228.0
+        },
+        {
+          "name": "Wall_Balls",
+          "time_seconds": 253.0
+        },
+        {
+          "name": "Roxzone_Time",
+          "time_seconds": 250.0
+        }
+      ],
+      "athlete_url": "?content=detail&fpid=list_overall&pid=list_overall&idp=LR3MS4JI3F3EADOV&lang=EN_CAP&event=H_HYROXOVERALL&pidp=ranking_nav&search%5Bname%5D=Perez+Rodriguez&search%5Bsex%5D=M&search%5Bfirstname%5D=Victor&search_event=H_HYROXOVERALL"
+    },
+    {
+      "rank": "22107",
+      "rank_gender": "22107",
+      "rank_age_group": "2384",
+      "name": "Perez Rodriguez, Victor",
+      "nationality": "ESP",
+      "city": "Cardiff",
+      "event_date": "Cardiff 2025",
+      "division": "HYROX",
+      "age_group": "40-44",
+      "total_time_seconds": 4172.0,
+      "total_time_display": "01:09:32",
+      "splits": [
+        {
+          "name": "Running_1",
+          "time_seconds": 277.0
+        },
+        {
+          "name": "Running_2",
+          "time_seconds": 262.0
+        },
+        {
+          "name": "Running_3",
+          "time_seconds": 265.0
+        },
+        {
+          "name": "Running_4",
+          "time_seconds": 266.0
+        },
+        {
+          "name": "Running_5",
+          "time_seconds": 268.0
+        },
+        {
+          "name": "Running_6",
+          "time_seconds": 267.0
+        },
+        {
+          "name": "Running_7",
+          "time_seconds": 268.0
+        },
+        {
+          "name": "Running_8",
+          "time_seconds": 322.0
+        },
+        {
+          "name": "SkiErg_1000m",
+          "time_seconds": 248.0
+        },
+        {
+          "name": "Sled_Push_50m",
+          "time_seconds": 148.0
+        },
+        {
+          "name": "Sled_Pull_50m",
+          "time_seconds": 224.0
+        },
+        {
+          "name": "Burpee_Broad_Jump_80m",
+          "time_seconds": 236.0
+        },
+        {
+          "name": "Row_1000m",
+          "time_seconds": 264.0
+        },
+        {
+          "name": "Farmers_Carry_200m",
+          "time_seconds": 109.0
+        },
+        {
+          "name": "Sandbag_Lunges_100m",
+          "time_seconds": 248.0
+        },
+        {
+          "name": "Wall_Balls",
+          "time_seconds": 270.0
+        },
+        {
+          "name": "Roxzone_Time",
+          "time_seconds": null
+        }
+      ],
+      "athlete_url": "?content=detail&fpid=list_overall&pid=list_overall&idp=LR3MS4JI321434OV&lang=EN_CAP&event=H_HYROXOVERALL&pidp=ranking_nav&search%5Bname%5D=Perez+Rodriguez&search%5Bsex%5D=M&search%5Bfirstname%5D=Victor&search_event=H_HYROXOVERALL"
+    },
+    {
+      "rank": "28002",
+      "rank_gender": "28002",
+      "rank_age_group": "5704",
+      "name": "Perez Rodriguez, Victor",
+      "nationality": "ESP",
+      "city": "Malaga",
+      "event_date": "Malaga 2025",
+      "division": "HYROX",
+      "age_group": "35-39",
+      "total_time_seconds": 4256.0,
+      "total_time_display": "01:10:56",
+      "splits": [
+        {
+          "name": "Running_1",
+          "time_seconds": 220.0
+        },
+        {
+          "name": "Running_2",
+          "time_seconds": 267.0
+        },
+        {
+          "name": "Running_3",
+          "time_seconds": 276.0
+        },
+        {
+          "name": "Running_4",
+          "time_seconds": 279.0
+        },
+        {
+          "name": "Running_5",
+          "time_seconds": 286.0
+        },
+        {
+          "name": "Running_6",
+          "time_seconds": 288.0
+        },
+        {
+          "name": "Running_7",
+          "time_seconds": 280.0
+        },
+        {
+          "name": "Running_8",
+          "time_seconds": 291.0
+        },
+        {
+          "name": "SkiErg_1000m",
+          "time_seconds": 218.0
+        },
+        {
+          "name": "Sled_Push_50m",
+          "time_seconds": 175.0
+        },
+        {
+          "name": "Sled_Pull_50m",
+          "time_seconds": 221.0
+        },
+        {
+          "name": "Burpee_Broad_Jump_80m",
+          "time_seconds": 217.0
+        },
+        {
+          "name": "Row_1000m",
+          "time_seconds": 277.0
+        },
+        {
+          "name": "Farmers_Carry_200m",
+          "time_seconds": 117.0
+        },
+        {
+          "name": "Sandbag_Lunges_100m",
+          "time_seconds": 252.0
+        },
+        {
+          "name": "Wall_Balls",
+          "time_seconds": 296.0
+        },
+        {
+          "name": "Roxzone_Time",
+          "time_seconds": 306.0
+        }
+      ],
+      "athlete_url": "?content=detail&fpid=list_overall&pid=list_overall&idp=LR3MS4JI2C37ACOV&lang=EN_CAP&event=H_HYROXOVERALL&pidp=ranking_nav&search%5Bname%5D=Perez+Rodriguez&search%5Bsex%5D=M&search%5Bfirstname%5D=Victor&search_event=H_HYROXOVERALL"
+    },
+    {
+      "rank": "30223",
+      "rank_gender": "30223",
+      "rank_age_group": "3396",
+      "name": "Perez Rodriguez, Victor",
+      "nationality": "ESP",
+      "city": "Rome",
+      "event_date": "Rome 2025",
+      "division": "HYROX",
+      "age_group": "40-44",
+      "total_time_seconds": 4285.0,
+      "total_time_display": "01:11:25",
+      "splits": [
+        {
+          "name": "Running_1",
+          "time_seconds": 300.0
+        },
+        {
+          "name": "Running_2",
+          "time_seconds": 226.0
+        },
+        {
+          "name": "Running_3",
+          "time_seconds": 238.0
+        },
+        {
+          "name": "Running_4",
+          "time_seconds": 336.0
+        },
+        {
+          "name": "Running_5",
+          "time_seconds": 246.0
+        },
+        {
+          "name": "Running_6",
+          "time_seconds": 249.0
+        },
+        {
+          "name": "Running_7",
+          "time_seconds": 252.0
+        },
+        {
+          "name": "Running_8",
+          "time_seconds": 296.0
+        },
+        {
+          "name": "SkiErg_1000m",
+          "time_seconds": 234.0
+        },
+        {
+          "name": "Sled_Push_50m",
+          "time_seconds": 133.0
+        },
+        {
+          "name": "Sled_Pull_50m",
+          "time_seconds": 263.0
+        },
+        {
+          "name": "Burpee_Broad_Jump_80m",
+          "time_seconds": 210.0
+        },
+        {
+          "name": "Row_1000m",
+          "time_seconds": 275.0
+        },
+        {
+          "name": "Farmers_Carry_200m",
+          "time_seconds": 108.0
+        },
+        {
+          "name": "Sandbag_Lunges_100m",
+          "time_seconds": 301.0
+        },
+        {
+          "name": "Wall_Balls",
+          "time_seconds": 300.0
+        },
+        {
+          "name": "Roxzone_Time",
+          "time_seconds": 325.0
+        }
+      ],
+      "athlete_url": "?content=detail&fpid=list_overall&pid=list_overall&idp=LR3MS4JI3BA099OV&lang=EN_CAP&event=H_HYROXOVERALL&pidp=ranking_nav&search%5Bname%5D=Perez+Rodriguez&search%5Bsex%5D=M&search%5Bfirstname%5D=Victor&search_event=H_HYROXOVERALL"
+    }
+  ]
+}
