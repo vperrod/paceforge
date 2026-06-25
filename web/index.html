@@ -1972,15 +1972,15 @@ function formatMarkdown(md) {
 
 // Per-km area chart (inline SVG). invert=true puts the smallest value on top —
 // used for pace, where fewer seconds = faster.
-function miniChart(values, { color, invert = false, fmt = v => v, height = 140 } = {}) {
+function miniChart(values, { color, invert = false, fmt = v => v, height = 140, band = null } = {}) {
   const clean = values.filter(v => v != null && !isNaN(v));
   if (clean.length < 2) return '<div style="color:var(--text-3);font-size:.82rem;padding:8px 0">Not enough split data.</div>';
   const W = 820, H = height, pl = 44, pr = 12, pt = 12, pb = 8, iw = W - pl - pr, ih = H - pt - pb;
-  const mn = Math.min(...clean), mx = Math.max(...clean), range = (mx - mn) || 1, n = values.length;
-  const pts = values.map((v, i) => v == null || isNaN(v) ? null : {
-    x: pl + (i / Math.max(n - 1, 1)) * iw,
-    y: pt + (invert ? (v - mn) / range : 1 - (v - mn) / range) * ih,
-  }).filter(Boolean);
+  let mn = Math.min(...clean), mx = Math.max(...clean);
+  if (band) { mn = Math.min(mn, band[0]); mx = Math.max(mx, band[1]); }  // keep the band in view
+  const range = (mx - mn) || 1, n = values.length;
+  const yOf = v => pt + (invert ? (v - mn) / range : 1 - (v - mn) / range) * ih;
+  const pts = values.map((v, i) => v == null || isNaN(v) ? null : { x: pl + (i / Math.max(n - 1, 1)) * iw, y: yOf(v) }).filter(Boolean);
   let path = `M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`;
   for (let i = 1; i < pts.length; i++) {
     const mxd = (pts[i - 1].x + pts[i].x) / 2;
@@ -1988,8 +1988,17 @@ function miniChart(values, { color, invert = false, fmt = v => v, height = 140 }
   }
   const gid = 'cg' + Math.random().toString(36).slice(2, 7);
   const top = invert ? mn : mx, bot = invert ? mx : mn;
+  let bandSvg = '';
+  if (band) {
+    const yA = yOf(band[1]), yB = yOf(band[0]), yTop = Math.min(yA, yB), hgt = Math.abs(yB - yA);
+    bandSvg = `<rect x="${pl}" y="${yTop.toFixed(1)}" width="${iw}" height="${Math.max(hgt, 1).toFixed(1)}" fill="var(--emerald)" opacity=".13"/>
+      <line x1="${pl}" x2="${pl + iw}" y1="${yA.toFixed(1)}" y2="${yA.toFixed(1)}" stroke="var(--emerald)" stroke-width="1" stroke-dasharray="5 4" opacity=".55"/>
+      <line x1="${pl}" x2="${pl + iw}" y1="${yB.toFixed(1)}" y2="${yB.toFixed(1)}" stroke="var(--emerald)" stroke-width="1" stroke-dasharray="5 4" opacity=".55"/>
+      <text x="${pl + iw - 3}" y="${(yTop + 11).toFixed(1)}" text-anchor="end" fill="var(--emerald)" font-size="10" font-family="var(--font-m)" opacity=".85">efficient: ${fmt(band[0])}–${fmt(band[1])}</text>`;
+  }
   return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" preserveAspectRatio="none">
     <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity=".26"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
+    ${bandSvg}
     <path d="${path} L${pts[pts.length - 1].x.toFixed(1)},${pt + ih} L${pts[0].x.toFixed(1)},${pt + ih} Z" fill="url(#${gid})"/>
     <path d="${path}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
     <text x="3" y="${pt + 9}" fill="var(--text-3)" font-size="11" font-family="var(--font-m)">${fmt(top)}</text>
@@ -2103,13 +2112,19 @@ function activityDetailBody(act, detail, analysisMd, match) {
   else if (runSplits.length >= 2)
     charts += sec('Pace per km', miniChart(splits.map(s => s.pace_sec), { color: 'var(--sky)', invert: true, fmt: v => formatPace(v) }));
   // Cadence (running economy) — over time from the series, else per-km from splits.
+  // Shaded band = the efficient 170–180 spm range (below it usually means over-striding).
+  const cadFmt = v => Math.round(v) + ' spm', CAD_BAND = [170, 180];
   if (cadOverTime.filter(v => v != null).length >= 3)
-    charts += sec('Cadence over time', miniChart(cadOverTime, { color: 'var(--violet)', fmt: v => Math.round(v) + ' spm', height: 110 }));
+    charts += sec('Cadence over time', miniChart(cadOverTime, { color: 'var(--violet)', fmt: cadFmt, height: 110, band: CAD_BAND }));
   else if (runSplits.some(s => s.avg_cadence))
-    charts += sec('Cadence per km', miniChart(runSplits.map(s => s.avg_cadence), { color: 'var(--violet)', fmt: v => Math.round(v) + ' spm', height: 110 }));
-  // Stride length over time (economy) — only available from the series.
-  if (strideOverTime.filter(v => v != null).length >= 3)
-    charts += sec('Stride length over time', miniChart(strideOverTime, { color: 'var(--amber)', fmt: v => (v / 100).toFixed(2) + ' m', height: 110 }));
+    charts += sec('Cadence per km', miniChart(runSplits.map(s => s.avg_cadence), { color: 'var(--violet)', fmt: cadFmt, height: 110, band: CAD_BAND }));
+  // Stride length over time. Efficient band is pace-aware: the stride you'd take at
+  // THIS run's speed with an efficient cadence (speed ÷ 180 to ÷ 170). Above it = over-striding.
+  if (strideOverTime.filter(v => v != null).length >= 3) {
+    const spdMmin = (act.distance_meters && act.duration_seconds) ? act.distance_meters / act.duration_seconds * 60 : null;
+    const strideBand = spdMmin ? [spdMmin / 180 * 100, spdMmin / 170 * 100] : null;  // cm, matching the series
+    charts += sec('Stride length over time', miniChart(strideOverTime, { color: 'var(--amber)', fmt: v => (v / 100).toFixed(2) + ' m', height: 110, band: strideBand }));
+  }
   // Time-in-HR-zone distribution (cardio + running).
   charts += sec('Heart-rate zones', hrZoneBars(detail && detail.hr_zones));
   // Pace distribution (running).
