@@ -88,8 +88,13 @@ meaningful sessions already have one:
 1. For every plan workout that is `completed` with `matched_activity_ids` and has **no**
    `data/analyses/{id}.md` yet, write one (this is the "auto for planned workouts" path).
 2. When asked on-demand (a `Coach: analyze activity {id}` issue), analyse that specific id.
-3. For each: read the activity in `data/activities.json`, its splits in
-   `data/details/{id}.json` (per-km pace/HR, weather), the matched planned workout, and
-   `data/profile.json`. Write `data/analyses/{id}.md` with these `##` sections:
-   **Session summary**, **Versus the plan**, **Effect on your profile**, **What to
-   improve** — concrete and specific (pace/HR/fade numbers, not platitudes). Commit it.
+3. For each: read the activity in `data/activities.json` (incl. `avg_running_cadence`,
+   `avg_stride_length`, GCT, vertical ratio), its `data/details/{id}.json` — per-km splits
+   (pace/HR/`avg_cadence`) and the time-series (`series` items carry `hr`, `pace`, `cad`,
+   `stride`) — the matched planned workout, and `data/profile.json`. Write `data/analyses/{id}.md`
+   with these `##` sections: **Session summary**, **Versus the plan**, **Effect on your profile**,
+   **What to improve** — concrete and specific (pace/HR/fade numbers, not platitudes). Commit it.
+4. **Running economy is first-class for runs:** explicitly assess **cadence** (spm; ~170–180
+   typical, watch over-striding = low cadence + long stride) and **stride length** (and how
+   both drift late in the session = fatigue), plus GCT and vertical ratio. Tie them to economy
+   and give a concrete cue (e.g. "lift cadence ~5% to cut over-striding"). Skip for non-runs.

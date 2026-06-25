@@ -2085,6 +2085,8 @@ function activityDetailBody(act, detail, analysisMd, match) {
   const runSplits = splits.filter(s => s.pace_sec != null);
   const hrOverTime = series.map(s => s.hr);
   const paceOverTime = series.map(s => s.pace);
+  const cadOverTime = series.map(s => s.cad);
+  const strideOverTime = series.map(s => s.stride);
   const sec = (title, body) => body ? `<div class="act-sec"><div class="eyebrow" style="margin-bottom:6px">${title}</div>${body}</div>` : '';
 
   const runHr = runSplits.filter(s => s.avg_hr != null);
@@ -2100,6 +2102,14 @@ function activityDetailBody(act, detail, analysisMd, match) {
     charts += sec('Pace over time', miniChart(paceOverTime, { color: 'var(--sky)', invert: true, fmt: v => formatPace(v) }));
   else if (runSplits.length >= 2)
     charts += sec('Pace per km', miniChart(splits.map(s => s.pace_sec), { color: 'var(--sky)', invert: true, fmt: v => formatPace(v) }));
+  // Cadence (running economy) — over time from the series, else per-km from splits.
+  if (cadOverTime.filter(v => v != null).length >= 3)
+    charts += sec('Cadence over time', miniChart(cadOverTime, { color: 'var(--violet)', fmt: v => Math.round(v) + ' spm', height: 110 }));
+  else if (runSplits.some(s => s.avg_cadence))
+    charts += sec('Cadence per km', miniChart(runSplits.map(s => s.avg_cadence), { color: 'var(--violet)', fmt: v => Math.round(v) + ' spm', height: 110 }));
+  // Stride length over time (economy) — only available from the series.
+  if (strideOverTime.filter(v => v != null).length >= 3)
+    charts += sec('Stride length over time', miniChart(strideOverTime, { color: 'var(--amber)', fmt: v => v.toFixed(2) + ' m', height: 110 }));
   // Time-in-HR-zone distribution (cardio + running).
   charts += sec('Heart-rate zones', hrZoneBars(detail && detail.hr_zones));
   // Pace distribution (running).
