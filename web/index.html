@@ -1616,9 +1616,18 @@ async function renderCalendar(page) {
     cached('activities', () => apiJson('/activities').catch(() => [])),
   ]);
 
+  // Index activities + which ones a plan workout already claims, so a matched run
+  // shows as ONE entry (the workout, opening its actual activity) — not two.
+  const actById = {};
+  for (const act of activities || []) actById[act.activity_id] = act;
+  const matchedIds = new Set();
+  if (plan && plan.weeks) {
+    for (const w of plan.weeks) for (const wo of (w.workouts || [])) (wo.matched_activity_ids || []).forEach(id => matchedIds.add(id));
+  }
+
   for (const act of activities || []) {
     const d = (act.start_time || '').slice(0, 10);
-    if (!d) continue;
+    if (!d || matchedIds.has(act.activity_id)) continue;
     const distKm = act.distance_meters ? (act.distance_meters/1000).toFixed(1) : null;
     const isRun = (act.activity_type || '').toLowerCase().includes('run');
     let sub = '';
@@ -1631,11 +1640,16 @@ async function renderCalendar(page) {
     for (const w of plan.weeks || []) {
       for (const wo of w.workouts || []) {
         if (!wo.scheduled_date) continue;
+        const matchedAct = (wo.matched_activity_ids || []).map(id => actById[id]).find(Boolean) || null;
         const distKm = wo.estimated_distance_meters ? (wo.estimated_distance_meters/1000).toFixed(1) + ' km' : '';
+        let sub = [wo.workout_type?.replace(/_/g,' '), distKm].filter(Boolean).join(' · ');
+        if (matchedAct && matchedAct.distance_meters && matchedAct.duration_seconds) {
+          sub = `${(matchedAct.distance_meters/1000).toFixed(1)} km · ${formatPace(matchedAct.duration_seconds/(matchedAct.distance_meters/1000))}/km`;
+        }
         (calEntries[wo.scheduled_date] ||= []).push({
-          type:'planned', title: (wo.completed ? '✓ ' : '○ ') + (wo.name || 'Workout'),
-          sub: [wo.workout_type?.replace(/_/g,' '), distKm].filter(Boolean).join(' · '),
-          color: wo.completed ? 'var(--emerald)' : 'var(--sky)', wo,
+          type: matchedAct ? 'activity' : 'planned',
+          title: (wo.completed ? '✓ ' : '○ ') + (wo.name || 'Workout'), sub,
+          color: wo.completed ? 'var(--emerald)' : 'var(--sky)', wo, activity: matchedAct,
         });
       }
     }

@@ -487,7 +487,8 @@ class GarminClient:
 
         # Recent activities (multiple types supported)
         activities: list[RecentActivity] = []
-        _act_types = activity_types or ["running"]
+        # None => Garmin returns every activity type (runs, cardio, strength, …).
+        _act_types = activity_types or [None]
         try:
             start = (date.today() - timedelta(days=lookback_days)).isoformat()
             raw: list = []
