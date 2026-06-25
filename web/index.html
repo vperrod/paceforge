@@ -1862,12 +1862,14 @@ function activityDetailBody(act, detail, analysisMd, match) {
   const paceOverTime = series.map(s => s.pace);
   const sec = (title, body) => body ? `<div class="act-sec"><div class="eyebrow" style="margin-bottom:6px">${title}</div>${body}</div>` : '';
 
+  const runHr = runSplits.filter(s => s.avg_hr != null);
   let charts = '';
-  // Heart rate over time (cardio + running); fall back to per-km HR when no series.
+  // Heart rate over time (cardio + running); fall back to per-km HR for runs with
+  // multiple splits. (Cardio's single session-lap isn't a per-km series.)
   if (hrOverTime.filter(v => v != null).length >= 3)
     charts += sec('Heart rate over time', miniChart(hrOverTime, { color: 'var(--rose)', fmt: v => Math.round(v) + ' bpm', height: 120 }));
-  else if (splits.some(s => s.avg_hr))
-    charts += sec('Heart rate per km', miniChart(splits.map(s => s.avg_hr), { color: 'var(--rose)', fmt: v => Math.round(v) + ' bpm', height: 120 }));
+  else if (runHr.length >= 2)
+    charts += sec('Heart rate per km', miniChart(runSplits.map(s => s.avg_hr), { color: 'var(--rose)', fmt: v => Math.round(v) + ' bpm', height: 120 }));
   // Pace over time (running); fall back to per-km pace.
   if (paceOverTime.filter(v => v != null).length >= 3)
     charts += sec('Pace over time', miniChart(paceOverTime, { color: 'var(--sky)', invert: true, fmt: v => formatPace(v) }));
