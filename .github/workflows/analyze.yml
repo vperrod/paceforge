@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write  # claude-code-action mints its GitHub App token via OIDC
 
 concurrency:
   group: paceforge-data
