@@ -1,6 +1,6 @@
 ---
 name: coach
-description: PaceForge running coach. Use when building, adapting, or reviewing a training plan, analysing Garmin/Strava activities and health metrics, or producing weekly reviews and improvement suggestions for the athlete in this repo. Triggers on "build my plan", "review my week", "adapt my plan", "how was my run", "reschedule", "PaceForge".
+description: PaceForge running coach. Use when building, adapting, or reviewing a training plan, analysing Garmin activities and health metrics, or producing weekly reviews and improvement suggestions for the athlete in this repo. Triggers on "build my plan", "review my week", "adapt my plan", "how was my run", "reschedule", "PaceForge".
 ---
 
 # PaceForge Coach
@@ -65,5 +65,3 @@ changed week (it deletes and re-creates the week's Garmin workouts to avoid dupe
 3. For each completed workout, compare planned vs actual (distance, pace, HR, cadence).
 4. Write `week-review.md` with: summary, plan adherence, performance, recovery
    (HRV/readiness/sleep/body-battery), concerns, and 2–4 concrete improvement tips.
-5. Optionally push your analysis to the matching Strava activity:
-   `paceforge strava-set-description --activity-id <id> --text "..."`.

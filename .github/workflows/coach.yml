@@ -27,9 +27,6 @@ jobs:
     env:
       PACEFORGE_GARMIN_EMAIL: ${{ secrets.PACEFORGE_GARMIN_EMAIL }}
       GARMIN_TOKEN: ${{ secrets.GARMIN_TOKEN }}
-      STRAVA_CLIENT_ID: ${{ secrets.STRAVA_CLIENT_ID }}
-      STRAVA_CLIENT_SECRET: ${{ secrets.STRAVA_CLIENT_SECRET }}
-      STRAVA_REFRESH_TOKEN: ${{ secrets.STRAVA_REFRESH_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 

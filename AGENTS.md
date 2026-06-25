@@ -2,7 +2,7 @@
 
 Single-user, serverless running coach. No backend, no database, no LLM API key.
 **Claude is the coach** (`.claude/skills/coach/`); the `paceforge` package does the
-deterministic maths + Garmin/Strava I/O; `data/*.json` (git-tracked) is the state.
+deterministic maths + Garmin I/O; `data/*.json` (git-tracked) is the state.
 
 Full orientation is in [CLAUDE.md](CLAUDE.md) — read it. Key points:
 
@@ -15,8 +15,7 @@ src/paceforge/
 ├── mcp_server.py     # `paceforge-mcp` stdio server (Claude desktop)
 ├── engine/           # vdot, workouts, planner (LLM-free), adaptation,
 │                     # analytics (health/running analysis), validate (rule checks)
-├── garmin/client.py  # reads metrics, uploads structured workouts (garth)
-├── strava/client.py  # OAuth + activity push
+├── garmin/client.py  # reads metrics, uploads structured workouts
 └── hyrox/            # race-result analyzer vs field benchmarks
 data/*.json           # profile.json, plan.json, activities.json
 ```
