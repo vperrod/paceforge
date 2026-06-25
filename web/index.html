@@ -313,6 +313,14 @@ a{color:var(--emerald);text-decoration:none}
 .modal-close:hover{color:var(--text);background:var(--hover)}
 .modal-foot{display:flex;gap:10px;justify-content:flex-end;margin-top:22px}
 .detail-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.modal.wide{max-width:900px}
+.mono{font-family:var(--font-m)}
+.act-sec{margin-top:18px}
+.splits-tbl{width:100%;border-collapse:collapse;font-size:.82rem}
+.splits-tbl th{text-align:left;color:var(--text-3);font-weight:600;font-size:.66rem;text-transform:uppercase;letter-spacing:.06em;padding:6px 8px;border-bottom:1px solid var(--border)}
+.splits-tbl td{padding:6px 8px;border-bottom:1px solid var(--border-s)}
+.act-analysis{font-size:.9rem;color:var(--text-2);line-height:1.65}
+.act-analysis b{color:var(--text)}
 .detail-item{text-align:center;padding:12px 6px;background:var(--elevated);border-radius:var(--r-sm)}
 .detail-item .d-val{font-family:var(--font-m);font-size:.95rem;font-weight:600}
 .detail-item .d-lbl{font-size:.64rem;color:var(--text-3);margin-top:3px;text-transform:uppercase;letter-spacing:.04em}
@@ -685,12 +693,12 @@ function toast(kind, title, body) {
 }
 
 // ── Modal ──────────────────────────────────────────────
-function openModal(content) {
+function openModal(content, wide) {
   closeModal();
   const ov = document.createElement('div');
   ov.className = 'modal-overlay';
   ov.id = 'modal-overlay';
-  ov.innerHTML = `<div class="modal" role="dialog" aria-modal="true">${content}</div>`;
+  ov.innerHTML = `<div class="modal${wide ? ' wide' : ''}" role="dialog" aria-modal="true">${content}</div>`;
   document.body.appendChild(ov);
   requestAnimationFrame(() => ov.classList.add('open'));
   ov.addEventListener('click', e => { if (e.target === ov) closeModal(); });
@@ -1675,37 +1683,154 @@ async function renderCalendar(page) {
   reDraw();
 }
 
-function showActivitySheet(act) {
-  const distKm = act.distance_meters ? (act.distance_meters/1000).toFixed(2) : '—';
+async function loadText(file) {
+  const res = await fetch('./data/' + file);
+  if (!res.ok) throw new Error('not found');
+  return res.text();
+}
+
+function formatMarkdown(md) {
+  return escHtml(md)
+    .replace(/^#{1,3} (.*)$/gm, '<div style="font-weight:700;color:var(--text);margin:12px 0 4px">$1</div>')
+    .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+    .replace(/^\s*[-*] (.*)$/gm, '<li>$1</li>')
+    .replace(/(?:<li>[\s\S]*?<\/li>\n?)+/g, m => '<ul style="margin:4px 0 10px 18px">' + m + '</ul>')
+    .replace(/\n{2,}/g, '<br><br>').replace(/\n/g, '<br>');
+}
+
+// Per-km area chart (inline SVG). invert=true puts the smallest value on top —
+// used for pace, where fewer seconds = faster.
+function miniChart(values, { color, invert = false, fmt = v => v, height = 140 } = {}) {
+  const clean = values.filter(v => v != null && !isNaN(v));
+  if (clean.length < 2) return '<div style="color:var(--text-3);font-size:.82rem;padding:8px 0">Not enough split data.</div>';
+  const W = 820, H = height, pl = 44, pr = 12, pt = 12, pb = 8, iw = W - pl - pr, ih = H - pt - pb;
+  const mn = Math.min(...clean), mx = Math.max(...clean), range = (mx - mn) || 1, n = values.length;
+  const pts = values.map((v, i) => v == null || isNaN(v) ? null : {
+    x: pl + (i / Math.max(n - 1, 1)) * iw,
+    y: pt + (invert ? (v - mn) / range : 1 - (v - mn) / range) * ih,
+  }).filter(Boolean);
+  let path = `M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`;
+  for (let i = 1; i < pts.length; i++) {
+    const mxd = (pts[i - 1].x + pts[i].x) / 2;
+    path += ` C${mxd.toFixed(1)},${pts[i - 1].y.toFixed(1)} ${mxd.toFixed(1)},${pts[i].y.toFixed(1)} ${pts[i].x.toFixed(1)},${pts[i].y.toFixed(1)}`;
+  }
+  const gid = 'cg' + Math.random().toString(36).slice(2, 7);
+  const top = invert ? mn : mx, bot = invert ? mx : mn;
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" preserveAspectRatio="none">
+    <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity=".26"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
+    <path d="${path} L${pts[pts.length - 1].x.toFixed(1)},${pt + ih} L${pts[0].x.toFixed(1)},${pt + ih} Z" fill="url(#${gid})"/>
+    <path d="${path}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="3" y="${pt + 9}" fill="var(--text-3)" font-size="11" font-family="var(--font-m)">${fmt(top)}</text>
+    <text x="3" y="${pt + ih}" fill="var(--text-3)" font-size="11" font-family="var(--font-m)">${fmt(bot)}</text>
+  </svg>`;
+}
+
+function matchedWorkout(plan, activityId) {
+  if (!plan || !plan.weeks) return null;
+  const idStr = String(activityId);
+  for (const wk of plan.weeks) for (const wo of (wk.workouts || []))
+    if ((wo.matched_activity_ids || []).map(String).includes(idStr)) return { wo, week: wk };
+  return null;
+}
+
+function deterministicInsights(detail, act, match) {
+  const out = [];
+  const avg = a => a.reduce((x, y) => x + y, 0) / a.length;
+  const sp = ((detail && detail.splits) || []).filter(s => s.pace_sec);
+  if (sp.length >= 3) {
+    const k = Math.max(1, Math.floor(sp.length / 3));
+    const first = avg(sp.slice(0, k).map(s => s.pace_sec)), last = avg(sp.slice(-k).map(s => s.pace_sec));
+    const fade = (last - first) / first * 100;
+    out.push(Math.abs(fade) < 2 ? 'Even pacing — held steady start to finish.'
+      : fade > 0 ? `Positive split — slowed ${fade.toFixed(0)}% over the run (faded).`
+      : `Negative split — sped up ${(-fade).toFixed(0)}%, strong finish.`);
+    const hr = sp.filter(s => s.avg_hr);
+    if (hr.length >= 3) {
+      const drift = avg(sp.slice(-k).map(s => s.avg_hr || 0)) - avg(sp.slice(0, k).map(s => s.avg_hr || 0));
+      if (drift > 5) out.push(`HR drifted up ~${Math.round(drift)} bpm — cardiac drift / fatigue.`);
+    }
+  }
+  if (act.training_effect_aerobic) out.push(`Aerobic TE ${act.training_effect_aerobic.toFixed(1)}/5 — ${act.training_effect_aerobic >= 3 ? 'meaningful aerobic stimulus.' : 'maintenance / recovery level.'}`);
+  if (match) {
+    const tgtKm = match.wo.estimated_distance_meters ? match.wo.estimated_distance_meters / 1000 : null;
+    const actKm = act.distance_meters ? act.distance_meters / 1000 : null;
+    if (tgtKm && actKm) out.push(`Planned ~${tgtKm.toFixed(1)} km (${(match.wo.workout_type || '').replace(/_/g, ' ')}); ran ${actKm.toFixed(1)} km.`);
+  }
+  return out.length ? `<ul style="margin:0;padding-left:18px;line-height:1.7;font-size:.88rem;color:var(--text-2)">${out.map(x => `<li>${escHtml(x)}</li>`).join('')}</ul>` : '';
+}
+
+function analyzeActivityWithCoach(act, btn) {
+  if (!requireToken()) return;
+  withBusy(btn, 'Requesting…', async () => {
+    const title = `Coach: analyze activity ${act.activity_id} (${act.name || 'activity'})`;
+    const body = `Analyze Garmin activity **${act.activity_id}** — "${act.name || ''}" on ${act.start_time || ''}.\n\nWrite the analysis to \`data/analyses/${act.activity_id}.md\`: what was done, how it compares to the planned workout (if one matched), how it affects my athlete profile, and what I should improve.`;
+    const res = await fetch(`https://api.github.com/repos/${REPO}/issues`, { method: 'POST', headers: ghHeaders(), body: JSON.stringify({ title, body, labels: ['coach'] }) });
+    if (!res.ok) throw new Error(await ghError(res));
+    const issue = await res.json();
+    toast('ok', 'Analysis requested', `<a href="${issue.html_url}" target="_blank" rel="noopener">#${issue.number}</a> — Claude will write it shortly.`);
+  });
+}
+
+async function showActivitySheet(act) {
+  const id = act.activity_id;
+  let detail = null, analysisMd = null, plan = null;
+  try { detail = await loadJSON(`details/${id}.json`); } catch {}
+  try { analysisMd = await loadText(`analyses/${id}.md`); } catch {}
+  try { plan = await planStore.get(); } catch {}
+  const match = matchedWorkout(plan, id);
+
+  const distKm = act.distance_meters ? (act.distance_meters / 1000).toFixed(2) : '—';
   const duration = act.duration_seconds ? formatSeconds(act.duration_seconds) : '—';
   const pace = act.avg_pace_sec_per_km ? formatPace(act.avg_pace_sec_per_km) + '/km' : '—';
-  let teHtml = '';
-  if (act.training_effect_aerobic || act.training_effect_anaerobic) {
-    teHtml = `<div style="margin-top:16px"><div class="eyebrow" style="margin-bottom:10px">Training Effect</div>`;
-    if (act.training_effect_aerobic) {
-      const pct = Math.min(100, Math.round(act.training_effect_aerobic/5*100));
-      teHtml += `<div class="gauge-row"><span class="gauge-tag">Aerobic</span><div class="gauge-bar"><div class="gauge-fill" style="width:${pct}%;background:var(--sky)"></div></div><span class="gauge-num">${act.training_effect_aerobic.toFixed(1)}</span></div>`;
-    }
-    if (act.training_effect_anaerobic) {
-      const pct = Math.min(100, Math.round(act.training_effect_anaerobic/5*100));
-      teHtml += `<div class="gauge-row"><span class="gauge-tag">Anaerobic</span><div class="gauge-bar"><div class="gauge-fill" style="width:${pct}%;background:var(--rose)"></div></div><span class="gauge-num">${act.training_effect_anaerobic.toFixed(1)}</span></div>`;
-    }
-    teHtml += '</div>';
-  }
+  const splits = (detail && detail.splits) || [];
+  const w = detail && detail.weather;
+
+  const charts = splits.length >= 2 ? `
+    <div class="act-sec"><div class="eyebrow" style="margin-bottom:6px">Pace per km</div>${miniChart(splits.map(s => s.pace_sec), { color: 'var(--sky)', invert: true, fmt: v => formatPace(v) })}</div>
+    ${splits.some(s => s.avg_hr) ? `<div class="act-sec"><div class="eyebrow" style="margin-bottom:6px">Heart rate per km</div>${miniChart(splits.map(s => s.avg_hr), { color: 'var(--rose)', fmt: v => Math.round(v) + ' bpm', height: 120 })}</div>` : ''}
+    <div class="act-sec"><div class="eyebrow" style="margin-bottom:8px">Splits</div>
+      <table class="splits-tbl"><thead><tr><th>#</th><th>km</th><th>Pace</th><th>HR</th><th>Elev</th></tr></thead><tbody>
+      ${splits.map(s => `<tr><td>${s.n}</td><td>${s.distance_m ? (s.distance_m / 1000).toFixed(2) : '—'}</td><td class="mono">${s.pace_sec ? formatPace(s.pace_sec) : '—'}</td><td class="mono">${s.avg_hr ?? '—'}</td><td>${s.elev_gain != null ? Math.round(s.elev_gain) + 'm' : '—'}</td></tr>`).join('')}
+      </tbody></table>
+    </div>`
+    : `<div class="act-sec" style="padding:10px 12px;background:var(--elevated);border-radius:var(--r-sm);font-size:.84rem;color:var(--text-2)">No per-km splits for this activity yet — they appear after the next sync (recent activities only).</div>`;
+
+  const planHtml = match ? `<div class="act-sec"><div class="eyebrow" style="margin-bottom:8px">Planned vs actual</div>
+    <div class="detail-grid">
+      ${detailItem(escHtml(match.wo.name || '—'), 'Planned')}
+      ${detailItem((match.wo.workout_type || '').replace(/_/g, ' ') || '—', 'Type')}
+      ${detailItem((match.wo.estimated_distance_meters ? (match.wo.estimated_distance_meters / 1000).toFixed(1) : '—') + ' km', 'Planned dist')}
+      ${detailItem(distKm + ' km', 'Actual dist')}
+    </div>
+    ${match.wo.purpose ? `<div style="font-size:.84rem;color:var(--text-3);margin-top:8px">${escHtml(match.wo.purpose.replace(/_/g, ' '))}</div>` : ''}
+  </div>` : '';
+
+  const insights = deterministicInsights(detail, act, match);
+  const analysisInner = analysisMd
+    ? `<div class="act-analysis">${formatMarkdown(analysisMd)}</div>`
+    : `<div>${insights || '<div style="color:var(--text-3);font-size:.85rem">No AI analysis yet.</div>'}
+        <button class="btn btn-primary btn-sm" id="act-analyze" style="margin-top:12px">${icons.spark} Analyze with Coach</button>
+        <div class="hint" style="margin-top:6px">Asks Claude (via GitHub) to write a full coaching analysis of this session.</div></div>`;
+
   openModal(`
-    <div class="modal-h"><div><div class="modal-title">${escHtml(act.name || 'Activity')}</div><div class="modal-sub">${escHtml(act.activity_type || '')}${act.start_time ? ' · ' + new Date(act.start_time).toLocaleString() : ''}</div></div><button class="modal-close" data-close>${icons.x}</button></div>
+    <div class="modal-h"><div><div class="modal-title">${escHtml(act.name || 'Activity')}</div><div class="modal-sub">${escHtml(act.activity_type || '')}${act.start_time ? ' · ' + new Date(act.start_time).toLocaleString() : ''}${w && w.temp_c != null ? ` · ${Math.round(w.temp_c)}°C${w.desc ? ' ' + escHtml(w.desc) : ''}` : ''}</div></div><button class="modal-close" data-close>${icons.x}</button></div>
     <div class="detail-grid">
       ${detailItem(distKm, 'Distance km')}${detailItem(duration, 'Duration')}${detailItem(pace, 'Avg Pace')}
       ${detailItem(act.avg_hr || '—', 'Avg HR')}${detailItem(act.max_hr || '—', 'Max HR')}${detailItem(act.calories || '—', 'Calories')}
       ${detailItem(act.avg_running_cadence ? Math.round(act.avg_running_cadence) : '—', 'Cadence')}
-      ${detailItem(act.avg_stride_length ? act.avg_stride_length.toFixed(2)+'m' : '—', 'Stride')}
-      ${detailItem(act.avg_ground_contact_time ? Math.round(act.avg_ground_contact_time)+'ms' : '—', 'GCT')}
-      ${detailItem(act.avg_vertical_oscillation ? act.avg_vertical_oscillation.toFixed(1)+'cm' : '—', 'Vert Osc')}
-      ${detailItem(act.avg_power ? Math.round(act.avg_power)+'W' : '—', 'Power')}
-      ${detailItem(act.elevation_gain ? Math.round(act.elevation_gain)+'m' : '—', 'Elevation')}
+      ${detailItem(act.avg_stride_length ? act.avg_stride_length.toFixed(2) + 'm' : '—', 'Stride')}
+      ${detailItem(act.avg_ground_contact_time ? Math.round(act.avg_ground_contact_time) + 'ms' : '—', 'GCT')}
+      ${detailItem(act.training_effect_aerobic ? act.training_effect_aerobic.toFixed(1) : '—', 'Aerobic TE')}
+      ${detailItem(act.training_effect_anaerobic ? act.training_effect_anaerobic.toFixed(1) : '—', 'Anaerobic TE')}
+      ${detailItem(act.elevation_gain ? Math.round(act.elevation_gain) + 'm' : '—', 'Elevation')}
     </div>
-    ${teHtml}
-  `);
+    ${charts}
+    ${planHtml}
+    <div class="act-sec"><div class="eyebrow" style="margin-bottom:8px">Coach analysis</div>${analysisInner}</div>
+  `, true);
+
+  const ab = document.getElementById('act-analyze');
+  if (ab) ab.addEventListener('click', () => analyzeActivityWithCoach(act, ab));
 }
 
 // ═══════════════════════════════════════════════════════
