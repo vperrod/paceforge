@@ -1,8 +1,0 @@
-<step title="Incoming Request" date="2026-04-09T13:45:40.393" instance="2ddc32" url="/logstream/docker" method="GET" type="request" pid="770,1,27" Host="paceforge-app.scm.azurewebsites.net" User-Agent="AZURECLI/2.80.0 (MSI)" Accept-Encoding="identity" Authorization="Bea..." x-ms-client-request-id="3b510fd9-341a-11f1-8d08-e40d3617ce4b" X-ARR-LOG-ID="3b510fd9-341a-11f1-8d08-e40d3617ce4b" CLIENT-IP="40.69.22.128:47873" X-SITE-DEPLOYMENT-ID="paceforge-app" WAS-DEFAULT-HOSTNAME="paceforge-app.scm.azurewebsites.net" X-Forwarded-Proto="https" X-AppService-Proto="https" X-Forwarded-TlsVersion="1.3" X-WAWS-Unencoded-URL="/logstream/docker" X-Client-IP="40.69.22.128" X-Client-Port="47873" >
-  <step title="Cleanup Xml Logs" date="2026-04-09T13:45:40.402" /><!-- duration: 24ms -->
-  <step title="LogStreamHandlerMiddleware.Invoke" date="2026-04-09T13:45:40.462" /><!-- duration: 145ms -->
-  <step title="Error occurred" date="2026-04-09T15:45:40.586" type="error" text="LogStreamManager: Inside TerminateClient" /><!-- duration: 16ms -->
-  <step title="Error occurred" date="2026-04-09T15:45:40.624" type="error" text="LogStreamManager: Inside Reset" /><!-- duration: 10ms -->
-  <step title="Error occurred" date="2026-04-09T17:13:41.136" type="error" text="LogStreamManager: ProcessRequest end due to timeout" /><!-- duration: 39ms -->
-  <step title="Outgoing response" date="2026-04-09T17:13:41.252" type="response" statusCode="200" statusText="OK" /><!-- duration: 8ms -->
-</step><!-- duration: 12480875ms -->

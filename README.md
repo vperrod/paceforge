@@ -1,63 +1,63 @@
 # PaceForge
 
-AI-enhanced running plan generator for Garmin watches.
+A personal, serverless running coach for Garmin. Pulls your Garmin Connect fitness
+data, builds and adapts training plans, pushes structured workouts to your watch,
+and reviews your training — with **no backend, no database, and no LLM API bill**.
 
-PaceForge analyses your Garmin Connect fitness data (VO2 max, HRV, training readiness, race predictions, recent activities) and generates personalised training plans for half marathons, marathons, and Hyrox events. Plans are pushed as structured workouts directly to your Garmin watch via Garmin Connect.
+It runs three ways, all free beyond a Claude subscription:
+- **Claude Code** in this repo (run the CLI directly),
+- the **Claude desktop app** via a local MCP server,
+- **GitHub Actions** — a daily Garmin sync and a weekly auto-review.
 
-## Features
+## How it works
 
-- **Garmin Connect integration** — reads fitness metrics, uploads structured workouts with pace/HR targets
-- **VDOT pace calculator** — derives training zones (Easy, Marathon, Threshold, Interval, Repetition) from your race performance using the Daniels & Gilbert formula
-- **Plan templates** — progressive-overload plans for Half Marathon (12 wk), Marathon (16 wk), and Hyrox (10 wk)
-- **AI coaching** (Phase 3) — LLM-powered plan adaptation and conversational coaching
-- **Streamlit dashboard** — visualise fitness profile, generate plans, push to Garmin in one click
+- **Deterministic maths in code**: VDOT→pace zones, workout construction, the template
+  planner, and plan validation live in the `paceforge` package.
+- **Judgement is Claude's**: plan design, adaptation to your current state, activity
+  analysis, and weekly reviews — guided by the coach skill (`.claude/skills/coach/`).
+- **State is files**: everything lives in git-tracked `data/*.json`. Git is the history.
 
-## Quick Start
+Claude **proposes** a plan; the engine **validates** it (paces ordered, no back-to-back
+intense days, sane volume ramps) before anything reaches your watch.
 
-```bash
-# Clone and install
-git clone https://github.com/<you>/paceforge.git
-cd paceforge
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -e ".[dev]"
-
-# Configure
-cp .env.example .env
-# Edit .env with your Garmin credentials
-
-# Run the API server
-uvicorn paceforge.api.app:app --reload
-
-# Run the dashboard (separate terminal)
-streamlit run src/paceforge/dashboard.py
-```
-
-## Configuration
-
-Set via environment variables or `.env` file (prefix `PACEFORGE_`):
-
-| Variable | Description |
-|----------|-------------|
-| `PACEFORGE_GARMIN_EMAIL` | Garmin Connect email |
-| `PACEFORGE_GARMIN_PASSWORD` | Garmin Connect password |
-| `PACEFORGE_OPENAI_API_KEY` | OpenAI API key (optional, for AI coach) |
-
-## Running Tests
+## Setup
 
 ```bash
-pytest tests/ -v
+python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
+.venv/bin/paceforge login        # one-time Garmin auth (handles MFA) → prints GARMIN_TOKEN
 ```
 
-## Architecture
+Store the printed `GARMIN_TOKEN` (and `PACEFORGE_GARMIN_EMAIL`) as GitHub Actions
+secrets to enable headless sync. See `.env.example` for all variables.
 
+## Usage
+
+```bash
+paceforge sync                              # Garmin metrics + activities → data/*.json
+paceforge analyze                           # aerobic/economy/load/predictions analysis
+paceforge plan --goal MARATHON --date 2026-10-04 --level intermediate
+paceforge validate                          # check data/plan.json against the rules
+paceforge push --dry-run                    # preview the week's workouts
+paceforge push                              # upload to Garmin
 ```
-src/paceforge/
-├── api/          # FastAPI backend
-├── engine/       # VDOT calculator, plan generator, templates
-├── garmin/       # Garmin Connect client wrapper
-├── models/       # Pydantic data models
-└── dashboard.py  # Streamlit frontend
+
+Or just ask Claude: *"sync and review my week"*, *"build my marathon block"*,
+*"reschedule Thursday's tempo to Saturday"* — it drives the same commands.
+
+## Migrating from the old hosted app
+
+```bash
+# Download paceforge.db from Azure (Kudu: /home/data/paceforge.db), then:
+python scripts/migrate_from_sqlite.py paceforge.db --email you@example.com
+paceforge status                            # confirm your plan + activities came across
+```
+
+Once verified, `scripts/decommission_azure.sh` tears down the old App Service + registry.
+
+## Tests
+
+```bash
+.venv/bin/pytest tests/ -q
 ```
 
 ## License
