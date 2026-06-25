@@ -2109,7 +2109,7 @@ function activityDetailBody(act, detail, analysisMd, match) {
     charts += sec('Cadence per km', miniChart(runSplits.map(s => s.avg_cadence), { color: 'var(--violet)', fmt: v => Math.round(v) + ' spm', height: 110 }));
   // Stride length over time (economy) — only available from the series.
   if (strideOverTime.filter(v => v != null).length >= 3)
-    charts += sec('Stride length over time', miniChart(strideOverTime, { color: 'var(--amber)', fmt: v => v.toFixed(2) + ' m', height: 110 }));
+    charts += sec('Stride length over time', miniChart(strideOverTime, { color: 'var(--amber)', fmt: v => (v / 100).toFixed(2) + ' m', height: 110 }));
   // Time-in-HR-zone distribution (cardio + running).
   charts += sec('Heart-rate zones', hrZoneBars(detail && detail.hr_zones));
   // Pace distribution (running).
@@ -2146,7 +2146,7 @@ function activityDetailBody(act, detail, analysisMd, match) {
       ${detailItem(distKm, 'Distance km')}${detailItem(duration, 'Duration')}${detailItem(pace, 'Avg Pace')}
       ${detailItem(act.avg_hr || '—', 'Avg HR')}${detailItem(act.max_hr || '—', 'Max HR')}${detailItem(act.calories || '—', 'Calories')}
       ${detailItem(act.avg_running_cadence ? Math.round(act.avg_running_cadence) : '—', 'Cadence')}
-      ${detailItem(act.avg_stride_length ? act.avg_stride_length.toFixed(2) + 'm' : '—', 'Stride')}
+      ${detailItem(act.avg_stride_length ? (act.avg_stride_length / 100).toFixed(2) + 'm' : '—', 'Stride')}
       ${detailItem(act.avg_ground_contact_time ? Math.round(act.avg_ground_contact_time) + 'ms' : '—', 'GCT')}
       ${detailItem(act.training_effect_aerobic ? act.training_effect_aerobic.toFixed(1) : '—', 'Aerobic TE')}
       ${detailItem(act.training_effect_anaerobic ? act.training_effect_anaerobic.toFixed(1) : '—', 'Anaerobic TE')}
