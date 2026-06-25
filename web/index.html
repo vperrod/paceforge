@@ -232,6 +232,14 @@ a{color:var(--emerald);text-decoration:none}
 .cal-day.other-month{opacity:.35}
 .cal-num{font-size:.82rem;font-weight:600;font-family:var(--font-m)}
 .cal-pill{font-size:.64rem;padding:2px 6px;border-radius:5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
+.cal-grid.compact{gap:4px}
+.cal-grid.compact .cal-day{min-height:44px;padding:5px 6px;gap:3px}
+.cal-dots{display:flex;flex-wrap:wrap;gap:3px;margin-top:auto}
+.cal-dot{width:6px;height:6px;border-radius:50%}
+.detail-head{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.detail-head .btn svg{width:15px;height:15px}
+.detail-h-title{font-size:1.15rem;font-weight:700;line-height:1.2}
+.detail-h-sub{font-size:.82rem;color:var(--text-3);margin-top:2px}
 
 /* ════════ HYROX ════════ */
 .hyrox-station{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--border-s)}
@@ -730,6 +738,7 @@ const icons = {
   alert:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>`,
   info:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></svg>`,
   x:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`,
+  back:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>`,
   run:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="17" cy="5" r="2"/><path d="m9 21 2-4-3-3 1-5 4 2 2 3"/><path d="M4 13h2l2-2"/></svg>`,
   dumbbell:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6.5 6.5 11 11M3 9v6M21 9v6M6 7v10M18 7v10"/></svg>`,
   edit:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4v16h16v-7"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>`,
@@ -950,7 +959,7 @@ function bindActivityRows(page, activities) {
   page.querySelectorAll('[data-act-idx]').forEach(el => {
     el.addEventListener('click', () => {
       const act = (activities || [])[+el.dataset.actIdx];
-      if (act) showActivitySheet(act);
+      if (act) openActivity(act);
     });
   });
 }
@@ -1607,9 +1616,18 @@ async function renderCalendar(page) {
     cached('activities', () => apiJson('/activities').catch(() => [])),
   ]);
 
+  // Index activities + which ones a plan workout already claims, so a matched run
+  // shows as ONE entry (the workout, opening its actual activity) — not two.
+  const actById = {};
+  for (const act of activities || []) actById[act.activity_id] = act;
+  const matchedIds = new Set();
+  if (plan && plan.weeks) {
+    for (const w of plan.weeks) for (const wo of (w.workouts || [])) (wo.matched_activity_ids || []).forEach(id => matchedIds.add(id));
+  }
+
   for (const act of activities || []) {
     const d = (act.start_time || '').slice(0, 10);
-    if (!d) continue;
+    if (!d || matchedIds.has(act.activity_id)) continue;
     const distKm = act.distance_meters ? (act.distance_meters/1000).toFixed(1) : null;
     const isRun = (act.activity_type || '').toLowerCase().includes('run');
     let sub = '';
@@ -1622,14 +1640,25 @@ async function renderCalendar(page) {
     for (const w of plan.weeks || []) {
       for (const wo of w.workouts || []) {
         if (!wo.scheduled_date) continue;
+        const matchedAct = (wo.matched_activity_ids || []).map(id => actById[id]).find(Boolean) || null;
         const distKm = wo.estimated_distance_meters ? (wo.estimated_distance_meters/1000).toFixed(1) + ' km' : '';
+        let sub = [wo.workout_type?.replace(/_/g,' '), distKm].filter(Boolean).join(' · ');
+        if (matchedAct && matchedAct.distance_meters && matchedAct.duration_seconds) {
+          sub = `${(matchedAct.distance_meters/1000).toFixed(1)} km · ${formatPace(matchedAct.duration_seconds/(matchedAct.distance_meters/1000))}/km`;
+        }
         (calEntries[wo.scheduled_date] ||= []).push({
-          type:'planned', title: (wo.completed ? '✓ ' : '○ ') + (wo.name || 'Workout'),
-          sub: [wo.workout_type?.replace(/_/g,' '), distKm].filter(Boolean).join(' · '),
-          color: wo.completed ? 'var(--emerald)' : 'var(--sky)', wo,
+          type: matchedAct ? 'activity' : 'planned',
+          title: (wo.completed ? '✓ ' : '○ ') + (wo.name || 'Workout'), sub,
+          color: wo.completed ? 'var(--emerald)' : 'var(--sky)', wo, activity: matchedAct,
         });
       }
     }
+  }
+
+  function dayCell(d, ds, todayStr) {
+    const entries = calEntries[ds] || [];
+    const dots = entries.slice(0, 4).map(e => `<span class="cal-dot" style="background:${e.color}"></span>`).join('');
+    return `<div class="cal-day ${ds === todayStr ? 'today' : ''}" data-date="${ds}"><div class="cal-num">${d}</div><div class="cal-dots">${dots}</div></div>`;
   }
 
   function drawMonth() {
@@ -1643,20 +1672,34 @@ async function renderCalendar(page) {
     const todayStr = new Date().toISOString().slice(0,10);
     for (let d = 1; d <= last.getDate(); d++) {
       const ds = `${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-      const entries = calEntries[ds] || [];
-      const pills = entries.slice(0,2).map(e => `<div class="cal-pill" style="background:${e.color}22;color:${e.color}">${escHtml((e.title||'').replace(/^[✓○]\s/,''))}</div>`).join('');
-      const more = entries.length > 2 ? `<div class="cal-pill" style="color:var(--text-3)">+${entries.length-2}</div>` : '';
-      grid += `<div class="cal-day ${ds===todayStr?'today':''}" data-date="${ds}" data-dots="${entries.length?'•'.repeat(Math.min(entries.length,3)):''}"><div class="cal-num">${d}</div>${pills}${more}</div>`;
+      grid += dayCell(d, ds, todayStr);
     }
     const remaining = (7 - (startDay + last.getDate()) % 7) % 7;
     for (let i = 1; i <= remaining; i++) grid += `<div class="cal-day other-month"><div class="cal-num">${i}</div></div>`;
-    return `<div class="fade-in"><div class="dash-grid"><div class="span-8">
+    return `<div class="fade-in"><div class="dash-grid"><div class="span-5">
       <div class="card">
         <div class="card-h"><div class="card-title">${monthName}</div><div style="display:flex;gap:8px"><button class="btn-icon" id="cal-prev" aria-label="Previous month">‹</button><button class="btn-icon" id="cal-next" aria-label="Next month">›</button></div></div>
-        <div class="cal-grid">${grid}</div>
+        <div class="cal-grid compact">${grid}</div>
       </div></div>
-      <div class="span-4"><div class="card" style="height:100%" id="cal-details"><div class="empty" style="border:none;padding:32px 12px">Select a day to see details.</div></div></div>
+      <div class="span-7"><div class="card" style="height:100%" id="cal-details"><div class="empty" style="border:none;padding:32px 12px">Select a day to see details.</div></div></div>
     </div></div>`;
+  }
+
+  // Render the selected day's entry list into the side panel; clicking an entry swaps
+  // the panel for that activity/workout's full detail (inline — no popup).
+  function showDay(ds) {
+    const details = document.getElementById('cal-details');
+    const entries = calEntries[ds] || [];
+    const dateLabel = new Date(ds + 'T00:00:00').toLocaleDateString('en-US', { weekday:'long', month:'short', day:'numeric' });
+    if (!entries.length) { details.innerHTML = `<div class="card-h"><div class="card-title" style="font-size:.95rem">${dateLabel}</div></div><div class="empty" style="border:none;padding:24px 0">Nothing scheduled.</div>`; return; }
+    details.innerHTML = `<div class="card-h"><div class="card-title" style="font-size:.95rem">${dateLabel}</div></div>` + entries.map((e, i) => `
+      <div class="act-item" data-cal-idx="${i}"><div class="act-bar" style="background:${e.color}"></div>
+        <div class="act-info"><div class="act-name">${escHtml(e.title)}</div>${e.sub ? `<div class="act-meta">${escHtml(e.sub)}</div>` : ''}</div></div>`).join('');
+    details.querySelectorAll('[data-cal-idx]').forEach(c => c.addEventListener('click', () => {
+      const e = entries[+c.dataset.calIdx];
+      if (e.type === 'activity' && e.activity) renderActivityDetail(details, e.activity, { onBack: () => showDay(ds) });
+      else if (e.type === 'planned' && e.wo) renderWorkoutDetail(details, e.wo, { onBack: () => showDay(ds) });
+    }));
   }
 
   function reDraw() {
@@ -1664,18 +1707,7 @@ async function renderCalendar(page) {
     page.querySelectorAll('.cal-day[data-date]').forEach(el => el.addEventListener('click', () => {
       page.querySelectorAll('.cal-day.selected').forEach(s => s.classList.remove('selected'));
       el.classList.add('selected');
-      const entries = calEntries[el.dataset.date] || [];
-      const details = document.getElementById('cal-details');
-      const dateLabel = new Date(el.dataset.date + 'T00:00:00').toLocaleDateString('en-US', { weekday:'long', month:'short', day:'numeric' });
-      if (!entries.length) { details.innerHTML = `<div class="card-h"><div class="card-title" style="font-size:.95rem">${dateLabel}</div></div><div class="empty" style="border:none;padding:24px 0">Nothing scheduled.</div>`; return; }
-      details.innerHTML = `<div class="card-h"><div class="card-title" style="font-size:.95rem">${dateLabel}</div></div>` + entries.map((e, i) => `
-        <div class="act-item" data-cal-idx="${i}"><div class="act-bar" style="background:${e.color}"></div>
-          <div class="act-info"><div class="act-name">${escHtml(e.title)}</div>${e.sub ? `<div class="act-meta">${escHtml(e.sub)}</div>` : ''}</div></div>`).join('');
-      details.querySelectorAll('[data-cal-idx]').forEach(c => c.addEventListener('click', () => {
-        const e = entries[+c.dataset.calIdx];
-        if (e.type === 'activity' && e.activity) showActivitySheet(e.activity);
-        else if (e.type === 'planned' && e.wo) showWorkoutSheet(e.wo);
-      }));
+      showDay(el.dataset.date);
     }));
     on('cal-prev', 'click', () => { viewMonth--; if (viewMonth<0){viewMonth=11;viewYear--;} reDraw(); });
     on('cal-next', 'click', () => { viewMonth++; if (viewMonth>11){viewMonth=0;viewYear++;} reDraw(); });
@@ -1771,19 +1803,13 @@ function analyzeActivityWithCoach(act, btn) {
   });
 }
 
-async function showActivitySheet(act) {
-  const id = act.activity_id;
-  let detail = null, analysisMd = null, plan = null;
-  try { detail = await loadJSON(`details/${id}.json`); } catch {}
-  try { analysisMd = await loadText(`analyses/${id}.md`); } catch {}
-  try { plan = await planStore.get(); } catch {}
-  const match = matchedWorkout(plan, id);
-
+// Inner body (metrics → charts → planned-vs-actual → coach analysis) shared by the
+// full-page activity view and the inline calendar panel. No modal chrome.
+function activityDetailBody(act, detail, analysisMd, match) {
   const distKm = act.distance_meters ? (act.distance_meters / 1000).toFixed(2) : '—';
   const duration = act.duration_seconds ? formatSeconds(act.duration_seconds) : '—';
   const pace = act.avg_pace_sec_per_km ? formatPace(act.avg_pace_sec_per_km) + '/km' : '—';
   const splits = (detail && detail.splits) || [];
-  const w = detail && detail.weather;
 
   const charts = splits.length >= 2 ? `
     <div class="act-sec"><div class="eyebrow" style="margin-bottom:6px">Pace per km</div>${miniChart(splits.map(s => s.pace_sec), { color: 'var(--sky)', invert: true, fmt: v => formatPace(v) })}</div>
@@ -1812,8 +1838,7 @@ async function showActivitySheet(act) {
         <button class="btn btn-primary btn-sm" id="act-analyze" style="margin-top:12px">${icons.spark} Analyze with Coach</button>
         <div class="hint" style="margin-top:6px">Asks Claude (via GitHub) to write a full coaching analysis of this session.</div></div>`;
 
-  openModal(`
-    <div class="modal-h"><div><div class="modal-title">${escHtml(act.name || 'Activity')}</div><div class="modal-sub">${escHtml(act.activity_type || '')}${act.start_time ? ' · ' + new Date(act.start_time).toLocaleString() : ''}${w && w.temp_c != null ? ` · ${Math.round(w.temp_c)}°C${w.desc ? ' ' + escHtml(w.desc) : ''}` : ''}</div></div><button class="modal-close" data-close>${icons.x}</button></div>
+  return `
     <div class="detail-grid">
       ${detailItem(distKm, 'Distance km')}${detailItem(duration, 'Duration')}${detailItem(pace, 'Avg Pace')}
       ${detailItem(act.avg_hr || '—', 'Avg HR')}${detailItem(act.max_hr || '—', 'Max HR')}${detailItem(act.calories || '—', 'Calories')}
@@ -1826,11 +1851,93 @@ async function showActivitySheet(act) {
     </div>
     ${charts}
     ${planHtml}
-    <div class="act-sec"><div class="eyebrow" style="margin-bottom:8px">Coach analysis</div>${analysisInner}</div>
-  `, true);
+    <div class="act-sec"><div class="eyebrow" style="margin-bottom:8px">Coach analysis</div>${analysisInner}</div>`;
+}
 
-  const ab = document.getElementById('act-analyze');
+// Render an activity's full detail into a container (page or calendar panel). onBack,
+// when given, shows a back button wired to it.
+async function renderActivityDetail(container, act, { onBack } = {}) {
+  container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  const id = act.activity_id;
+  let detail = null, analysisMd = null, plan = null;
+  try { detail = await loadJSON(`details/${id}.json`); } catch {}
+  try { analysisMd = await loadText(`analyses/${id}.md`); } catch {}
+  try { plan = await planStore.get(); } catch {}
+  const match = matchedWorkout(plan, id);
+  const w = detail && detail.weather;
+  const sub = `${escHtml(act.activity_type || '')}${act.start_time ? ' · ' + new Date(act.start_time).toLocaleString() : ''}${w && w.temp_c != null ? ` · ${Math.round(w.temp_c)}°C${w.desc ? ' ' + escHtml(w.desc) : ''}` : ''}`;
+  container.innerHTML = `<div class="fade-in">
+    <div class="detail-head">
+      ${onBack ? `<button class="btn btn-ghost btn-sm" data-back>${icons.back} Back</button>` : ''}
+      <div><div class="detail-h-title">${escHtml(act.name || 'Activity')}</div><div class="detail-h-sub">${sub}</div></div>
+    </div>
+    ${activityDetailBody(act, detail, analysisMd, match)}
+  </div>`;
+  const ab = container.querySelector('#act-analyze');
   if (ab) ab.addEventListener('click', () => analyzeActivityWithCoach(act, ab));
+  const bb = container.querySelector('[data-back]');
+  if (bb && onBack) bb.addEventListener('click', onBack);
+}
+
+// Open an activity as a full page (replaces the modal). Back returns to the prior tab.
+let _activityReturnTab = 'home';
+async function openActivity(act) {
+  _activityReturnTab = state.tab;
+  const page = document.getElementById('page-content');
+  if (!page) return;
+  setTopbar(act.name || 'Activity', 'Activity detail', '');
+  await renderActivityDetail(page, act, { onBack: () => goTab(_activityReturnTab) });
+  document.querySelector('.page')?.scrollTo({ top: 0 });
+}
+
+// Read-only workout detail (description + steps + completion data) for the calendar panel.
+function workoutDetailBody(wo) {
+  let stepsHtml = '';
+  if (wo.steps && wo.steps.length) {
+    stepsHtml = `<div style="margin-top:16px"><div class="eyebrow" style="margin-bottom:10px">Steps</div>`;
+    for (const s of wo.steps) {
+      const paceTxt = s.target_pace || (s.target_low ? formatPace(s.target_low) + (s.target_high && s.target_high !== s.target_low ? '–' + formatPace(s.target_high) : '') + '/km' : '');
+      const durTxt = s.duration || (s.duration_seconds ? formatSeconds(s.duration_seconds) : (s.distance_meters ? (s.distance_meters / 1000).toFixed(1) + ' km' : ''));
+      stepsHtml += `<div class="step-item">
+        <div style="font-weight:600">${escHtml(s.description || s.step_type || s.type || 'Step')}</div>
+        ${durTxt ? `<div style="color:var(--text-2);margin-top:3px;font-size:.8rem">${escHtml(durTxt)}</div>` : ''}
+        ${paceTxt ? `<div style="color:var(--emerald);margin-top:3px;font-size:.8rem">Pace: ${escHtml(paceTxt)}</div>` : ''}
+        ${s.target_hr ? `<div style="color:var(--sky);margin-top:3px;font-size:.8rem">HR: ${escHtml(String(s.target_hr))}</div>` : ''}
+      </div>`;
+    }
+    stepsHtml += '</div>';
+  }
+  let metricsHtml = '';
+  if (wo.completed && wo.completion_metrics) {
+    const cm = wo.completion_metrics;
+    metricsHtml = `<div style="margin-top:16px"><div class="eyebrow" style="margin-bottom:10px">Completion Data</div><div class="detail-grid">
+      ${detailItem(cm.distance_meters ? (cm.distance_meters / 1000).toFixed(2) : '—', 'Distance')}
+      ${detailItem(cm.duration_seconds ? formatSeconds(cm.duration_seconds) : '—', 'Duration')}
+      ${detailItem(cm.avg_pace_sec_per_km ? formatPace(cm.avg_pace_sec_per_km) : '—', 'Pace')}
+      ${detailItem(cm.avg_hr || '—', 'Avg HR')}
+      ${detailItem(cm.max_hr || '—', 'Max HR')}
+      ${detailItem(cm.calories || '—', 'Calories')}
+    </div></div>`;
+  }
+  return `
+    ${wo.description ? `<div style="font-size:.88rem;color:var(--text-2);line-height:1.55;margin-bottom:8px">${escHtml(wo.description)}</div>` : ''}
+    ${stepsHtml}
+    ${metricsHtml}
+    ${wo.notes ? `<div style="margin-top:12px;font-size:.84rem;color:var(--text-3)">${escHtml(wo.notes)}</div>` : ''}`;
+}
+
+function renderWorkoutDetail(container, wo, { onBack } = {}) {
+  const dist = wo.estimated_distance_meters ? (wo.estimated_distance_meters / 1000).toFixed(1) + ' km' : '';
+  const dur = wo.estimated_duration_seconds ? Math.round(wo.estimated_duration_seconds / 60) + ' min' : '';
+  container.innerHTML = `<div class="fade-in">
+    <div class="detail-head">
+      ${onBack ? `<button class="btn btn-ghost btn-sm" data-back>${icons.back} Back</button>` : ''}
+      <div><div class="detail-h-title">${escHtml(wo.name || 'Workout')}</div><div class="detail-h-sub">${escHtml((wo.workout_type || '').replace(/_/g, ' '))}${dist ? ' · ' + dist : ''}${dur ? ' · ~' + dur : ''}${wo.completed ? ' · ✓ done' : ''}</div></div>
+    </div>
+    ${workoutDetailBody(wo)}
+  </div>`;
+  const bb = container.querySelector('[data-back]');
+  if (bb && onBack) bb.addEventListener('click', onBack);
 }
 
 // ═══════════════════════════════════════════════════════

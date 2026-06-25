@@ -519,8 +519,10 @@
           "notes": "Your weekly long run. Stay conversational throughout — this builds your endurance foundation.",
           "purpose": "aerobic_base",
           "cadence_target": null,
-          "completed": false,
-          "matched_activity_ids": [],
+          "completed": true,
+          "matched_activity_ids": [
+            23171846485
+          ],
           "completion_analysis": null,
           "completion_metrics": null,
           "user_rpe": null,
@@ -2144,8 +2146,10 @@
           "notes": "Start easy, finish at marathon pace. This teaches your body to run strong when fatigued.",
           "purpose": "aerobic_base",
           "cadence_target": null,
-          "completed": false,
-          "matched_activity_ids": [],
+          "completed": true,
+          "matched_activity_ids": [
+            23253401122
+          ],
           "completion_analysis": null,
           "completion_metrics": null,
           "user_rpe": null,
@@ -2740,8 +2744,10 @@
           "notes": "Your longest run yet. Stay patient and conversational. This builds your aerobic capacity foundation.",
           "purpose": "aerobic_base",
           "cadence_target": null,
-          "completed": false,
-          "matched_activity_ids": [],
+          "completed": true,
+          "matched_activity_ids": [
+            23373151954
+          ],
           "completion_analysis": null,
           "completion_metrics": null,
           "user_rpe": null,
@@ -2778,8 +2784,10 @@
           "notes": "Cutback week for recovery. Keep it short and easy to allow adaptation from the previous three weeks.",
           "purpose": "recovery",
           "cadence_target": null,
-          "completed": false,
-          "matched_activity_ids": [],
+          "completed": true,
+          "matched_activity_ids": [
+            23373151954
+          ],
           "completion_analysis": null,
           "completion_metrics": null,
           "user_rpe": null,
@@ -2882,8 +2890,10 @@
           "notes": "Shorter intervals but same intensity. Focus on smooth, controlled effort rather than fighting the pace.",
           "purpose": "vo2max",
           "cadence_target": null,
-          "completed": false,
-          "matched_activity_ids": [],
+          "completed": true,
+          "matched_activity_ids": [
+            23373152945
+          ],
           "completion_analysis": null,
           "completion_metrics": null,
           "user_rpe": null,
