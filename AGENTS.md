@@ -9,15 +9,26 @@ Full orientation is in [CLAUDE.md](CLAUDE.md) — read it. Key points:
 ## Architecture
 ```
 src/paceforge/
-├── store.py          # load/save data/*.json (the "database")
-├── actions.py        # all behaviour; CLI + MCP are thin wrappers over this
+├── store.py          # load/save data/* (the "database"): profile, plan, activities,
+│                     # details, history, benchmarks, hyrox
+├── actions.py        # all behaviour; CLI + MCP are thin wrappers. sync(), analyze(),
+│                     # fitness() (Fitness 2.0 assessment), plan/push/validate
 ├── cli.py            # `paceforge` command
 ├── mcp_server.py     # `paceforge-mcp` stdio server (Claude desktop)
-├── engine/           # vdot, workouts, planner (LLM-free), adaptation,
-│                     # analytics (health/running analysis), validate (rule checks)
-├── garmin/client.py  # reads metrics, uploads structured workouts
+├── engine/           # LLM-free maths:
+│   ├── vdot, workouts, planner, adaptation, validate   # plan construction + rules
+│   ├── analytics.py          # legacy snapshot/aerobic/economy/race analysis
+│   ├── durability.py         # running engine: CS/D', EF, decoupling, HRR, 80/20…
+│   ├── load.py               # CTL/ATL/TSB, ACWR, HRV, sleep, readiness…
+│   ├── strength.py           # HYROX stations, hybrid balance (needs benchmarks)
+│   └── limiters.py           # ranks limiters → coach_input contract
+├── garmin/client.py  # reads metrics + per-sample series, uploads workouts
 └── hyrox/            # race-result analyzer vs field benchmarks
-data/*.json           # profile.json, plan.json, activities.json
+web/index.html        # the GitHub Pages dashboard (reads committed data/*.json)
+scripts/build_site_data.py  # precomputes analytics.json + fitness.json for the web (CI)
+data/                 # profile.json, plan.json, activities.json, history.jsonl,
+                      # details/{id}.json (splits + time-series), analyses/{id}.md,
+                      # hyrox.json, benchmarks.json
 ```
 
 ## The AI / validation split
