@@ -82,6 +82,48 @@ def append_daily_history(profile: UserFitnessProfile) -> None:
            "\n".join(json.dumps(r, default=str) for r in rows) + "\n")
 
 
+def load_all_details() -> dict[int, dict]:
+    """Every stored per-activity detail, keyed by activity_id (for the fitness engines)."""
+    out: dict[int, dict] = {}
+    ddir = _path("details")
+    if not ddir.exists():
+        return out
+    for f in ddir.glob("*.json"):
+        try:
+            d = json.loads(f.read_text())
+            if d.get("activity_id") is not None:
+                out[int(d["activity_id"])] = d
+        except (json.JSONDecodeError, ValueError, OSError):
+            pass
+    return out
+
+
+def load_hyrox_results() -> list[dict]:
+    """The HYROX race results list (data/hyrox.json -> 'results'); [] if absent."""
+    p = _path("hyrox.json")
+    if not p.exists():
+        return []
+    try:
+        return json.loads(p.read_text()).get("results", []) or []
+    except (json.JSONDecodeError, OSError, AttributeError):
+        return []
+
+
+def load_benchmarks() -> dict | None:
+    """User-entered strength/HYROX benchmarks (data/benchmarks.json); None if unset."""
+    p = _path("benchmarks.json")
+    if not p.exists():
+        return None
+    try:
+        return json.loads(p.read_text()) or None
+    except (json.JSONDecodeError, OSError):
+        return None
+
+
+def save_benchmarks(benchmarks: dict) -> None:
+    _write(_path("benchmarks.json"), json.dumps(benchmarks, indent=2))
+
+
 def load_history() -> list[dict]:
     """All stored daily wellness snapshots, oldest first."""
     p = _path("history.jsonl")

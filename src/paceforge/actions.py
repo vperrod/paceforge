@@ -267,6 +267,27 @@ def analyze() -> dict:
     return compute_all(profile)
 
 
+def fitness() -> dict:
+    """Fitness 2.0 assessment: running-engine/durability, load/recovery/wellbeing,
+    strength/HYROX, and the readiness-gated ranked limiters + LLM-coach contract."""
+    from paceforge.engine.durability import compute_running_metrics
+    from paceforge.engine.limiters import rank_limiters
+    from paceforge.engine.load import compute_load_recovery
+    from paceforge.engine.strength import compute_strength_hyrox
+
+    profile = store.load_profile()
+    if profile is None:
+        raise RuntimeError("No profile — run `paceforge sync` first.")
+    activities = store.load_activities()
+    details = store.load_all_details()
+    running = compute_running_metrics(activities, details, profile)
+    load = compute_load_recovery(store.load_history(), activities, profile)
+    strength = compute_strength_hyrox(
+        store.load_hyrox_results(), store.load_benchmarks(), profile, activities, details)
+    limiters = rank_limiters(running, load, strength)
+    return {"running": running, "load": load, "strength": strength, **limiters}
+
+
 def validate() -> list[str]:
     plan = store.load_plan()
     if plan is None:
