@@ -30,7 +30,24 @@ def load_profile() -> UserFitnessProfile | None:
     return UserFitnessProfile.model_validate_json(p.read_text()) if p.exists() else None
 
 
+_EMPTY = (None, [], {}, "")
+
+
 def save_profile(profile: UserFitnessProfile) -> None:
+    """Persist the profile, preserving prior non-empty fields the fresh fetch dropped.
+
+    Garmin's wellness endpoints intermittently return null for VO2max/HRV/readiness
+    for a given day. Without this merge a sync would overwrite good values with null,
+    so we only let a new value replace an existing one when the new value is non-empty.
+    """
+    existing = load_profile()
+    if existing is not None:
+        merged = profile.model_dump()
+        old = existing.model_dump()
+        for field, value in merged.items():
+            if value in _EMPTY and old.get(field) not in _EMPTY:
+                merged[field] = old[field]
+        profile = UserFitnessProfile.model_validate(merged)
     _write(_path("profile.json"), profile.model_dump_json(indent=2))
 
 
@@ -51,5 +68,15 @@ def load_activities() -> list[RecentActivity]:
 
 
 def save_activities(activities: list[RecentActivity]) -> None:
-    payload = json.dumps([a.model_dump(mode="json") for a in activities], indent=2)
+    """Merge a fresh activity window into the stored history (union by activity_id).
+
+    A sync only sees a recent lookback window; replacing the file would cap history
+    at that window. We union with what's already stored, letting the fresh copy win
+    for any overlapping id, and keep the newest first.
+    """
+    by_id = {a.activity_id: a for a in load_activities()}
+    for a in activities:
+        by_id[a.activity_id] = a
+    merged = sorted(by_id.values(), key=lambda a: str(a.start_time or ""), reverse=True)
+    payload = json.dumps([a.model_dump(mode="json") for a in merged], indent=2)
     _write(_path("activities.json"), payload)
