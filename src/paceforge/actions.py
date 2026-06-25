@@ -115,9 +115,54 @@ def _match_plan() -> int:
     return changed
 
 
+def _extract_series(metrics: dict, max_points: int = 120) -> list | None:
+    """Downsample Garmin's per-sample metrics into a compact [{t, hr, pace}] series.
+
+    Reads metricDescriptors/activityDetailMetrics; keeps elapsed time, heart rate and
+    pace (from speed). Returns None when there's no HR or speed channel (so cardio with
+    only HR still yields an HR line, and a run yields both).
+    """
+    if not isinstance(metrics, dict):
+        return None
+    descs = metrics.get("metricDescriptors") or []
+    rows = metrics.get("activityDetailMetrics") or []
+    if not descs or not rows:
+        return None
+    idx = {d.get("key"): d.get("metricsIndex") for d in descs if isinstance(d, dict)}
+    hr_i, sp_i, t_i = (idx.get("directHeartRate"), idx.get("directSpeed"),
+                       idx.get("sumElapsedDuration"))
+    if hr_i is None and sp_i is None:
+        return None
+    step = max(1, -(-len(rows) // max_points))  # ceil division → never exceed max_points
+    series = []
+    for row in rows[::step]:
+        m = row.get("metrics") if isinstance(row, dict) else None
+        if not isinstance(m, list):
+            continue
+        def at(i):
+            return m[i] if (i is not None and i < len(m)) else None
+        hr, sp, t = at(hr_i), at(sp_i), at(t_i)
+        # speed (m/s) → pace (s/km); ignore near-standstill so pace doesn't blow up.
+        pace = round(1000 / sp, 1) if sp and sp > 0.3 else None
+        series.append({
+            "t": round(t) if t is not None else None,
+            "hr": round(hr) if hr is not None else None,
+            "pace": pace,
+        })
+    return series or None
+
+
+# Bump when _trim_detail's shape changes so sync re-fetches older stored details.
+_DETAIL_VERSION = 2
+
+
 def _trim_detail(detail: dict) -> dict:
     """Reduce a raw ``get_activity_detail`` blob to the lean shape the web charts use."""
-    out: dict = {"activity_id": detail.get("activity_id")}
+    out: dict = {"activity_id": detail.get("activity_id"), "v": _DETAIL_VERSION}
+
+    series = _extract_series(detail.get("metrics"))
+    if series:
+        out["series"] = series
 
     splits = detail.get("splits") or {}
     laps = splits.get("lapDTOs") if isinstance(splits, dict) else (
@@ -175,9 +220,13 @@ def _sync_details(client: GarminClient, limit: int = 40) -> int:
     seen: set = set()
     fetched = 0
     for aid in ids:
-        if aid is None or aid in seen or store.has_detail(aid):
+        if aid is None or aid in seen:
             continue
         seen.add(aid)
+        # Skip only if the stored detail is already at the current schema version;
+        # older details get re-fetched once so the new charts get their time-series.
+        if store.has_detail(aid) and (store.load_detail(aid) or {}).get("v", 0) >= _DETAIL_VERSION:
+            continue
         try:
             store.save_detail(aid, _trim_detail(client.get_activity_detail(aid)))
             fetched += 1

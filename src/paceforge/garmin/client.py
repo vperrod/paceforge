@@ -638,6 +638,13 @@ class GarminClient:
             logger.debug("weather unavailable for %s", activity_id)
             result["weather"] = None
 
+        # Downsampled time-series (HR + speed over time) for the detail charts.
+        try:
+            result["metrics"] = self.client.get_activity_details(activity_id, maxchart=200)
+        except Exception:
+            logger.debug("time-series metrics unavailable for %s", activity_id)
+            result["metrics"] = None
+
         return result
 
     def get_all_workouts(self) -> list[dict]:

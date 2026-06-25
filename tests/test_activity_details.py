@@ -73,3 +73,31 @@ class TestSyncDetails:
         again = actions._sync_details(client, limit=40)
         assert again == 0
         assert client.calls == []
+
+
+class TestExtractSeries:
+    def _metrics(self, n, with_speed=True):
+        descs = [{"key": "sumElapsedDuration", "metricsIndex": 0},
+                 {"key": "directHeartRate", "metricsIndex": 1}]
+        if with_speed:
+            descs.append({"key": "directSpeed", "metricsIndex": 2})
+        rows = [{"metrics": ([i * 5.0, 120 + (i % 20)] + ([3.0] if with_speed else []))}
+                for i in range(n)]
+        return {"metricDescriptors": descs, "activityDetailMetrics": rows}
+
+    def test_downsamples_to_cap(self):
+        s = actions._extract_series(self._metrics(400), max_points=120)
+        assert 100 <= len(s) <= 120
+
+    def test_run_has_hr_and_pace(self):
+        s = actions._extract_series(self._metrics(50))
+        assert s[0]["hr"] == 120 and s[0]["pace"] == round(1000 / 3.0, 1)
+
+    def test_cardio_has_hr_no_pace(self):
+        s = actions._extract_series(self._metrics(50, with_speed=False))
+        assert s[0]["hr"] is not None and s[0]["pace"] is None
+
+    def test_empty_or_missing_returns_none(self):
+        assert actions._extract_series({}) is None
+        assert actions._extract_series(None) is None
+        assert actions._extract_series({"metricDescriptors": [], "activityDetailMetrics": []}) is None
