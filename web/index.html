@@ -254,11 +254,11 @@ a{color:var(--emerald);text-decoration:none}
 .settings-value{font-size:.85rem;color:var(--text-2);font-family:var(--font-m)}
 .field{margin-bottom:14px}
 .field label{display:block;font-size:.8rem;font-weight:600;color:var(--text-2);margin-bottom:7px}
-.field input,.field textarea,.field select{
-  width:100%;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-sm);
+.field input,.field textarea,.field select,.bm-field input{
+  width:100%;background:var(--bg-2);color:var(--text);border:1px solid var(--border);border-radius:var(--r-sm);
   padding:12px 14px;font-size:.92rem;outline:none;transition:border-color var(--t-fast);
 }
-.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--emerald)}
+.field input:focus,.field textarea:focus,.field select:focus,.bm-field input:focus{border-color:var(--emerald)}
 .field .hint{font-size:.74rem;color:var(--text-3);margin-top:6px;line-height:1.45}
 .mono-input{font-family:var(--font-m)}
 .conn-status{display:inline-flex;align-items:center;gap:7px;font-size:.82rem;font-weight:600;padding:5px 11px;border-radius:var(--r-pill)}
@@ -1347,21 +1347,14 @@ function bindBenchmarkForm(container, redraw) {
     try { localStorage.setItem('pf_benchmarks', JSON.stringify(bm)); } catch {}
     const status = container.querySelector('#bm-status');
     if (!githubToken.has()) { status.innerHTML = 'Saved locally. Add a GitHub token in Settings to sync and unlock the full strength assessment.'; return; }
-    status.textContent = 'Committing…';
-    await commitJsonFile('data/benchmarks.json', bm, 'data: update strength benchmarks');
-    status.innerHTML = 'Saved &amp; committed — your strength assessment refreshes after the next site build (~1 min); reload then.';
+    status.textContent = 'Saving…';
+    // Dispatch a workflow (same mechanism as Sync) — it commits benchmarks.json with
+    // GITHUB_TOKEN, so the user's token only needs the actions:write it already has.
+    const res = await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/save-benchmarks.yml/dispatches`,
+      { method: 'POST', headers: ghHeaders(), body: JSON.stringify({ ref: REF, inputs: { data: JSON.stringify(bm) } }) });
+    if (!res.ok && res.status !== 204) throw new Error(await ghError(res));
+    status.innerHTML = 'Saved — building your strength assessment (~1–2 min). Reload the page after that to see it.';
   }));
-}
-
-// Commit a JSON file to the repo via the GitHub contents API (uses the Settings token).
-async function commitJsonFile(path, obj, message) {
-  const url = `https://api.github.com/repos/${REPO}/contents/${path}`;
-  let sha;
-  try { const r = await fetch(`${url}?ref=${REF}`, { headers: ghHeaders() }); if (r.ok) sha = (await r.json()).sha; } catch {}
-  const content = btoa(unescape(encodeURIComponent(JSON.stringify(obj, null, 2))));
-  const res = await fetch(url, { method: 'PUT', headers: ghHeaders(),
-    body: JSON.stringify({ message, content, sha, branch: REF }) });
-  if (!res.ok) throw new Error(await ghError(res));
 }
 
 function renderWeeklyOverview(el) {
