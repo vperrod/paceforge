@@ -362,64 +362,83 @@ a{color:var(--emerald);text-decoration:none}
 // PaceForge Mobile Web — Single Page Application
 // ═══════════════════════════════════════════════════════
 
-const API = '';
-
-// ── State ──────────────────────────────────────────────
+// ── State (single-user, no auth) ───────────────────────
 const state = {
-  jwt: localStorage.getItem('pf_jwt'),
-  refresh: localStorage.getItem('pf_refresh'),
-  user: JSON.parse(localStorage.getItem('pf_user') || 'null'),
+  user: { name: 'Victor', email: 'vperrod@gmail.com', role: 'user' },
   tab: 'home',
-  authPage: 'login',
 };
 
-// ── API helpers ────────────────────────────────────────
-async function api(path, opts = {}) {
-  const headers = { 'Content-Type': 'application/json', ...opts.headers };
-  if (state.jwt) headers['Authorization'] = `Bearer ${state.jwt}`;
-  const res = await fetch(API + path, { ...opts, headers });
-  if (res.status === 401 && state.refresh) {
-    const ok = await refreshToken();
-    if (ok) {
-      headers['Authorization'] = `Bearer ${state.jwt}`;
-      return fetch(API + path, { ...opts, headers });
-    }
+// ── Static data layer ──────────────────────────────────
+// The old FastAPI backend is gone; this is a static GitHub Pages site.
+// apiJson() serves the committed data/*.json (refreshed by the sync
+// workflow) plus the build-time analytics. Writes are no-ops.
+async function loadJSON(file) {
+  const key = 'f:' + file;
+  if (cache[key]) return cache[key];
+  const res = await fetch('./data/' + file);
+  if (!res.ok) throw new Error('Failed to load ' + file);
+  const v = await res.json();
+  cache[key] = v;
+  return v;
+}
+
+async function apiJson(path, opts = {}) {
+  const p = path.split('?')[0];
+  if (opts.method && opts.method !== 'GET') return {};   // static: no writes
+  switch (p) {
+    case '/profile/analytics': return loadJSON('analytics.json');
+    case '/plans': { const plan = await loadJSON('plan.json').catch(() => null); return plan ? [plan] : []; }
+    case '/activities': return loadJSON('activities.json');
+    case '/auth/profile': return profileMeta();
+    case '/garmin/status': { const pr = await loadJSON('profile.json').catch(() => null); return { connected: !!(pr && pr.profile_date) }; }
+    case '/weekly-overview': return loadJSON('weekly.json').catch(() => ({ content: null }));
+    case '/hyrox/results': return hyroxResults();
+    case '/feed': return feedFromActivities();
+    default:
+      if (p.startsWith('/feed/')) return [];
+      return null;
   }
-  return res;
 }
 
-async function apiJson(path, opts) {
-  const res = await api(path, opts);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(err.detail || 'Request failed');
-  }
-  return res.json();
+async function profileMeta() {
+  const pr = await loadJSON('profile.json').catch(() => ({}));
+  return {
+    name: state.user.name, email: state.user.email, role: 'user', status: 'active',
+    garmin_email: state.user.email, created_at: pr.profile_date || '',
+  };
 }
 
-async function refreshToken() {
-  try {
-    const res = await fetch(API + '/auth/refresh', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: state.refresh }),
-    });
-    if (!res.ok) throw new Error();
-    const data = await res.json();
-    state.jwt = data.access_token;
-    state.refresh = data.refresh_token;
-    localStorage.setItem('pf_jwt', state.jwt);
-    localStorage.setItem('pf_refresh', state.refresh);
-    return true;
-  } catch { logout(); return false; }
+async function hyroxResults() {
+  const h = await loadJSON('hyrox.json').catch(() => ({ results: [] }));
+  return (h.results || []).map(r => ({
+    race_name: r.event_date || r.city || 'Race',
+    overall_time: r.total_time_display || '',
+    stations: (r.splits || []).map(s => ({
+      name: (s.name || '').replace(/_/g, ' '),
+      time: formatSeconds(s.time_seconds),
+    })),
+  }));
 }
 
-function logout() {
-  state.jwt = null; state.refresh = null; state.user = null;
-  localStorage.removeItem('pf_jwt');
-  localStorage.removeItem('pf_refresh');
-  localStorage.removeItem('pf_user');
-  render();
+async function feedFromActivities() {
+  const acts = await loadJSON('activities.json').catch(() => []);
+  return acts.slice(0, 20).map(a => ({
+    id: a.activity_id, user_name: state.user.name, title: a.name || a.activity_type || 'Activity',
+    created_at: a.start_time, like_count: 0, comment_count: 0, user_liked: false,
+    metadata: {
+      distance_meters: a.distance_meters, duration_seconds: a.duration_seconds,
+      avg_pace_sec_per_km: a.avg_pace_sec_per_km, avg_hr: a.avg_hr, calories: a.calories,
+      elevation_gain: a.elevation_gain, training_effect_aerobic: a.training_effect_aerobic,
+    },
+  }));
+}
+
+function exportPlan() {
+  loadJSON('plan.json').then(plan => {
+    const blob = new Blob([JSON.stringify(plan, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'plan.json'; a.click();
+  });
 }
 
 // ── SVG Icons ──────────────────────────────────────────
@@ -456,143 +475,9 @@ function clearCache(prefix) {
 // ── Render Router ──────────────────────────────────────
 function render() {
   const app = document.getElementById('app');
-  if (!state.jwt) {
-    app.innerHTML = renderAuth();
-    bindAuth();
-  } else {
-    app.innerHTML = renderApp();
-    bindApp();
-    loadTab(state.tab);
-  }
-}
-
-// ═══════════════════════════════════════════════════════
-// AUTH PAGES
-// ═══════════════════════════════════════════════════════
-function renderAuth() {
-  let form = '';
-  if (state.authPage === 'register') {
-    form = `
-      <div class="auth-form"><h2>Create Account</h2>
-        <div id="auth-msg"></div>
-        <div class="field"><label>Full Name</label><input id="reg-name" autocomplete="name"></div>
-        <div class="field"><label>Email</label><input id="reg-email" type="email" autocomplete="email"></div>
-        <div class="field"><label>Password (min 8 chars)</label><input id="reg-pw" type="password"></div>
-        <div class="field"><label>Confirm Password</label><input id="reg-pw2" type="password"></div>
-        <div class="field"><label>Why do you want access?</label><input id="reg-reason" placeholder="Training for a marathon..."></div>
-        <button class="btn btn-primary" id="reg-btn">Create Account</button>
-      </div>
-      <button class="btn-link" id="to-login">← Back to Login</button>`;
-  } else if (state.authPage === 'forgot') {
-    form = `
-      <div class="auth-form"><h2>Forgot Password</h2>
-        <p style="color:var(--text-2);font-size:.85rem;margin-bottom:16px">Enter your email and we'll send you a reset link.</p>
-        <div id="auth-msg"></div>
-        <div class="field"><label>Email</label><input id="forgot-email" type="email"></div>
-        <button class="btn btn-primary" id="forgot-btn">Send Reset Link</button>
-      </div>
-      <button class="btn-link" id="to-login">← Back to Login</button>`;
-  } else {
-    form = `
-      <div class="auth-form"><h2>Welcome Back</h2>
-        <div id="auth-msg"></div>
-        <div class="field"><label>Email</label><input id="login-email" type="email" autocomplete="email"></div>
-        <div class="field"><label>Password</label><input id="login-pw" type="password" autocomplete="current-password"></div>
-        <button class="btn btn-primary" id="login-btn">Sign In</button>
-      </div>
-      <button class="btn-link" id="to-forgot">Forgot Password?</button>
-      <div class="auth-footer">Don't have an account?</div>
-      <button class="btn btn-ghost" id="to-register" style="margin-top:8px">Create Account</button>`;
-  }
-  return `<div class="page auth-page"><div class="auth-box fade-in">
-    <div class="auth-logo">${logo}<h1>PaceForge</h1><p>AI-Powered Running Plans</p></div>
-    ${form}
-  </div></div>`;
-}
-
-function bindAuth() {
-  const msg = (html, type='error') => {
-    const el = document.getElementById('auth-msg');
-    if (el) el.innerHTML = `<div class="${type}-msg">${html}</div>`;
-  };
-
-  on('login-btn', 'click', async () => {
-    const email = val('login-email'), pw = val('login-pw');
-    if (!email || !pw) return msg('Please fill in all fields');
-    disableBtn('login-btn');
-    try {
-      const data = await apiJson('/auth/login', { method: 'POST', body: JSON.stringify({ email, password: pw }) });
-      state.jwt = data.access_token;
-      state.refresh = data.refresh_token;
-      state.user = { name: data.name, email: data.email, role: data.role };
-      localStorage.setItem('pf_jwt', state.jwt);
-      localStorage.setItem('pf_refresh', state.refresh);
-      localStorage.setItem('pf_user', JSON.stringify(state.user));
-      render();
-    } catch (e) { msg(e.message); enableBtn('login-btn', 'Sign In'); }
-  });
-
-  on('reg-btn', 'click', async () => {
-    const name = val('reg-name'), email = val('reg-email'), pw = val('reg-pw'), pw2 = val('reg-pw2'), reason = val('reg-reason');
-    if (!name || !email || !pw) return msg('All fields except reason are required');
-    if (pw.length < 8) return msg('Password must be at least 8 characters');
-    if (pw !== pw2) return msg('Passwords do not match');
-    disableBtn('reg-btn');
-    try {
-      await apiJson('/auth/register', { method: 'POST', body: JSON.stringify({ name, email, password: pw, reason }) });
-      msg('Registration submitted! An admin will review your request.', 'success');
-    } catch (e) { msg(e.message); enableBtn('reg-btn', 'Create Account'); }
-  });
-
-  on('forgot-btn', 'click', async () => {
-    const email = val('forgot-email');
-    if (!email) return msg('Please enter your email');
-    disableBtn('forgot-btn');
-    try {
-      await apiJson('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) });
-      msg('If that email is registered, a reset link has been sent.', 'success');
-    } catch (e) { msg(e.message); enableBtn('forgot-btn', 'Send Reset Link'); }
-  });
-
-  on('to-login', 'click', () => { state.authPage = 'login'; render(); });
-  on('to-register', 'click', () => { state.authPage = 'register'; render(); });
-  on('to-forgot', 'click', () => { state.authPage = 'forgot'; render(); });
-
-  const params = new URLSearchParams(location.search);
-  const resetToken = params.get('reset_token');
-  if (resetToken) showResetSheet(resetToken);
-}
-
-function showResetSheet(token) {
-  document.body.insertAdjacentHTML('beforeend', `
-    <div class="sheet-overlay open" id="reset-overlay">
-      <div class="sheet">
-        <div class="sheet-handle"></div>
-        <h2 style="font-family:var(--font-d);font-weight:700;margin-bottom:16px">Reset Password</h2>
-        <div id="reset-msg"></div>
-        <div class="field"><label>New Password (min 8 chars)</label><input id="reset-pw" type="password"></div>
-        <div class="field"><label>Confirm New Password</label><input id="reset-pw2" type="password"></div>
-        <button class="btn btn-primary" id="reset-btn">Reset Password</button>
-      </div>
-    </div>`);
-
-  on('reset-btn', 'click', async () => {
-    const pw = val('reset-pw'), pw2 = val('reset-pw2');
-    const msgEl = document.getElementById('reset-msg');
-    if (!pw || pw.length < 8) { msgEl.innerHTML = '<div class="error-msg">Password must be at least 8 characters</div>'; return; }
-    if (pw !== pw2) { msgEl.innerHTML = '<div class="error-msg">Passwords do not match</div>'; return; }
-    disableBtn('reset-btn');
-    try {
-      await apiJson('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, new_password: pw }) });
-      msgEl.innerHTML = '<div class="success-msg">Password has been reset! You can now sign in.</div>';
-      history.replaceState(null, '', location.pathname);
-      setTimeout(() => { document.getElementById('reset-overlay')?.remove(); }, 2000);
-    } catch (e) { msgEl.innerHTML = `<div class="error-msg">${escHtml(e.message)}</div>`; enableBtn('reset-btn', 'Reset Password'); }
-  });
-
-  on('reset-overlay', 'click', (e) => {
-    if (e.target.id === 'reset-overlay') { e.target.remove(); history.replaceState(null, '', location.pathname); }
-  });
+  app.innerHTML = renderApp();
+  bindApp();
+  loadTab(state.tab);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -604,7 +489,6 @@ function renderApp() {
     ['fitness', 'Profile', icons.profile],
     ['plan', 'Plan', icons.plan],
     ['calendar', 'Calendar', icons.calendar],
-    ['coach', 'Coach', icons.coach],
   ];
   return `
     <div class="page" id="page-content"></div>
@@ -635,9 +519,7 @@ async function loadTab(tab) {
       case 'fitness': await renderFitness(page); break;
       case 'plan': await renderPlan(page); break;
       case 'calendar': await renderCalendar(page); break;
-      case 'coach': renderCoach(page); break;
       case 'settings': await renderSettings(page); break;
-      case 'admin': await renderAdminPage(page); break;
       case 'hyrox': await renderHyroxPage(page); break;
       default: page.innerHTML = '<div class="empty">Coming soon</div>';
     }
@@ -893,7 +775,7 @@ async function renderFitness(page) {
     ['hyrox_p', 'HYROX'],
   ];
 
-  let activeSub = 'weekly';
+  let activeSub = 'snapshot';
 
   function drawFitness() {
     let html = `<div class="fade-in">
@@ -1719,66 +1601,6 @@ function showActivitySheet(act) {
 }
 
 // ═══════════════════════════════════════════════════════
-// TAB: AI COACH
-// ═══════════════════════════════════════════════════════
-function renderCoach(page) {
-  const messages = cache._chatMsgs || [];
-  page.innerHTML = `<div style="display:flex;flex-direction:column;height:calc(100dvh - 88px)">
-    <div class="section-title" style="margin-bottom:8px">AI Coach</div>
-    <div class="chat-messages" id="chat-msgs">
-      ${messages.length ? messages.map(m => `
-        <div class="chat-msg ${m.role}">
-          <div class="chat-bubble">${m.content}</div>
-        </div>`).join('') : '<div class="empty" style="padding:60px 0">Ask me anything about your training</div>'}
-    </div>
-    <div class="chat-input">
-      <input id="chat-in" placeholder="Ask your coach..." enterkeyhint="send">
-      <button id="chat-send">${icons.send}</button>
-    </div>
-  </div>`;
-
-  const scrollToBottom = () => {
-    const el = document.getElementById('chat-msgs');
-    if (el) el.scrollTop = el.scrollHeight;
-  };
-  scrollToBottom();
-
-  const sendMsg = async () => {
-    const input = document.getElementById('chat-in');
-    const text = input.value.trim();
-    if (!text) return;
-    input.value = '';
-
-    if (!cache._chatMsgs) cache._chatMsgs = [];
-    cache._chatMsgs.push({ role: 'user', content: escHtml(text) });
-
-    const msgs = document.getElementById('chat-msgs');
-    msgs.innerHTML += `<div class="chat-msg user"><div class="chat-bubble">${escHtml(text)}</div></div>`;
-    msgs.innerHTML += `<div class="chat-msg assistant" id="coach-typing"><div class="chat-bubble"><div class="spinner" style="width:18px;height:18px;border-width:2px"></div></div></div>`;
-    scrollToBottom();
-
-    try {
-      const res = await apiJson('/coach/chat', {
-        method: 'POST',
-        body: JSON.stringify({ message: text, history: cache._chatMsgs.filter(m => m.role !== 'typing').map(m => ({ role: m.role, content: m.content })) }),
-      });
-      document.getElementById('coach-typing')?.remove();
-      const reply = res.reply || res.message || 'I couldn\'t generate a response.';
-      cache._chatMsgs.push({ role: 'assistant', content: reply });
-      msgs.innerHTML += `<div class="chat-msg assistant"><div class="chat-bubble">${formatMarkdown(reply)}</div></div>`;
-      scrollToBottom();
-    } catch (e) {
-      document.getElementById('coach-typing')?.remove();
-      msgs.innerHTML += `<div class="chat-msg assistant"><div class="chat-bubble" style="color:var(--rose)">Error: ${escHtml(e.message)}</div></div>`;
-      scrollToBottom();
-    }
-  };
-
-  on('chat-send', 'click', sendMsg);
-  document.getElementById('chat-in')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMsg(); });
-}
-
-// ═══════════════════════════════════════════════════════
 // SETTINGS PAGE (via icon on Home)
 // ═══════════════════════════════════════════════════════
 async function renderSettings(page) {
@@ -1830,11 +1652,11 @@ async function renderSettings(page) {
         </div>
       </div>` : ''}
       <button class="btn btn-ghost" onclick="state.tab='hyrox';loadTab('hyrox')">HYROX Race Results</button>
-      <button class="btn btn-ghost" style="margin-top:8px;color:var(--rose);border-color:var(--rose-d)" id="logout-btn">Sign Out</button>
+      <button class="btn btn-ghost" style="margin-top:8px" id="export-plan-btn">Export Plan (plan.json)</button>
       <button class="btn-link" style="margin-top:12px" onclick="state.tab='home';document.querySelectorAll('.tab-bar button')[0].click()">← Back</button>
     </div>`;
 
-    on('logout-btn', 'click', logout);
+    on('export-plan-btn', 'click', exportPlan);
 
     // Strava auto-update toggle
     const autoToggle = document.getElementById('strava-auto-toggle');
@@ -1873,60 +1695,6 @@ async function renderHyroxPage(page) {
     }
     html += '<button class="btn-link" style="margin-top:12px" onclick="state.tab=\'settings\';loadTab(\'settings\')">← Back</button></div>';
     page.innerHTML = html;
-  } catch (e) { page.innerHTML = `<div class="empty">Failed: ${escHtml(e.message)}</div>`; }
-}
-
-// ═══════════════════════════════════════════════════════
-// ADMIN PAGE
-// ═══════════════════════════════════════════════════════
-async function renderAdminPage(page) {
-  if (state.user?.role !== 'admin') { page.innerHTML = '<div class="empty">Admin access required</div>'; return; }
-  page.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-  try {
-    const users = await apiJson('/admin/users');
-    let html = `<div class="fade-in"><div class="section-title">Admin — User Management</div>
-      <div class="metric-grid" style="margin-bottom:16px">
-        ${metricCard('Pending', String(users.filter(u => u.status === 'pending').length), '')}
-        ${metricCard('Approved', String(users.filter(u => u.status === 'approved').length), '')}
-      </div>`;
-
-    for (const u of users) {
-      const badgeCls = u.role === 'admin' ? 'admin' : u.status;
-      const badgeLabel = u.role === 'admin' ? 'ADMIN' : u.status.toUpperCase();
-      const lastLogin = u.last_login ? u.last_login.slice(0, 16).replace('T', ' ') : 'Never';
-      html += `<div class="admin-user">
-        <div class="admin-name">${escHtml(u.name)} <span class="admin-badge ${badgeCls}">${badgeLabel}</span></div>
-        <div class="admin-meta">${escHtml(u.email)}${u.garmin_email ? ' · Garmin: ' + escHtml(u.garmin_email) : ''}</div>
-        <div class="admin-meta">Registered: ${(u.created_at || '').slice(0, 10)} · Last login: ${lastLogin}</div>
-        ${u.reason ? `<div class="admin-meta">Reason: ${escHtml(u.reason)}</div>` : ''}
-        <div class="admin-actions">
-          ${u.status === 'pending' ? `
-            <button style="background:var(--emerald);color:#0F1117" data-approve="${u.id}">Approve</button>
-            <button style="background:var(--rose-d);color:var(--rose)" data-reject="${u.id}">Reject</button>
-          ` : ''}
-          ${u.status === 'approved' && u.role !== 'admin' ? `
-            <button style="background:var(--rose-d);color:var(--rose)" data-reject="${u.id}">Revoke</button>
-          ` : ''}
-        </div>
-      </div>`;
-    }
-    html += '<button class="btn-link" style="margin-top:12px" onclick="state.tab=\'home\';document.querySelectorAll(\'.tab-bar button\')[0].click()">← Back</button></div>';
-    page.innerHTML = html;
-
-    page.querySelectorAll('[data-approve]').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        await apiJson(`/admin/users/${btn.dataset.approve}`, { method: 'PATCH', body: JSON.stringify({ status: 'approved' }) });
-        clearCache('');
-        renderAdminPage(page);
-      });
-    });
-    page.querySelectorAll('[data-reject]').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        await apiJson(`/admin/users/${btn.dataset.reject}`, { method: 'PATCH', body: JSON.stringify({ status: 'rejected' }) });
-        clearCache('');
-        renderAdminPage(page);
-      });
-    });
   } catch (e) { page.innerHTML = `<div class="empty">Failed: ${escHtml(e.message)}</div>`; }
 }
 
