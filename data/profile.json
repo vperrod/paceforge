@@ -1867,7 +1867,7 @@
   "sleep_light_seconds": 14460.0,
   "sleep_rem_seconds": 0.0,
   "sleep_awake_seconds": 360.0,
-  "stress_avg": 23,
+  "stress_avg": 24,
   "stress_high": 77,
   "stress_low": null,
   "training_load_7day": 507.0,

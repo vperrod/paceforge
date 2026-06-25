@@ -1,5 +1,468 @@
 {
   "activity_id": 23373153356,
+  "v": 2,
+  "series": [
+    {
+      "t": 0,
+      "hr": 74,
+      "pace": null
+    },
+    {
+      "t": 15,
+      "hr": 84,
+      "pace": null
+    },
+    {
+      "t": 50,
+      "hr": 78,
+      "pace": null
+    },
+    {
+      "t": 80,
+      "hr": 75,
+      "pace": null
+    },
+    {
+      "t": 98,
+      "hr": 72,
+      "pace": null
+    },
+    {
+      "t": 119,
+      "hr": 85,
+      "pace": null
+    },
+    {
+      "t": 151,
+      "hr": 83,
+      "pace": null
+    },
+    {
+      "t": 168,
+      "hr": 99,
+      "pace": null
+    },
+    {
+      "t": 199,
+      "hr": 92,
+      "pace": null
+    },
+    {
+      "t": 218,
+      "hr": 76,
+      "pace": null
+    },
+    {
+      "t": 241,
+      "hr": 85,
+      "pace": null
+    },
+    {
+      "t": 258,
+      "hr": 74,
+      "pace": null
+    },
+    {
+      "t": 282,
+      "hr": 80,
+      "pace": null
+    },
+    {
+      "t": 318,
+      "hr": 81,
+      "pace": null
+    },
+    {
+      "t": 349,
+      "hr": 90,
+      "pace": null
+    },
+    {
+      "t": 367,
+      "hr": 107,
+      "pace": null
+    },
+    {
+      "t": 396,
+      "hr": 107,
+      "pace": null
+    },
+    {
+      "t": 427,
+      "hr": 101,
+      "pace": null
+    },
+    {
+      "t": 451,
+      "hr": 110,
+      "pace": null
+    },
+    {
+      "t": 491,
+      "hr": 123,
+      "pace": null
+    },
+    {
+      "t": 519,
+      "hr": 154,
+      "pace": null
+    },
+    {
+      "t": 554,
+      "hr": 145,
+      "pace": null
+    },
+    {
+      "t": 581,
+      "hr": 144,
+      "pace": null
+    },
+    {
+      "t": 614,
+      "hr": 142,
+      "pace": null
+    },
+    {
+      "t": 634,
+      "hr": 144,
+      "pace": null
+    },
+    {
+      "t": 663,
+      "hr": 144,
+      "pace": null
+    },
+    {
+      "t": 686,
+      "hr": 156,
+      "pace": null
+    },
+    {
+      "t": 706,
+      "hr": 139,
+      "pace": null
+    },
+    {
+      "t": 736,
+      "hr": 134,
+      "pace": null
+    },
+    {
+      "t": 759,
+      "hr": 142,
+      "pace": null
+    },
+    {
+      "t": 785,
+      "hr": 144,
+      "pace": null
+    },
+    {
+      "t": 815,
+      "hr": 140,
+      "pace": null
+    },
+    {
+      "t": 839,
+      "hr": 158,
+      "pace": null
+    },
+    {
+      "t": 867,
+      "hr": 152,
+      "pace": null
+    },
+    {
+      "t": 893,
+      "hr": 153,
+      "pace": null
+    },
+    {
+      "t": 922,
+      "hr": 162,
+      "pace": null
+    },
+    {
+      "t": 950,
+      "hr": 171,
+      "pace": null
+    },
+    {
+      "t": 974,
+      "hr": 155,
+      "pace": null
+    },
+    {
+      "t": 1004,
+      "hr": 165,
+      "pace": null
+    },
+    {
+      "t": 1045,
+      "hr": 175,
+      "pace": null
+    },
+    {
+      "t": 1075,
+      "hr": 173,
+      "pace": null
+    },
+    {
+      "t": 1107,
+      "hr": 179,
+      "pace": null
+    },
+    {
+      "t": 1144,
+      "hr": 175,
+      "pace": null
+    },
+    {
+      "t": 1166,
+      "hr": 186,
+      "pace": null
+    },
+    {
+      "t": 1193,
+      "hr": 176,
+      "pace": null
+    },
+    {
+      "t": 1224,
+      "hr": 177,
+      "pace": null
+    },
+    {
+      "t": 1266,
+      "hr": 162,
+      "pace": null
+    },
+    {
+      "t": 1297,
+      "hr": 149,
+      "pace": null
+    },
+    {
+      "t": 1345,
+      "hr": 150,
+      "pace": null
+    },
+    {
+      "t": 1375,
+      "hr": 152,
+      "pace": null
+    },
+    {
+      "t": 1408,
+      "hr": 164,
+      "pace": null
+    },
+    {
+      "t": 1423,
+      "hr": 131,
+      "pace": null
+    },
+    {
+      "t": 1455,
+      "hr": 142,
+      "pace": null
+    },
+    {
+      "t": 1484,
+      "hr": 136,
+      "pace": null
+    },
+    {
+      "t": 1510,
+      "hr": 140,
+      "pace": null
+    },
+    {
+      "t": 1546,
+      "hr": 154,
+      "pace": null
+    },
+    {
+      "t": 1584,
+      "hr": 152,
+      "pace": null
+    },
+    {
+      "t": 1611,
+      "hr": 168,
+      "pace": null
+    },
+    {
+      "t": 1646,
+      "hr": 164,
+      "pace": null
+    },
+    {
+      "t": 1683,
+      "hr": 161,
+      "pace": null
+    },
+    {
+      "t": 1718,
+      "hr": 165,
+      "pace": null
+    },
+    {
+      "t": 1765,
+      "hr": 164,
+      "pace": null
+    },
+    {
+      "t": 1806,
+      "hr": 162,
+      "pace": null
+    },
+    {
+      "t": 1832,
+      "hr": 163,
+      "pace": null
+    },
+    {
+      "t": 1860,
+      "hr": 158,
+      "pace": null
+    },
+    {
+      "t": 1894,
+      "hr": 161,
+      "pace": null
+    },
+    {
+      "t": 1916,
+      "hr": 155,
+      "pace": null
+    },
+    {
+      "t": 1936,
+      "hr": 160,
+      "pace": null
+    },
+    {
+      "t": 1967,
+      "hr": 159,
+      "pace": null
+    },
+    {
+      "t": 1997,
+      "hr": 139,
+      "pace": null
+    },
+    {
+      "t": 2016,
+      "hr": 136,
+      "pace": null
+    },
+    {
+      "t": 2042,
+      "hr": 149,
+      "pace": null
+    },
+    {
+      "t": 2071,
+      "hr": 154,
+      "pace": null
+    },
+    {
+      "t": 2101,
+      "hr": 148,
+      "pace": null
+    },
+    {
+      "t": 2140,
+      "hr": 143,
+      "pace": null
+    },
+    {
+      "t": 2171,
+      "hr": 158,
+      "pace": null
+    },
+    {
+      "t": 2194,
+      "hr": 162,
+      "pace": null
+    },
+    {
+      "t": 2223,
+      "hr": 166,
+      "pace": null
+    },
+    {
+      "t": 2260,
+      "hr": 167,
+      "pace": null
+    },
+    {
+      "t": 2292,
+      "hr": 157,
+      "pace": null
+    },
+    {
+      "t": 2308,
+      "hr": 159,
+      "pace": null
+    },
+    {
+      "t": 2334,
+      "hr": 153,
+      "pace": null
+    },
+    {
+      "t": 2364,
+      "hr": 143,
+      "pace": null
+    },
+    {
+      "t": 2399,
+      "hr": 137,
+      "pace": null
+    },
+    {
+      "t": 2430,
+      "hr": 136,
+      "pace": null
+    },
+    {
+      "t": 2449,
+      "hr": 143,
+      "pace": null
+    },
+    {
+      "t": 2475,
+      "hr": 148,
+      "pace": null
+    },
+    {
+      "t": 2488,
+      "hr": 136,
+      "pace": null
+    },
+    {
+      "t": 2514,
+      "hr": 150,
+      "pace": null
+    },
+    {
+      "t": 2542,
+      "hr": 151,
+      "pace": null
+    },
+    {
+      "t": 2573,
+      "hr": 147,
+      "pace": null
+    },
+    {
+      "t": 2597,
+      "hr": 135,
+      "pace": null
+    }
+  ],
   "splits": [
     {
       "n": 1,
