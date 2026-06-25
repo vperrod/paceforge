@@ -2,376 +2,399 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#0F1117">
+<meta name="theme-color" content="#0B0D12">
 <title>PaceForge</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='6' y='18' width='5' height='8' rx='1' fill='%2310B981' opacity='.3'/><rect x='13' y='12' width='5' height='14' rx='1' fill='%2310B981' opacity='.6'/><rect x='20' y='5' width='5' height='21' rx='1' fill='%2310B981'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0F1117;--surface:#161821;--card:#1A1D2B;--elevated:#1C1F2B;
-  --border:rgba(148,163,194,.12);--border-s:rgba(148,163,194,.08);--border-x:rgba(148,163,194,.18);
-  --text:#E8ECF4;--text-2:#8B95AD;--text-3:#5C6478;
-  --emerald:#10B981;--emerald-d:rgba(16,185,129,.12);--emerald-g:rgba(16,185,129,.06);
-  --amber:#F59E0B;--amber-d:rgba(245,158,11,.12);
-  --sky:#0EA5E9;--sky-d:rgba(14,165,233,.12);
-  --rose:#F43F5E;--rose-d:rgba(244,63,94,.12);
-  --violet:#8B5CF6;
-  --r:12px;--r-sm:8px;
-  --ease:cubic-bezier(.23,1,.32,1);
-  --font-d:'Manrope',sans-serif;--font-b:'Figtree',sans-serif;--font-m:'JetBrains Mono',monospace;
+  /* ── Surfaces (near-black, layered) ── */
+  --bg:#0B0D12;--bg-2:#0E1118;--surface:#12151E;--card:#161A24;--elevated:#1B202C;--hover:#1F2430;
+  --border:rgba(150,165,200,.10);--border-s:rgba(150,165,200,.06);--border-x:rgba(150,165,200,.18);
+  /* ── Text ── */
+  --text:#EAEEF6;--text-2:#9AA4BC;--text-3:#5E6678;
+  /* ── Accents ── */
+  --emerald:#13C892;--emerald-2:#34D8A8;--emerald-d:rgba(19,200,146,.14);--emerald-g:rgba(19,200,146,.06);
+  --amber:#F5A623;--amber-d:rgba(245,166,35,.14);
+  --sky:#38BDF8;--sky-d:rgba(56,189,248,.14);
+  --rose:#FB5A6E;--rose-d:rgba(251,90,110,.14);
+  --violet:#A78BFA;--violet-d:rgba(167,139,250,.14);
+  /* ── Geometry ── */
+  --r:16px;--r-md:12px;--r-sm:9px;--r-pill:999px;
+  --sp:4px;
+  --shadow:0 1px 0 rgba(255,255,255,.02) inset,0 8px 30px -12px rgba(0,0,0,.6);
+  --shadow-lg:0 24px 60px -20px rgba(0,0,0,.7);
+  --ease:cubic-bezier(.22,1,.36,1);
+  --t-fast:.14s;--t:.24s;
+  --font-d:'Space Grotesk',sans-serif;--font-b:'Figtree',sans-serif;--font-m:'JetBrains Mono',monospace;
   --safe-b:env(safe-area-inset-bottom,0px);
+  --sidebar-w:248px;--maxw:1320px;
 }
 html{height:100%;-webkit-tap-highlight-color:transparent}
 body{
-  font-family:var(--font-b);color:var(--text);background:var(--bg);
-  min-height:100%;display:flex;flex-direction:column;
-  -webkit-font-smoothing:antialiased;overflow-x:hidden;
+  font-family:var(--font-b);color:var(--text);
+  background:
+    radial-gradient(1200px 600px at 12% -8%,rgba(19,200,146,.10),transparent 60%),
+    radial-gradient(900px 500px at 100% 0%,rgba(56,189,248,.06),transparent 55%),
+    var(--bg);
+  background-attachment:fixed;
+  min-height:100%;-webkit-font-smoothing:antialiased;overflow-x:hidden;
 }
 input,textarea,select,button{font-family:inherit;font-size:inherit;color:inherit}
 a{color:var(--emerald);text-decoration:none}
+::selection{background:var(--emerald-d);color:var(--emerald-2)}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:var(--elevated);border-radius:8px;border:3px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-thumb:hover{background:var(--hover);background-clip:padding-box}
+:focus-visible{outline:2px solid var(--emerald);outline-offset:2px;border-radius:6px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
-/* ── Layout ─────────────────────────────────── */
-#app{flex:1;display:flex;flex-direction:column;min-height:100dvh}
-.page{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 16px calc(72px + var(--safe-b))}
-.page.auth-page{display:flex;align-items:center;justify-content:center;padding:24px}
+/* ════════ APP SHELL ════════ */
+#app{min-height:100dvh}
+.shell{display:grid;grid-template-columns:var(--sidebar-w) 1fr;min-height:100dvh}
 
-/* ── Bottom Nav ─────────────────────────────── */
-.tab-bar{
-  position:fixed;bottom:0;left:0;right:0;
-  background:var(--surface);border-top:1px solid var(--border);
-  display:flex;padding:6px 0 calc(6px + var(--safe-b));z-index:100;
+/* ── Sidebar (desktop) ── */
+.sidebar{
+  position:sticky;top:0;height:100dvh;display:flex;flex-direction:column;
+  background:linear-gradient(180deg,rgba(18,21,30,.9),rgba(11,13,18,.9));
+  border-right:1px solid var(--border);padding:22px 16px;backdrop-filter:blur(12px);
 }
-.tab-bar button{
-  flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
-  background:none;border:none;color:var(--text-3);font-size:10px;
-  padding:6px 0;cursor:pointer;transition:color .15s;font-family:var(--font-b);
+.brand{display:flex;align-items:center;gap:11px;padding:4px 8px 22px}
+.brand-mark{width:34px;height:34px;flex-shrink:0}
+.brand-name{font-family:var(--font-d);font-weight:700;font-size:1.18rem;letter-spacing:-.02em}
+.brand-name .dot{color:var(--emerald)}
+.nav{display:flex;flex-direction:column;gap:3px;flex:1}
+.nav-label{font-size:.64rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);padding:14px 12px 6px}
+.nav-item{
+  display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--r-sm);
+  color:var(--text-2);font-weight:600;font-size:.9rem;cursor:pointer;border:none;background:none;
+  width:100%;text-align:left;transition:background var(--t-fast),color var(--t-fast);position:relative;
 }
-.tab-bar button.active{color:var(--emerald)}
-.tab-bar button svg{width:22px;height:22px}
+.nav-item svg{width:19px;height:19px;flex-shrink:0}
+.nav-item:hover{background:var(--hover);color:var(--text)}
+.nav-item.active{background:var(--emerald-d);color:var(--emerald-2)}
+.nav-item.active::before{content:"";position:absolute;left:-16px;top:8px;bottom:8px;width:3px;border-radius:0 3px 3px 0;background:var(--emerald)}
+.sidebar-foot{border-top:1px solid var(--border);padding-top:14px;margin-top:8px}
+.side-user{display:flex;align-items:center;gap:10px;padding:6px 8px}
+.side-avatar{width:34px;height:34px;border-radius:50%;background:var(--emerald-d);color:var(--emerald-2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;flex-shrink:0}
+.side-user-name{font-weight:600;font-size:.85rem;line-height:1.2}
+.side-user-mail{font-size:.72rem;color:var(--text-3);line-height:1.2}
 
-/* ── Auth ───────────────────────────────────── */
-.auth-box{width:100%;max-width:380px}
-.auth-logo{text-align:center;margin-bottom:32px}
-.auth-logo svg{width:48px;height:48px;margin-bottom:12px}
-.auth-logo h1{font-family:var(--font-d);font-size:1.5rem;font-weight:800;letter-spacing:-.02em}
-.auth-logo p{color:var(--text-2);font-size:.85rem;margin-top:4px}
-.auth-form{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:24px}
-.auth-form h2{font-family:var(--font-d);font-size:1.1rem;font-weight:700;margin-bottom:20px}
-.field{margin-bottom:16px}
-.field label{display:block;font-size:.8rem;font-weight:500;color:var(--text-2);margin-bottom:6px}
-.field input{
-  width:100%;background:var(--elevated);border:1px solid var(--border);
-  border-radius:var(--r-sm);padding:12px 14px;font-size:.95rem;outline:none;
-  transition:border-color .15s;
+/* ── Main ── */
+.main{min-width:0;display:flex;flex-direction:column}
+.page{flex:1;overflow-y:auto}
+.page-inner{max-width:var(--maxw);margin:0 auto;padding:28px 36px 64px;width:100%}
+
+/* ── Top bar (sticky) ── */
+.topbar{
+  position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:16px;
+  padding:16px 36px;border-bottom:1px solid var(--border);
+  background:rgba(11,13,18,.72);backdrop-filter:blur(16px);
 }
-.field input:focus{border-color:var(--emerald)}
+.topbar .page-title{font-family:var(--font-d);font-weight:700;font-size:1.25rem;letter-spacing:-.01em;line-height:1.1}
+.topbar .page-sub{font-size:.8rem;color:var(--text-2);margin-top:1px}
+.topbar-actions{margin-left:auto;display:flex;align-items:center;gap:10px}
+
+/* ── Bottom tab bar (mobile only) ── */
+.tab-bar{display:none}
+
+/* ════════ BUTTONS ════════ */
 .btn{
-  width:100%;padding:13px;border:none;border-radius:var(--r-sm);
-  font-weight:600;font-size:.95rem;cursor:pointer;
-  transition:opacity .15s,transform .1s;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:11px 18px;border:1px solid transparent;border-radius:var(--r-sm);
+  font-weight:600;font-size:.88rem;cursor:pointer;white-space:nowrap;
+  transition:background var(--t-fast),border-color var(--t-fast),transform var(--t-fast),opacity var(--t-fast);
 }
-.btn:active{transform:scale(.98)}
-.btn-primary{background:var(--emerald);color:#0F1117}
-.btn-primary:disabled{opacity:.5}
-.btn-ghost{background:transparent;color:var(--text-2);border:1px solid var(--border)}
-.btn-link{
-  background:none;border:none;color:var(--text-2);font-size:.85rem;
-  padding:8px;cursor:pointer;width:100%;text-align:center;
-}
+.btn svg{width:17px;height:17px}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-primary{background:var(--emerald);color:#06251A;box-shadow:0 6px 18px -8px var(--emerald)}
+.btn-primary:hover:not(:disabled){background:var(--emerald-2)}
+.btn-ghost{background:var(--elevated);color:var(--text);border-color:var(--border)}
+.btn-ghost:hover:not(:disabled){background:var(--hover);border-color:var(--border-x)}
+.btn-outline{background:transparent;color:var(--text-2);border-color:var(--border-x)}
+.btn-outline:hover:not(:disabled){color:var(--text);background:var(--elevated)}
+.btn-danger{background:var(--rose-d);color:var(--rose);border-color:rgba(251,90,110,.3)}
+.btn-danger:hover:not(:disabled){background:rgba(251,90,110,.2)}
+.btn-sm{padding:7px 12px;font-size:.8rem;border-radius:var(--r-sm)}
+.btn-icon{width:38px;height:38px;padding:0;border-radius:var(--r-sm);background:var(--elevated);border:1px solid var(--border);color:var(--text-2)}
+.btn-icon:hover{color:var(--text);background:var(--hover)}
+.btn-block{width:100%}
+.btn-link{background:none;border:none;color:var(--text-2);font-size:.85rem;cursor:pointer;font-weight:600}
 .btn-link:hover{color:var(--emerald)}
-.auth-footer{text-align:center;margin-top:16px;color:var(--text-3);font-size:.85rem}
-.error-msg{background:var(--rose-d);color:var(--rose);padding:10px 14px;border-radius:var(--r-sm);font-size:.85rem;margin-bottom:12px}
-.success-msg{background:var(--emerald-d);color:var(--emerald);padding:10px 14px;border-radius:var(--r-sm);font-size:.85rem;margin-bottom:12px}
 
-/* ── Cards & Metrics ────────────────────────── */
+/* ════════ CARDS ════════ */
 .card{
-  background:var(--card);border:1px solid var(--border);border-radius:var(--r);
-  padding:16px;margin-bottom:12px;
+  background:linear-gradient(180deg,var(--card),var(--surface));
+  border:1px solid var(--border);border-radius:var(--r);padding:20px;box-shadow:var(--shadow);
 }
-.metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
-.metric{
-  background:var(--card);border:1px solid var(--border);border-radius:var(--r);
-  padding:14px;
-}
-.metric-label{font-size:.7rem;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em;font-weight:600}
-.metric-value{font-family:var(--font-m);font-size:1.4rem;font-weight:700;margin-top:4px;line-height:1.2}
-.metric-sub{font-size:.75rem;color:var(--text-2);margin-top:2px}
-.section-title{
-  font-family:var(--font-d);font-size:1rem;font-weight:700;
-  margin-bottom:12px;display:flex;align-items:center;gap:8px;
-}
+.card-pad-sm{padding:16px}
+.card-h{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+.card-title{font-family:var(--font-d);font-weight:600;font-size:1rem;letter-spacing:-.01em;display:flex;align-items:center;gap:9px}
+.card-title .ico{color:var(--emerald)}
+.card-title .ico svg{width:18px;height:18px}
+.eyebrow{font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-3)}
 
-/* ── Workout Cards ──────────────────────────── */
-.workout-card{
-  background:var(--card);border:1px solid var(--border);border-radius:var(--r);
-  padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;
-  cursor:pointer;transition:border-color .15s;
-}
-.workout-card:active{border-color:var(--emerald)}
-.wo-bar{width:4px;border-radius:2px;align-self:stretch;flex-shrink:0}
-.wo-info{flex:1;min-width:0}
-.wo-name{font-weight:600;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.wo-meta{font-size:.78rem;color:var(--text-2);margin-top:2px}
-.wo-badge{
-  font-size:.65rem;font-weight:600;padding:3px 8px;border-radius:6px;
-  white-space:nowrap;flex-shrink:0;
-}
+/* ── Grids ── */
+.grid{display:grid;gap:18px}
+.stat-row{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+.cols-auto{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.dash-grid{display:grid;gap:18px;grid-template-columns:repeat(12,1fr)}
+.span-4{grid-column:span 4}.span-5{grid-column:span 5}.span-6{grid-column:span 6}
+.span-7{grid-column:span 7}.span-8{grid-column:span 8}.span-12{grid-column:span 12}
+.mt{margin-top:18px}.mt-sm{margin-top:10px}
 
-/* ── Week Selector ──────────────────────────── */
-.week-nav{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;margin-bottom:12px;-webkit-overflow-scrolling:touch}
-.week-nav::-webkit-scrollbar{display:none}
+/* ── Stat cards (hero) ── */
+.stat{
+  background:linear-gradient(160deg,var(--card),var(--surface));
+  border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;
+  position:relative;overflow:hidden;transition:border-color var(--t),transform var(--t);
+}
+.stat:hover{border-color:var(--border-x);transform:translateY(-2px)}
+.stat::after{content:"";position:absolute;right:-30px;top:-30px;width:90px;height:90px;border-radius:50%;background:var(--accent,var(--emerald));opacity:.07;filter:blur(8px)}
+.stat-label{font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3)}
+.stat-value{font-family:var(--font-m);font-size:2rem;font-weight:700;line-height:1.05;margin-top:10px;letter-spacing:-.02em}
+.stat-value .unit{font-size:.9rem;color:var(--text-3);font-weight:500;margin-left:3px}
+.stat-sub{font-size:.78rem;color:var(--text-2);margin-top:6px;display:flex;align-items:center;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:.7rem;font-weight:700;padding:3px 9px;border-radius:var(--r-pill);background:var(--accent-d,var(--emerald-d));color:var(--accent,var(--emerald))}
+.dotmark{width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block}
+
+/* ── Mini label/value rows ── */
+.lv{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border-s);font-size:.88rem}
+.lv:last-child{border-bottom:none}
+.lv-label{color:var(--text-2)}
+.lv-val{font-weight:600;font-family:var(--font-m);font-size:.86rem}
+
+/* ── Gauges ── */
+.gauge-row{display:flex;align-items:center;gap:12px;margin-bottom:11px}
+.gauge-row:last-child{margin-bottom:0}
+.gauge-tag{font-size:.78rem;color:var(--text-2);width:96px;flex-shrink:0}
+.gauge-bar{flex:1;height:8px;background:var(--elevated);border-radius:var(--r-pill);overflow:hidden}
+.gauge-fill{height:100%;border-radius:var(--r-pill);transition:width .5s var(--ease)}
+.gauge-num{font-family:var(--font-m);font-size:.78rem;width:46px;text-align:right;color:var(--text-2)}
+.grade-badge{display:inline-block;font-size:.68rem;font-weight:700;padding:2px 9px;border-radius:var(--r-pill)}
+
+/* ════════ ACTIVITY / WORKOUT ITEMS ════════ */
+.act-item{
+  display:flex;align-items:center;gap:14px;padding:13px 14px;border-radius:var(--r-md);
+  border:1px solid transparent;cursor:pointer;transition:background var(--t-fast),border-color var(--t-fast);
+}
+.act-item:hover{background:var(--elevated);border-color:var(--border)}
+.act-bar{width:4px;align-self:stretch;border-radius:4px;flex-shrink:0}
+.act-icon{width:38px;height:38px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--elevated)}
+.act-icon svg{width:18px;height:18px}
+.act-info{flex:1;min-width:0}
+.act-name{font-weight:600;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.act-meta{font-size:.78rem;color:var(--text-2);margin-top:2px}
+.act-stat{text-align:right;flex-shrink:0}
+.act-stat .v{font-family:var(--font-m);font-weight:600;font-size:.9rem}
+.act-stat .l{font-size:.66rem;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em}
+.wo-badge{font-size:.66rem;font-weight:700;padding:3px 9px;border-radius:var(--r-pill);white-space:nowrap;flex-shrink:0}
+
+.divlist > * + *{border-top:1px solid var(--border-s)}
+
+/* ── Week selector ── */
+.week-nav{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;margin-bottom:16px;scrollbar-width:thin}
 .week-btn{
-  flex-shrink:0;padding:8px 14px;border-radius:var(--r-sm);border:1px solid var(--border);
-  background:var(--card);color:var(--text-2);font-size:.8rem;font-weight:600;
-  cursor:pointer;white-space:nowrap;transition:all .15s;
+  flex-shrink:0;padding:9px 15px;border-radius:var(--r-sm);border:1px solid var(--border);
+  background:var(--elevated);color:var(--text-2);font-size:.82rem;font-weight:600;cursor:pointer;
+  white-space:nowrap;transition:all var(--t-fast);display:flex;flex-direction:column;gap:1px;align-items:flex-start;line-height:1.2;
 }
-.week-btn.active{background:var(--emerald);color:#0F1117;border-color:var(--emerald)}
+.week-btn small{font-size:.62rem;color:var(--text-3);font-weight:500}
+.week-btn:hover{border-color:var(--border-x)}
+.week-btn.active{background:var(--emerald-d);color:var(--emerald-2);border-color:rgba(19,200,146,.4)}
+.week-btn.active small{color:var(--emerald)}
 
-/* ── Calendar ───────────────────────────────── */
-.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.cal-header h3{font-family:var(--font-d);font-weight:700;font-size:1rem}
-.cal-nav{display:flex;gap:8px}
-.cal-nav button{
-  background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);
-  width:36px;height:36px;display:flex;align-items:center;justify-content:center;
-  color:var(--text);cursor:pointer;font-size:1.1rem;
-}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;gap:2px}
-.cal-day-label{font-size:.65rem;color:var(--text-3);font-weight:600;padding:6px 0;text-transform:uppercase}
+/* ── Pace grid / editor ── */
+.pace-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.pace-item{padding:12px 14px;background:var(--elevated);border:1px solid var(--border);border-radius:var(--r-md)}
+.pace-item .pl{font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);font-weight:700}
+.pace-item .pv{font-family:var(--font-m);font-weight:700;font-size:1.05rem;color:var(--emerald);margin-top:4px}
+.pace-item .pv .u{font-size:.72rem;color:var(--text-3);font-weight:400}
+
+/* ════════ CALENDAR ════════ */
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.cal-day-label{font-size:.68rem;color:var(--text-3);font-weight:700;text-align:center;padding:4px 0;text-transform:uppercase;letter-spacing:.05em}
 .cal-day{
-  aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  font-size:.85rem;border-radius:var(--r-sm);cursor:pointer;
-  position:relative;transition:background .15s;gap:2px;
+  min-height:86px;border:1px solid var(--border-s);border-radius:var(--r-sm);padding:7px 8px;
+  cursor:pointer;transition:background var(--t-fast),border-color var(--t-fast);display:flex;flex-direction:column;gap:4px;
 }
-.cal-day:active{background:var(--elevated)}
-.cal-day.today{color:var(--emerald);font-weight:700}
-.cal-day.selected{background:var(--emerald);color:#0F1117;font-weight:700}
-.cal-day.other-month{color:var(--text-3);opacity:.4}
-.cal-dots{display:flex;gap:3px;position:absolute;bottom:4px}
-.cal-dot{width:5px;height:5px;border-radius:50%}
-.cal-entry{
-  display:flex;align-items:center;gap:10px;padding:12px 14px;
-  background:var(--card);border:1px solid var(--border);border-radius:var(--r);
-  margin-bottom:8px;cursor:pointer;
-}
-.cal-entry-bar{width:4px;border-radius:2px;align-self:stretch;flex-shrink:0}
-.cal-entry-info{flex:1;min-width:0}
-.cal-entry-title{font-weight:600;font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cal-entry-sub{font-size:.75rem;color:var(--text-2);margin-top:1px}
+.cal-day:hover{background:var(--elevated);border-color:var(--border)}
+.cal-day.today{border-color:rgba(19,200,146,.5)}
+.cal-day.today .cal-num{color:var(--emerald)}
+.cal-day.selected{background:var(--emerald-d);border-color:var(--emerald)}
+.cal-day.other-month{opacity:.35}
+.cal-num{font-size:.82rem;font-weight:600;font-family:var(--font-m)}
+.cal-pill{font-size:.64rem;padding:2px 6px;border-radius:5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
 
-/* ── Feed ───────────────────────────────────── */
-.feed-item{
-  background:var(--card);border:1px solid var(--border);border-radius:var(--r);
-  padding:16px;margin-bottom:12px;
-}
-.feed-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-.feed-avatar{
-  width:36px;height:36px;border-radius:50%;background:var(--emerald-d);
-  display:flex;align-items:center;justify-content:center;
-  font-weight:700;font-size:.85rem;color:var(--emerald);flex-shrink:0;
-}
-.feed-user{font-weight:600;font-size:.9rem}
-.feed-time{font-size:.75rem;color:var(--text-3)}
-.feed-body{font-size:.88rem;line-height:1.5;color:var(--text-2);margin-bottom:10px}
-.feed-actions{display:flex;gap:16px}
-.feed-actions button{
-  background:none;border:none;color:var(--text-3);font-size:.8rem;
-  display:flex;align-items:center;gap:4px;cursor:pointer;padding:4px 0;
-}
-.feed-actions button.liked{color:var(--rose)}
-.comment-list{margin-top:10px;border-top:1px solid var(--border);padding-top:10px}
-.comment{font-size:.82rem;margin-bottom:6px}
-.comment b{color:var(--text);font-weight:600}
-.comment-input{
-  display:flex;gap:8px;margin-top:8px;
-}
-.comment-input input{
-  flex:1;background:var(--elevated);border:1px solid var(--border);
-  border-radius:var(--r-sm);padding:8px 12px;font-size:.85rem;outline:none;
-}
-.comment-input input:focus{border-color:var(--emerald)}
-.comment-input button{
-  background:var(--emerald);color:#0F1117;border:none;border-radius:var(--r-sm);
-  padding:8px 14px;font-weight:600;font-size:.85rem;cursor:pointer;flex-shrink:0;
-}
-
-/* ── AI Coach ───────────────────────────────── */
-.chat-messages{flex:1;overflow-y:auto;padding-bottom:12px}
-.chat-msg{margin-bottom:12px;max-width:85%;animation:fadeUp .2s var(--ease)}
-.chat-msg.user{margin-left:auto}
-.chat-bubble{
-  padding:12px 16px;border-radius:16px;font-size:.9rem;line-height:1.5;
-  word-wrap:break-word;
-}
-.chat-msg.user .chat-bubble{background:var(--emerald);color:#0F1117;border-bottom-right-radius:4px}
-.chat-msg.assistant .chat-bubble{background:var(--card);border:1px solid var(--border);border-bottom-left-radius:4px;color:var(--text)}
-.chat-input{
-  display:flex;gap:8px;padding:12px 0;border-top:1px solid var(--border);
-  position:sticky;bottom:0;background:var(--bg);
-}
-.chat-input input{
-  flex:1;background:var(--card);border:1px solid var(--border);
-  border-radius:20px;padding:12px 18px;font-size:.9rem;outline:none;
-}
-.chat-input input:focus{border-color:var(--emerald)}
-.chat-input button{
-  background:var(--emerald);color:#0F1117;border:none;border-radius:50%;
-  width:44px;height:44px;display:flex;align-items:center;justify-content:center;
-  cursor:pointer;flex-shrink:0;font-size:1.1rem;
-}
-
-/* ── Profile ────────────────────────────────── */
-.profile-header{text-align:center;margin-bottom:20px}
-.profile-avatar{
-  width:64px;height:64px;border-radius:50%;background:var(--emerald-d);
-  display:flex;align-items:center;justify-content:center;margin:0 auto 10px;
-  font-size:1.5rem;font-weight:700;color:var(--emerald);
-}
-.profile-name{font-family:var(--font-d);font-weight:700;font-size:1.2rem}
-.profile-email{font-size:.85rem;color:var(--text-2);margin-top:2px}
-.settings-row{
-  display:flex;justify-content:space-between;align-items:center;
-  padding:14px 0;border-bottom:1px solid var(--border);
-}
-.settings-row:last-child{border-bottom:none}
-.settings-label{font-size:.9rem;font-weight:500}
-.settings-value{font-size:.85rem;color:var(--text-2)}
-
-/* ── Sub-tabs (Profile sections) ────────────── */
-.sub-tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:14px;-webkit-overflow-scrolling:touch}
-.sub-tabs::-webkit-scrollbar{display:none}
-.sub-tab{
-  flex-shrink:0;padding:7px 14px;border-radius:20px;border:1px solid var(--border);
-  background:var(--card);color:var(--text-2);font-size:.78rem;font-weight:600;
-  cursor:pointer;white-space:nowrap;transition:all .15s;
-}
-.sub-tab.active{background:var(--emerald);color:#0F1117;border-color:var(--emerald)}
-
-/* ── Gauge / Progress ───────────────────────── */
-.gauge-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-.gauge-bar{flex:1;height:8px;background:var(--elevated);border-radius:4px;overflow:hidden}
-.gauge-fill{height:100%;border-radius:4px;transition:width .4s var(--ease)}
-.grade-badge{
-  display:inline-block;font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:4px;
-  margin-left:6px;
-}
-
-/* ── HYROX ──────────────────────────────────── */
-.hyrox-station{
-  display:flex;justify-content:space-between;align-items:center;
-  padding:12px 0;border-bottom:1px solid var(--border);
-}
+/* ════════ HYROX ════════ */
+.hyrox-station{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--border-s)}
 .hyrox-station:last-child{border-bottom:none}
-.hyrox-name{font-size:.85rem;font-weight:500}
+.hyrox-name{font-size:.86rem;font-weight:500}
 .hyrox-time{font-family:var(--font-m);font-size:.9rem;font-weight:600}
 
-/* ── Admin ──────────────────────────────────── */
-.admin-user{
-  background:var(--card);border:1px solid var(--border);border-radius:var(--r);
-  padding:14px;margin-bottom:10px;
+/* ════════ SETTINGS ════════ */
+.settings-row{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 0;border-bottom:1px solid var(--border-s)}
+.settings-row:last-child{border-bottom:none}
+.settings-label{font-size:.9rem;font-weight:500}
+.settings-value{font-size:.85rem;color:var(--text-2);font-family:var(--font-m)}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:.8rem;font-weight:600;color:var(--text-2);margin-bottom:7px}
+.field input,.field textarea,.field select{
+  width:100%;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-sm);
+  padding:12px 14px;font-size:.92rem;outline:none;transition:border-color var(--t-fast);
 }
-.admin-name{font-weight:600;font-size:.9rem;display:flex;align-items:center;gap:8px}
-.admin-badge{
-  font-size:.6rem;font-weight:700;padding:2px 8px;border-radius:4px;text-transform:uppercase;
-}
-.admin-badge.approved{background:var(--emerald-d);color:var(--emerald)}
-.admin-badge.pending{background:var(--amber-d);color:var(--amber)}
-.admin-badge.rejected{background:var(--rose-d);color:var(--rose)}
-.admin-badge.admin{background:var(--sky-d);color:var(--sky)}
-.admin-meta{font-size:.78rem;color:var(--text-2);margin-top:4px}
-.admin-actions{display:flex;gap:8px;margin-top:10px}
-.admin-actions button{
-  flex:1;padding:8px;border-radius:var(--r-sm);border:none;
-  font-weight:600;font-size:.8rem;cursor:pointer;
-}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--emerald)}
+.field .hint{font-size:.74rem;color:var(--text-3);margin-top:6px;line-height:1.45}
+.mono-input{font-family:var(--font-m)}
+.conn-status{display:inline-flex;align-items:center;gap:7px;font-size:.82rem;font-weight:600;padding:5px 11px;border-radius:var(--r-pill)}
+.conn-on{background:var(--emerald-d);color:var(--emerald)}
+.conn-off{background:var(--elevated);color:var(--text-3)}
 
-/* ── Loading & Empty ────────────────────────── */
-.loading{display:flex;justify-content:center;padding:40px 0}
-.spinner{
-  width:28px;height:28px;border:3px solid var(--border);
-  border-top-color:var(--emerald);border-radius:50%;
-  animation:spin .6s linear infinite;
+/* ── Sub tabs ── */
+.sub-tabs{display:flex;gap:7px;overflow-x:auto;padding-bottom:8px;margin-bottom:20px;scrollbar-width:thin}
+.sub-tab{
+  flex-shrink:0;padding:8px 16px;border-radius:var(--r-pill);border:1px solid var(--border);
+  background:var(--elevated);color:var(--text-2);font-size:.82rem;font-weight:600;cursor:pointer;
+  white-space:nowrap;transition:all var(--t-fast);
 }
-.empty{text-align:center;padding:40px 0;color:var(--text-3);font-size:.9rem}
+.sub-tab:hover{border-color:var(--border-x)}
+.sub-tab.active{background:var(--emerald-d);color:var(--emerald-2);border-color:rgba(19,200,146,.4)}
 
-/* ── Animations ─────────────────────────────── */
+/* ════════ STATES ════════ */
+.loading{display:flex;justify-content:center;padding:64px 0}
+.spinner{width:30px;height:30px;border:3px solid var(--border);border-top-color:var(--emerald);border-radius:50%;animation:spin .6s linear infinite}
+.empty{
+  text-align:center;padding:48px 24px;color:var(--text-3);font-size:.92rem;
+  border:1px dashed var(--border-x);border-radius:var(--r);background:var(--surface);
+}
+.empty .e-ico{width:46px;height:46px;margin:0 auto 14px;border-radius:14px;background:var(--elevated);display:flex;align-items:center;justify-content:center;color:var(--text-2)}
+.empty .e-ico svg{width:24px;height:24px}
+.empty .e-title{color:var(--text);font-weight:600;font-size:1rem;margin-bottom:6px}
+.banner{display:flex;align-items:center;gap:14px;padding:14px 18px;border-radius:var(--r-md);font-size:.86rem}
+.banner.warn{background:var(--amber-d);border:1px solid rgba(245,166,35,.3);color:var(--text)}
+.banner .b-ico{flex-shrink:0;color:var(--amber)}
+.banner .b-ico svg{width:20px;height:20px}
+
+/* ════════ ANIMATIONS ════════ */
 @keyframes spin{to{transform:rotate(360deg)}}
-@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-.fade-in{animation:fadeUp .25s var(--ease)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes pop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
+.fade-in{animation:fadeUp .32s var(--ease)}
+.fade-in > *{animation:fadeUp .4s var(--ease) backwards}
+.fade-in > *:nth-child(2){animation-delay:.04s}
+.fade-in > *:nth-child(3){animation-delay:.08s}
+.fade-in > *:nth-child(4){animation-delay:.12s}
+.fade-in > *:nth-child(5){animation-delay:.16s}
 
-/* ── Modal / Sheet ──────────────────────────── */
-.sheet-overlay{
-  position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;
-  opacity:0;transition:opacity .2s;pointer-events:none;
+/* ════════ MODAL ════════ */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(5,7,11,.66);backdrop-filter:blur(4px);z-index:200;
+  opacity:0;transition:opacity var(--t);pointer-events:none;display:flex;align-items:center;justify-content:center;padding:24px;
 }
-.sheet-overlay.open{opacity:1;pointer-events:auto}
-.sheet{
-  position:fixed;bottom:0;left:0;right:0;z-index:201;
-  background:var(--surface);border-radius:16px 16px 0 0;
-  padding:20px 16px calc(20px + var(--safe-b));
-  transform:translateY(100%);transition:transform .3s var(--ease);
-  max-height:85dvh;overflow-y:auto;
+.modal-overlay.open{opacity:1;pointer-events:auto}
+.modal{
+  width:100%;max-width:560px;max-height:88dvh;overflow-y:auto;
+  background:linear-gradient(180deg,var(--card),var(--surface));
+  border:1px solid var(--border-x);border-radius:var(--r);box-shadow:var(--shadow-lg);
+  padding:24px;transform:translateY(14px) scale(.98);transition:transform var(--t) var(--ease);
 }
-.sheet-overlay.open .sheet{transform:translateY(0)}
-.sheet-handle{width:36px;height:4px;border-radius:2px;background:var(--text-3);margin:0 auto 16px}
+.modal-overlay.open .modal{transform:none}
+.modal-h{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
+.modal-title{font-family:var(--font-d);font-weight:700;font-size:1.2rem;letter-spacing:-.01em}
+.modal-sub{font-size:.84rem;color:var(--text-2);margin-top:4px}
+.modal-close{background:var(--elevated);border:1px solid var(--border);border-radius:var(--r-sm);width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-2);flex-shrink:0}
+.modal-close:hover{color:var(--text);background:var(--hover)}
+.modal-foot{display:flex;gap:10px;justify-content:flex-end;margin-top:22px}
+.detail-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.detail-item{text-align:center;padding:12px 6px;background:var(--elevated);border-radius:var(--r-sm)}
+.detail-item .d-val{font-family:var(--font-m);font-size:.95rem;font-weight:600}
+.detail-item .d-lbl{font-size:.64rem;color:var(--text-3);margin-top:3px;text-transform:uppercase;letter-spacing:.04em}
+.step-item{padding:11px 14px;background:var(--elevated);border-radius:var(--r-sm);margin-bottom:7px;font-size:.84rem}
 
-/* ── Activity Detail Grid ───────────────────── */
-.detail-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
-.detail-item{text-align:center;padding:10px 4px;background:var(--elevated);border-radius:var(--r-sm)}
-.detail-item .d-val{font-family:var(--font-m);font-size:.9rem;font-weight:600}
-.detail-item .d-lbl{font-size:.65rem;color:var(--text-3);margin-top:2px;text-transform:uppercase}
-
-/* ── Plan Header ────────────────────────────── */
-.plan-header{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:14px}
-.plan-title{font-family:var(--font-d);font-weight:700;font-size:1.1rem;margin-bottom:4px}
-.plan-meta{font-size:.8rem;color:var(--text-2);margin-bottom:8px}
-.pace-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
-.pace-item{font-size:.78rem;display:flex;justify-content:space-between;padding:6px 10px;background:var(--elevated);border-radius:var(--r-sm)}
-.pace-label{color:var(--text-2)}
-.pace-val{font-family:var(--font-m);font-weight:600;color:var(--emerald)}
-
-/* ── Top Bar Icons ──────────────────────────── */
-.top-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-.top-bar-icons{display:flex;gap:10px}
-.top-bar-icons button{
-  background:none;border:none;color:var(--text-3);cursor:pointer;
-  width:32px;height:32px;display:flex;align-items:center;justify-content:center;
-  border-radius:50%;transition:background .15s;
+/* ════════ TOASTS ════════ */
+#toasts{position:fixed;top:18px;right:18px;z-index:300;display:flex;flex-direction:column;gap:10px;max-width:380px}
+.toast{
+  display:flex;align-items:flex-start;gap:11px;padding:13px 15px;border-radius:var(--r-md);
+  background:var(--elevated);border:1px solid var(--border-x);box-shadow:var(--shadow-lg);
+  font-size:.86rem;animation:pop .26s var(--ease);
 }
-.top-bar-icons button:active{background:var(--elevated)}
-.top-bar-icons button svg{width:20px;height:20px}
+.toast .t-ico{flex-shrink:0;width:20px;height:20px;margin-top:1px}
+.toast.ok .t-ico{color:var(--emerald)}.toast.err .t-ico{color:var(--rose)}.toast.info .t-ico{color:var(--sky)}
+.toast .t-body{flex:1;min-width:0;line-height:1.4}
+.toast .t-body b{display:block;font-weight:700;margin-bottom:2px}
+.toast .t-body a{word-break:break-all}
+.toast .t-x{background:none;border:none;color:var(--text-3);cursor:pointer;font-size:1.1rem;line-height:1;flex-shrink:0}
 
-/* ── Training Effect Bar ────────────────────── */
-.te-bar{display:flex;align-items:center;gap:8px;margin-bottom:6px}
-.te-label{font-size:.75rem;color:var(--text-2);width:70px;flex-shrink:0}
-.te-track{flex:1;height:6px;background:var(--elevated);border-radius:3px;overflow:hidden}
-.te-fill{height:100%;border-radius:3px;transition:width .3s var(--ease)}
-.te-val{font-family:var(--font-m);font-size:.75rem;width:28px;text-align:right}
+/* ════════ TOGGLE ════════ */
+.toggle{position:relative;width:46px;height:26px;flex-shrink:0;cursor:pointer}
+.toggle input{opacity:0;width:0;height:0;position:absolute}
+.toggle .track{position:absolute;inset:0;border-radius:var(--r-pill);background:var(--elevated);transition:background var(--t-fast)}
+.toggle .knob{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left var(--t-fast)}
+.toggle input:checked + .track{background:var(--emerald)}
+.toggle input:checked ~ .knob{left:23px}
+
+/* ════════ AUTH ════════ */
+.auth-page{display:flex;align-items:center;justify-content:center;min-height:100dvh;padding:24px}
+
+/* ════════ RESPONSIVE ════════ */
+@media (max-width:1023px){
+  .shell{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .topbar{padding:14px 16px}
+  .page-inner{padding:18px 16px calc(86px + var(--safe-b))}
+  .dash-grid{grid-template-columns:1fr}
+  .span-4,.span-5,.span-6,.span-7,.span-8,.span-12{grid-column:span 1}
+  .cal-day{min-height:54px;padding:5px 5px}
+  .cal-pill{display:none}
+  .cal-day::after{content:attr(data-dots)}
+  .stat-value{font-size:1.7rem}
+  .tab-bar{
+    display:flex;position:fixed;bottom:0;left:0;right:0;z-index:100;
+    background:rgba(14,17,24,.92);backdrop-filter:blur(16px);border-top:1px solid var(--border);
+    padding:7px 4px calc(7px + var(--safe-b));
+  }
+  .tab-bar button{
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;
+    color:var(--text-3);font-size:10px;font-weight:600;padding:5px 0;cursor:pointer;
+  }
+  .tab-bar button svg{width:22px;height:22px}
+  .tab-bar button.active{color:var(--emerald)}
+  #toasts{left:12px;right:12px;max-width:none}
+}
+@media (min-width:1024px){.mobile-only{display:none!important}}
 </style>
 </head>
 <body>
 <div id="app"></div>
+<div id="toasts"></div>
 
 <script>
 // ═══════════════════════════════════════════════════════
-// PaceForge Mobile Web — Single Page Application
+// PaceForge — single-user static training dashboard
+// Data layer (apiJson / loadJSON) reads ./data/*.json only.
+// Actions reach GitHub directly using a user-supplied PAT.
 // ═══════════════════════════════════════════════════════
 
-// ── State (single-user, no auth) ───────────────────────
+// ── State ──────────────────────────────────────────────
 const state = {
   user: { name: 'Victor', email: 'vperrod@gmail.com', role: 'user' },
   tab: 'home',
 };
+const REPO = 'vperrod/paceforge';     // owner/repo for GitHub actions
+const REF  = 'master';
 
-// ── Static data layer ──────────────────────────────────
-// The old FastAPI backend is gone; this is a static GitHub Pages site.
-// apiJson() serves the committed data/*.json (refreshed by the sync
-// workflow) plus the build-time analytics. Writes are no-ops.
+// ═══════════════════════════════════════════════════════
+// STATIC DATA LAYER  (unchanged contract — DO NOT BREAK)
+// ═══════════════════════════════════════════════════════
+const cache = {};
+
 async function loadJSON(file) {
   const key = 'f:' + file;
   if (cache[key]) return cache[key];
@@ -387,7 +410,7 @@ async function apiJson(path, opts = {}) {
   if (opts.method && opts.method !== 'GET') return {};   // static: no writes
   switch (p) {
     case '/profile/analytics': return loadJSON('analytics.json');
-    case '/plans': { const plan = await loadJSON('plan.json').catch(() => null); return plan ? [plan] : []; }
+    case '/plans': { const plan = await planStore.get().catch(() => null); return plan ? [plan] : []; }
     case '/activities': return loadJSON('activities.json');
     case '/auth/profile': return profileMeta();
     case '/garmin/status': { const pr = await loadJSON('profile.json').catch(() => null); return { connected: !!(pr && pr.profile_date) }; }
@@ -433,83 +456,374 @@ async function feedFromActivities() {
   }));
 }
 
-function exportPlan() {
-  loadJSON('plan.json').then(plan => {
+// ═══════════════════════════════════════════════════════
+// PLAN STORE  — localStorage-backed editable plan
+// Seeded from ./data/plan.json on first load (key: pf_plan).
+// All Plan-view reads go through planStore.get().
+// ═══════════════════════════════════════════════════════
+const PLAN_KEY = 'pf_plan';
+const planStore = {
+  _mem: null,
+  async _seed() {
+    const plan = await loadJSON('plan.json');
+    return JSON.parse(JSON.stringify(plan));
+  },
+  async get() {
+    if (this._mem) return this._mem;
+    const raw = localStorage.getItem(PLAN_KEY);
+    if (raw) { try { this._mem = JSON.parse(raw); return this._mem; } catch {} }
+    this._mem = await this._seed();
+    this._persist();
+    return this._mem;
+  },
+  _persist() {
+    try { localStorage.setItem(PLAN_KEY, JSON.stringify(this._mem)); } catch {}
+  },
+  // mutator receives the live plan object; mutate it then persist
+  async update(mutator) {
+    const plan = await this.get();
+    mutator(plan);
+    this._mem = plan;
+    this._persist();
+    clearCache('plans');           // invalidate apiJson('/plans') TTL cache
+    delete cache['f:plan.json'];   // not strictly needed, but keep synced-source clean
+    return plan;
+  },
+  async reset() {
+    this._mem = await this._seed();
+    this._persist();
+    clearCache('plans');
+    return this._mem;
+  },
+  // helpers to address a workout deterministically
+  workoutKey(weekIdx, woIdx) { return weekIdx + ':' + woIdx; },
+  async setPaces(paces) {
+    return this.update(plan => {
+      ['easy_pace','marathon_pace','threshold_pace','interval_pace','repetition_pace'].forEach(k => {
+        if (paces[k] != null && !isNaN(paces[k])) plan[k] = paces[k];
+      });
+    });
+  },
+  async toggleComplete(weekIdx, woIdx) {
+    return this.update(plan => {
+      const wo = plan.weeks?.[weekIdx]?.workouts?.[woIdx];
+      if (wo) wo.completed = !wo.completed;
+    });
+  },
+  async reschedule(weekIdx, woIdx, date) {
+    return this.update(plan => {
+      const wo = plan.weeks?.[weekIdx]?.workouts?.[woIdx];
+      if (wo) wo.scheduled_date = date;
+    });
+  },
+  async setNote(weekIdx, woIdx, note) {
+    return this.update(plan => {
+      const wo = plan.weeks?.[weekIdx]?.workouts?.[woIdx];
+      if (wo) wo.notes = note;
+    });
+  },
+  async export() {
+    const plan = await this.get();
     const blob = new Blob([JSON.stringify(plan, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob); a.download = 'plan.json'; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  },
+};
+
+function exportPlan() { planStore.export(); }
+
+// ═══════════════════════════════════════════════════════
+// GITHUB INTEGRATION  — real actions from a static page
+// Token lives ONLY in localStorage (pf_gh_token). Never committed.
+// ═══════════════════════════════════════════════════════
+const GH_TOKEN_KEY = 'pf_gh_token';
+const githubToken = {
+  get() { return (localStorage.getItem(GH_TOKEN_KEY) || '').trim(); },
+  set(t) { localStorage.setItem(GH_TOKEN_KEY, (t || '').trim()); },
+  clear() { localStorage.removeItem(GH_TOKEN_KEY); },
+  has() { return !!this.get(); },
+};
+
+function ghHeaders() {
+  return {
+    'Authorization': 'Bearer ' + githubToken.get(),
+    'Accept': 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28',
+    'Content-Type': 'application/json',
+  };
+}
+
+function requireToken() {
+  if (githubToken.has()) return true;
+  toast('err', 'GitHub not connected', 'Add a Personal Access Token in Settings → GitHub to enable this action.');
+  return false;
+}
+
+// ── ACTION 1: Sync from Garmin (workflow_dispatch sync.yml) ──
+async function syncFromGarmin(btn) {
+  if (!requireToken()) return;
+  withBusy(btn, 'Dispatching…', async () => {
+    const res = await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/sync.yml/dispatches`, {
+      method: 'POST', headers: ghHeaders(), body: JSON.stringify({ ref: REF }),
+    });
+    if (res.status === 204) {
+      toast('ok', 'Garmin sync started', 'The sync workflow is running. Data refreshes in a few minutes — reload then.');
+    } else {
+      throw new Error(await ghError(res));
+    }
   });
 }
 
-// ── SVG Icons ──────────────────────────────────────────
+// ── ACTION 2: Push a plan week to Garmin (workflow_dispatch push.yml) ──
+async function pushWeekToGarmin(weekNumber, btn) {
+  if (!requireToken()) return;
+  withBusy(btn, 'Pushing…', async () => {
+    const res = await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/push.yml/dispatches`, {
+      method: 'POST', headers: ghHeaders(),
+      body: JSON.stringify({ ref: REF, inputs: { week: String(weekNumber) } }),
+    });
+    if (res.status === 204) {
+      toast('ok', `Week ${weekNumber} → Garmin`, 'Push workflow dispatched. Workouts will appear on your Garmin calendar shortly.');
+    } else {
+      throw new Error(await ghError(res));
+    }
+  });
+}
+
+// ── ACTION 3: Generate / adapt plan (opens a GitHub issue → Claude coach) ──
+function openCoachModal(prefillWeek) {
+  if (!requireToken()) return;
+  const defaultBody =
+`**Goal:** HYROX — Intermediate (target ${'2026-11-15'})
+
+**What I want the coach to do:**
+- [ ] Build a fresh plan
+- [x] Adapt my current plan
+
+**Context / changes since last sync:**
+-
+
+**Constraints (days/week, time, niggles):**
+-
+
+${prefillWeek ? `**Focus week:** ${prefillWeek}\n` : ''}_Generated from the PaceForge dashboard. Edit freely before submitting._`;
+
+  openModal(`
+    <div class="modal-h">
+      <div>
+        <div class="modal-title">Ask the Coach</div>
+        <div class="modal-sub">Opens a GitHub issue that triggers Claude's coaching workflow.</div>
+      </div>
+      <button class="modal-close" data-close>${icons.x}</button>
+    </div>
+    <div class="field">
+      <label for="coach-title">Issue title</label>
+      <input id="coach-title" value="Coach: build/adapt my plan">
+    </div>
+    <div class="field">
+      <label for="coach-body">Request (Markdown)</label>
+      <textarea id="coach-body" rows="11" class="mono-input" style="font-size:.82rem;line-height:1.5">${escHtml(defaultBody)}</textarea>
+      <div class="hint">This is posted to <b>${REPO}</b> issues. The coach workflow reads it and responds.</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" data-close>Cancel</button>
+      <button class="btn btn-primary" id="coach-submit">${icons.spark} Create issue</button>
+    </div>
+  `);
+  on('coach-submit', 'click', () => submitCoachIssue());
+}
+
+async function submitCoachIssue() {
+  const title = val('coach-title') || 'Coach: build/adapt my plan';
+  const body = document.getElementById('coach-body')?.value || '';
+  const btn = document.getElementById('coach-submit');
+  withBusy(btn, 'Creating…', async () => {
+    const res = await fetch(`https://api.github.com/repos/${REPO}/issues`, {
+      method: 'POST', headers: ghHeaders(),
+      body: JSON.stringify({ title, body, labels: ['coach'] }),
+    });
+    if (res.ok) {
+      const issue = await res.json();
+      closeModal();
+      toast('ok', 'Issue created', `<a href="${issue.html_url}" target="_blank" rel="noopener">#${issue.number} — view on GitHub</a>`);
+    } else {
+      throw new Error(await ghError(res));
+    }
+  });
+}
+
+async function ghError(res) {
+  let detail = '';
+  try { const j = await res.json(); detail = j.message || ''; } catch {}
+  if (res.status === 401) return 'Token rejected (401). Check your PAT in Settings.';
+  if (res.status === 403) return 'Forbidden (403). Token needs Actions/Issues write on this repo.';
+  if (res.status === 404) return 'Not found (404). Workflow/repo missing or token lacks access.';
+  if (res.status === 422) return 'Invalid request (422). ' + detail;
+  return `GitHub error ${res.status}. ${detail}`;
+}
+
+// Run an async action with a busy button + error toast.
+async function withBusy(btn, busyLabel, fn) {
+  const orig = btn ? btn.innerHTML : null;
+  if (btn) { btn.disabled = true; btn.dataset.orig = orig; btn.innerHTML = `<span class="spinner" style="width:16px;height:16px;border-width:2px"></span>${busyLabel}`; }
+  try { await fn(); }
+  catch (e) { toast('err', 'Action failed', escHtml(e.message || 'Unknown error')); }
+  finally { if (btn) { btn.disabled = false; btn.innerHTML = orig; } }
+}
+
+// ── Toasts ─────────────────────────────────────────────
+function toast(kind, title, body) {
+  const ico = kind === 'ok' ? icons.check : kind === 'err' ? icons.alert : icons.info;
+  const el = document.createElement('div');
+  el.className = 'toast ' + kind;
+  el.innerHTML = `<span class="t-ico">${ico}</span><div class="t-body"><b>${escHtml(title)}</b>${body || ''}</div><button class="t-x" aria-label="Dismiss">×</button>`;
+  document.getElementById('toasts').appendChild(el);
+  const kill = () => { el.style.opacity = '0'; el.style.transform = 'translateX(20px)'; setTimeout(() => el.remove(), 200); };
+  el.querySelector('.t-x').addEventListener('click', kill);
+  if (kind !== 'err') setTimeout(kill, 6000); else setTimeout(kill, 10000);
+}
+
+// ── Modal ──────────────────────────────────────────────
+function openModal(content) {
+  closeModal();
+  const ov = document.createElement('div');
+  ov.className = 'modal-overlay';
+  ov.id = 'modal-overlay';
+  ov.innerHTML = `<div class="modal" role="dialog" aria-modal="true">${content}</div>`;
+  document.body.appendChild(ov);
+  requestAnimationFrame(() => ov.classList.add('open'));
+  ov.addEventListener('click', e => { if (e.target === ov) closeModal(); });
+  ov.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', closeModal));
+  document.addEventListener('keydown', escClose);
+}
+function closeModal() {
+  const ov = document.getElementById('modal-overlay');
+  if (ov) { ov.classList.remove('open'); setTimeout(() => ov.remove(), 220); }
+  document.removeEventListener('keydown', escClose);
+}
+function escClose(e) { if (e.key === 'Escape') closeModal(); }
+
+// ═══════════════════════════════════════════════════════
+// SVG ICONS
+// ═══════════════════════════════════════════════════════
 const icons = {
-  home: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"/></svg>`,
-  profile: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
-  plan: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>`,
-  calendar: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>`,
-  coach: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>`,
-  settings: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>`,
-  admin: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>`,
-  send: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>`,
-  heart: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>`,
-  comment: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>`,
-  hyrox: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>`,
+  home:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9"/><path d="M9 20v-5h6v5"/></svg>`,
+  fitness:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13h3l2.5-7 4 14L15 9l2 4h4"/></svg>`,
+  plan:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h5"/><path d="m15.5 15.5 1.5 1.5 3-3"/></svg>`,
+  calendar:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>`,
+  hyrox:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>`,
+  settings:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.2V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-2.7-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 4.6 14H4a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.2-2.7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 10 4.6V4a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.6 1.6 0 0 0 19.4 9H20a2 2 0 1 1 0 4h-.6z"/></svg>`,
+  sync:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5M3 21v-5h5"/></svg>`,
+  push:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>`,
+  spark:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><path d="M12 8a4 4 0 0 0 4 4 4 4 0 0 0-4 4 4 4 0 0 0-4-4 4 4 0 0 0 4-4z"/></svg>`,
+  github:`<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.5 2 2 6.6 2 12.2c0 4.5 2.9 8.3 6.8 9.6.5.1.7-.2.7-.5v-1.7c-2.8.6-3.4-1.4-3.4-1.4-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.6 2.4 1.1 3 .9.1-.7.4-1.1.6-1.4-2.2-.3-4.6-1.1-4.6-5 0-1.1.4-2 1-2.7-.1-.3-.4-1.3.1-2.7 0 0 .8-.3 2.7 1a9.3 9.3 0 0 1 5 0c1.9-1.3 2.7-1 2.7-1 .5 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.9-2.3 4.7-4.6 5 .4.3.7.9.7 1.9v2.8c0 .3.2.6.7.5A10.2 10.2 0 0 0 22 12.2C22 6.6 17.5 2 12 2z"/></svg>`,
+  check:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4 4L19 7"/></svg>`,
+  alert:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>`,
+  info:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></svg>`,
+  x:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`,
+  run:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="17" cy="5" r="2"/><path d="m9 21 2-4-3-3 1-5 4 2 2 3"/><path d="M4 13h2l2-2"/></svg>`,
+  dumbbell:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6.5 6.5 11 11M3 9v6M21 9v6M6 7v10M18 7v10"/></svg>`,
+  edit:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4v16h16v-7"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>`,
+  download:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M5 21h14"/></svg>`,
+  heart:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5.6a4.4 4.4 0 0 0-6.2 0L12 6.4l-.8-.8A4.4 4.4 0 1 0 5 11.8L12 19l7-7.2a4.4 4.4 0 0 0 0-6.2z"/></svg>`,
 };
 
-const logo = `<svg viewBox="0 0 512 512" fill="none" width="100%"><rect x="100" y="320" width="60" height="120" rx="8" fill="#10B981" opacity=".25"/><rect x="200" y="220" width="60" height="220" rx="8" fill="#10B981" opacity=".5"/><rect x="300" y="100" width="60" height="340" rx="8" fill="#10B981" opacity=".85"/><path d="M130 310 L230 210 L330 90" stroke="#10B981" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M318 118 L330 90 L306 96" stroke="#10B981" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`;
+const logoMark = `<svg viewBox="0 0 512 512" fill="none" width="100%" height="100%"><rect x="96" y="320" width="68" height="124" rx="10" fill="#13C892" opacity=".28"/><rect x="200" y="216" width="68" height="228" rx="10" fill="#13C892" opacity=".55"/><rect x="304" y="96" width="68" height="348" rx="10" fill="#13C892" opacity=".9"/><path d="M130 308 230 206 338 90" stroke="#13C892" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M322 116 338 90 310 98" stroke="#13C892" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`;
 
-// ── Data caches ────────────────────────────────────────
-const cache = {};
-
+// ── Cache helpers ──────────────────────────────────────
 async function cached(key, fetcher, ttl = 60000) {
   if (cache[key] && Date.now() - cache[key].t < ttl) return cache[key].v;
   const v = await fetcher();
   if (v !== null && v !== undefined) cache[key] = { v, t: Date.now() };
   return v;
 }
+function clearCache(prefix) { for (const k of Object.keys(cache)) { if (k.startsWith(prefix)) delete cache[k]; } }
 
-function clearCache(prefix) {
-  for (const k of Object.keys(cache)) { if (k.startsWith(prefix)) delete cache[k]; }
-}
+// ═══════════════════════════════════════════════════════
+// SHELL / ROUTER
+// ═══════════════════════════════════════════════════════
+const NAV = [
+  ['home', 'Overview', icons.home, 'Your training command center'],
+  ['fitness', 'Fitness', icons.fitness, 'Physiology, economy & race readiness'],
+  ['plan', 'Plan', icons.plan, 'HYROX block — edit, sync & push'],
+  ['calendar', 'Calendar', icons.calendar, 'Planned workouts & completed activities'],
+  ['hyrox', 'HYROX', icons.hyrox, 'Race results & station splits'],
+  ['settings', 'Settings', icons.settings, 'Connections & GitHub integration'],
+];
 
-// ── Render Router ──────────────────────────────────────
 function render() {
   const app = document.getElementById('app');
-  app.innerHTML = renderApp();
-  bindApp();
+  const initials = (state.user.name || '?').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+  app.innerHTML = `
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">${logoMark}</div>
+          <div class="brand-name">Pace<span class="dot">Forge</span></div>
+        </div>
+        <nav class="nav" id="side-nav">
+          <div class="nav-label">Training</div>
+          ${NAV.slice(0,5).map(([id,label,ic]) => navItem(id,label,ic)).join('')}
+          <div class="nav-label">Account</div>
+          ${navItem('settings','Settings',icons.settings)}
+        </nav>
+        <div class="sidebar-foot">
+          <div class="side-user">
+            <div class="side-avatar">${initials}</div>
+            <div style="min-width:0">
+              <div class="side-user-name">${escHtml(state.user.name)}</div>
+              <div class="side-user-mail">${escHtml(state.user.email)}</div>
+            </div>
+          </div>
+        </div>
+      </aside>
+      <div class="main">
+        <header class="topbar">
+          <div>
+            <div class="page-title" id="tb-title">Overview</div>
+            <div class="page-sub" id="tb-sub"></div>
+          </div>
+          <div class="topbar-actions" id="tb-actions"></div>
+        </header>
+        <main class="page"><div class="page-inner" id="page-content"></div></main>
+      </div>
+    </div>
+    <nav class="tab-bar mobile-only" id="tab-bar">
+      ${NAV.filter(n => n[0] !== 'settings').map(([id,label,ic]) =>
+        `<button data-tab="${id}" class="${state.tab===id?'active':''}">${ic}<span>${label}</span></button>`).join('')}
+    </nav>`;
+  bindShell();
   loadTab(state.tab);
 }
 
-// ═══════════════════════════════════════════════════════
-// MAIN APP SHELL
-// ═══════════════════════════════════════════════════════
-function renderApp() {
-  const tabs = [
-    ['home', 'Home', icons.home],
-    ['fitness', 'Profile', icons.profile],
-    ['plan', 'Plan', icons.plan],
-    ['calendar', 'Calendar', icons.calendar],
-  ];
-  return `
-    <div class="page" id="page-content"></div>
-    <div class="tab-bar">
-      ${tabs.map(([id, label, icon]) =>
-        `<button data-tab="${id}" class="${state.tab === id ? 'active' : ''}">${icon}<span>${label}</span></button>`
-      ).join('')}
-    </div>`;
+function navItem(id, label, ic) {
+  return `<button class="nav-item ${state.tab===id?'active':''}" data-tab="${id}">${ic}<span>${label}</span></button>`;
 }
 
-function bindApp() {
-  document.querySelectorAll('.tab-bar button').forEach(btn => {
-    btn.addEventListener('click', () => {
-      state.tab = btn.dataset.tab;
-      document.querySelectorAll('.tab-bar button').forEach(b => b.classList.toggle('active', b.dataset.tab === state.tab));
-      loadTab(state.tab);
-    });
+function bindShell() {
+  document.querySelectorAll('[data-tab]').forEach(btn => {
+    btn.addEventListener('click', () => goTab(btn.dataset.tab));
   });
 }
 
+function goTab(tab) {
+  state.tab = tab;
+  document.querySelectorAll('[data-tab]').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  loadTab(tab);
+  document.querySelector('.page')?.scrollTo({ top: 0 });
+}
+
+function setTopbar(title, sub, actionsHtml) {
+  const t = document.getElementById('tb-title'), s = document.getElementById('tb-sub'), a = document.getElementById('tb-actions');
+  if (t) t.textContent = title;
+  if (s) s.textContent = sub || '';
+  if (a) a.innerHTML = actionsHtml || '';
+}
+
 async function loadTab(tab) {
+  const meta = NAV.find(n => n[0] === tab);
+  setTopbar(meta ? meta[1] : 'PaceForge', meta ? meta[3] : '', '');
   const page = document.getElementById('page-content');
   if (!page) return;
   page.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
@@ -521,287 +835,263 @@ async function loadTab(tab) {
       case 'calendar': await renderCalendar(page); break;
       case 'settings': await renderSettings(page); break;
       case 'hyrox': await renderHyroxPage(page); break;
-      default: page.innerHTML = '<div class="empty">Coming soon</div>';
+      default: page.innerHTML = emptyState('Coming soon', '');
     }
   } catch (e) {
-    page.innerHTML = `<div class="empty">Failed to load: ${escHtml(e.message)}</div>`;
+    page.innerHTML = emptyState('Failed to load', escHtml(e.message));
   }
 }
 
+function emptyState(title, sub, icon) {
+  return `<div class="empty"><div class="e-ico">${icon || icons.info}</div><div class="e-title">${title}</div>${sub ? `<div>${sub}</div>` : ''}</div>`;
+}
+
 // ═══════════════════════════════════════════════════════
-// TAB: HOME (Metrics + Feed)
+// VIEW: OVERVIEW (dashboard)
 // ═══════════════════════════════════════════════════════
 async function renderHome(page) {
-  const [analytics, feed] = await Promise.all([
+  const [analytics, activities, plan, profile] = await Promise.all([
     cached('analytics', () => apiJson('/profile/analytics').catch(() => null)),
-    cached('feed', () => apiJson('/feed?limit=20').catch(() => []), 30000),
+    cached('activities', () => apiJson('/activities').catch(() => [])),
+    cached('plans', () => apiJson('/plans').catch(() => [])).then(p => p[0] || null),
+    loadJSON('profile.json').catch(() => ({})),
   ]);
 
-  const a = analytics || {};
-  const snap = a.snapshot || {};
-  const aero = a.aerobic || {};
-  const loadRec = a.load_recovery || {};
+  const a = analytics || {}, snap = a.snapshot || {}, aero = a.aerobic || {}, lr = a.load_recovery || {}, rp = a.race_predictions || {};
 
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  setTopbar('Overview', greeting() + ', ' + (state.user.name || 'Runner'),
+    `<button class="btn btn-ghost btn-sm" id="ov-coach">${icons.spark} Ask Coach</button>
+     <button class="btn btn-primary btn-sm" id="ov-sync">${icons.sync} Sync Garmin</button>`);
+
+  // ── Hero stats ──
+  const stats = [
+    { label:'VDOT', value: snap.vdot != null ? snap.vdot.toFixed(1) : '—', sub: snap.fitness_level || '', accent:'var(--emerald)', accentD:'var(--emerald-d)' },
+    { label:'VO₂max', value: profile.vo2_max != null ? profile.vo2_max : (aero.vo2max_category || '—'), unit: profile.vo2_max != null ? '' : '', sub: aero.vo2max_category || '', accent:'var(--sky)', accentD:'var(--sky-d)' },
+    { label:'Readiness', value: profile.training_readiness != null ? profile.training_readiness : '—', unit: profile.training_readiness != null ? '/100' : '', sub: snap.training_status || '', accent:'var(--violet)', accentD:'var(--violet-d)' },
+    { label:'Body Battery', value: lr.body_battery != null ? lr.body_battery : (profile.body_battery_current ?? '—'), unit:'', sub: lr.stress_level ? 'Stress · ' + lr.stress_level : '', accent:'var(--amber)', accentD:'var(--amber-d)' },
+    { label:'Weekly Volume', value: profile.weekly_mileage_km != null ? profile.weekly_mileage_km.toFixed(0) : '—', unit:'km', sub: lr.load_status ? 'Load · ' + lr.load_status : '', accent:'var(--rose)', accentD:'var(--rose-d)' },
+    { label:'HRV', value: profile.hrv_last_night != null ? profile.hrv_last_night : '—', unit: profile.hrv_last_night != null ? 'ms' : '', sub: profile.hrv_status || lr.hrv_assessment || '', accent:'var(--emerald)', accentD:'var(--emerald-d)' },
+  ];
 
   let html = `<div class="fade-in">
-    <div class="top-bar">
-      <div>
-        <div style="font-size:.82rem;color:var(--text-2)">${greeting}</div>
-        <div style="font-family:var(--font-d);font-size:1.3rem;font-weight:700">${state.user?.name || 'Runner'}</div>
-      </div>
-      <div class="top-bar-icons">
-        <button onclick="state.tab='settings';loadTab('settings')" title="Settings">${icons.settings}</button>
-        ${state.user?.role === 'admin' ? `<button onclick="state.tab='admin';loadTab('admin')" title="Admin">${icons.admin}</button>` : ''}
-      </div>
+    <div class="grid stat-row">
+      ${stats.map(statCard).join('')}
     </div>
 
-    <div class="metric-grid">
-      ${metricCard('VDOT', snap.vdot ? snap.vdot.toFixed(1) : '—', snap.fitness_level || '')}
-      ${metricCard('VO₂max', aero.vo2max_category || '—', aero.cardiac_efficiency ? 'Cardiac: ' + aero.cardiac_efficiency : '')}
-      ${metricCard('Status', snap.training_status || '—', loadRec.fatigue_risk ? 'Fatigue: ' + loadRec.fatigue_risk : '')}
-      ${metricCard('Battery', loadRec.body_battery != null ? loadRec.body_battery : '—', loadRec.stress_level ? 'Stress: ' + loadRec.stress_level : '')}
-    </div>`;
+    <div class="dash-grid mt">
+      <div class="span-7">${recentActivitiesCard(activities)}</div>
+      <div class="span-5">${thisWeekCard(plan)}</div>
+      <div class="span-5">${racePredictionsCard(rp)}</div>
+      <div class="span-7">${loadRecoveryCard(lr, profile)}</div>
+    </div>
+  </div>`;
 
-  // Feed section
-  html += `<div class="section-title" style="margin-top:8px">Activity Feed</div>`;
-  if (feed && feed.length) {
-    for (const ev of feed) {
-      html += renderFeedItem(ev);
-    }
-  } else {
-    html += '<div class="empty" style="padding:20px 0">No activity yet.</div>';
-  }
-  html += '</div>';
   page.innerHTML = html;
-  bindFeedActions(page);
+  on('ov-sync', 'click', e => syncFromGarmin(e.currentTarget));
+  on('ov-coach', 'click', () => openCoachModal());
+  bindActivityRows(page, activities);
+  bindWeekJump(page);
 }
 
-function renderFeedItem(ev) {
-  const initials = (ev.user_name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-  const timeAgo = formatTimeAgo(ev.created_at);
-  const likeCount = ev.like_count || 0;
-  const commentCount = ev.comment_count || 0;
-  const isLiked = ev.user_liked;
-
-  // Show metadata for activity events
-  let metaHtml = '';
-  let descHtml = '';
-  let splitsHtml = '';
-  if (ev.metadata) {
-    const m = ev.metadata;
-
-    // Metrics cards strip (compact)
-    const cards = [];
-    if (m.distance_km || m.distance_meters) {
-      const d = m.distance_km || (m.distance_meters / 1000);
-      cards.push(['Distance', d.toFixed(1), 'km']);
-    }
-    if (m.duration_seconds) {
-      const dm = Math.floor(m.duration_seconds / 60);
-      const ds = Math.round(m.duration_seconds % 60);
-      cards.push(['Duration', `${dm}:${String(ds).padStart(2,'0')}`, '']);
-    }
-    if (m.pace || m.avg_pace_sec_per_km) {
-      const p = m.avg_pace_sec_per_km || 0;
-      cards.push(['Pace', p ? formatPace(p) : m.pace.replace('/km',''), '/km']);
-    }
-    if (m.avg_hr) cards.push(['Avg HR', Math.round(m.avg_hr), 'bpm']);
-    if (m.calories) cards.push(['Calories', Math.round(m.calories), '']);
-    if (m.elevation_gain && m.elevation_gain > 0) cards.push(['Elevation', Math.round(m.elevation_gain) + 'm', '']);
-    if (m.training_effect_aerobic) cards.push(['Aerobic TE', m.training_effect_aerobic.toFixed(1), '']);
-    if (cards.length) {
-      metaHtml = `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">${cards.map(([l,v,u]) =>
-        `<div style="flex:1;min-width:70px;text-align:center;padding:6px 4px;background:var(--elevated);border-radius:6px">
-          <div style="font-family:var(--font-m);font-size:.82rem;font-weight:600">${v}<span style="font-size:.65rem;color:var(--text-3);font-weight:400">${u}</span></div>
-          <div style="font-size:.6rem;color:var(--text-3);text-transform:uppercase;margin-top:1px">${l}</div>
-        </div>`).join('')}</div>`;
-    }
-
-    // Planned workout description
-    if (m.description) {
-      const purposeBadge = m.purpose
-        ? `<span style="display:inline-block;background:var(--emerald-a);color:var(--emerald);font-size:.65rem;padding:1px 6px;border-radius:8px;margin-right:5px;text-transform:uppercase;font-weight:600">${m.purpose.replace(/_/g,' ')}</span>`
-        : '';
-      descHtml = `<div style="color:var(--text-3);font-size:.78rem;font-style:italic;margin-top:6px;padding:6px 8px;background:var(--elevated);border-radius:6px;border-left:2px solid var(--emerald-a)">${purposeBadge}${escHtml(m.description)}</div>`;
-    }
-
-    // Pace analysis — Garmin-style smooth bezier area chart
-    if (m.splits && m.splits.length > 1) {
-      const valid = m.splits.filter(s => s.pace_sec);
-      if (valid.length > 1) {
-        const paces = valid.map(s => s.pace_sec);
-        const minP = Math.min(...paces);
-        const maxP = Math.max(...paces);
-        const avgP = paces.reduce((a,b) => a+b, 0) / paces.length;
-        const range = maxP - minP || 1;
-        const W = 340, H = 95;
-        const pl = 6, pr = 68, pt = 8, pb = 16;
-        const pw = W - pl - pr, ph = H - pt - pb;
-        const n = valid.length;
-        const points = valid.map((s, i) => {
-          const x = pl + (i / Math.max(n - 1, 1)) * pw;
-          const y = pt + ((s.pace_sec - minP) / range) * ph;
-          return { x, y, pace: s.pace_sec, km: s.km };
-        });
-        // Cubic bezier path
-        let path = `M${points[0].x.toFixed(1)},${points[0].y.toFixed(1)}`;
-        for (let i = 1; i < points.length; i++) {
-          const mx = (points[i-1].x + points[i].x) / 2;
-          path += ` C${mx.toFixed(1)},${points[i-1].y.toFixed(1)} ${mx.toFixed(1)},${points[i].y.toFixed(1)} ${points[i].x.toFixed(1)},${points[i].y.toFixed(1)}`;
-        }
-        const area = path + ` L${points[points.length-1].x.toFixed(1)},${pt+ph} L${points[0].x.toFixed(1)},${pt+ph} Z`;
-        const avgY = pt + ((avgP - minP) / range) * ph;
-        const fastY = pt, slowY = pt + ph;
-        const rx = W - pr + 6;
-        const fmt = sec => { const m = Math.floor(sec/60); const s = Math.round(sec%60); return `${m}:${String(s).padStart(2,'0')}`; };
-        // X-axis km labels
-        let xLabels = '';
-        const kmStep = Math.max(1, Math.floor(n / 5));
-        points.forEach((p, i) => {
-          if (i % kmStep === 0 || i === points.length - 1)
-            xLabels += `<text x="${p.x.toFixed(0)}" y="${H-1}" fill="var(--text-3)" font-size="7" text-anchor="middle">${p.km}</text>`;
-        });
-        splitsHtml = `<div style="margin-top:8px">
-          <div style="font-size:.65rem;color:var(--text-3);text-transform:uppercase;font-weight:600;margin-bottom:3px">Pace Analysis</div>
-          <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;font-family:var(--font-m)">
-            <defs><linearGradient id="pg-${ev.id}" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="var(--sky)" stop-opacity="0.35"/>
-              <stop offset="100%" stop-color="var(--sky)" stop-opacity="0.03"/>
-            </linearGradient></defs>
-            <line x1="${pl}" y1="${fastY}" x2="${W-pr}" y2="${fastY}" stroke="var(--border)" stroke-width="0.5"/>
-            <line x1="${pl}" y1="${slowY}" x2="${W-pr}" y2="${slowY}" stroke="var(--border)" stroke-width="0.5"/>
-            <line x1="${pl}" y1="${avgY.toFixed(1)}" x2="${W-pr}" y2="${avgY.toFixed(1)}" stroke="var(--text-3)" stroke-width="0.5" stroke-dasharray="3,3"/>
-            <path d="${area}" fill="url(#pg-${ev.id})"/>
-            <path d="${path}" fill="none" stroke="var(--sky)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            ${xLabels}
-            <text x="${rx}" y="${fastY+4}" fill="var(--sky)" font-size="7.5" font-weight="600">${fmt(minP)}</text>
-            <text x="${rx}" y="${fastY+12}" fill="var(--text-3)" font-size="6">Fastest</text>
-            <text x="${rx}" y="${avgY+2}" fill="var(--text-2)" font-size="7.5">${fmt(avgP)}</text>
-            <text x="${rx}" y="${avgY+10}" fill="var(--text-3)" font-size="6">Average</text>
-            <text x="${rx}" y="${slowY-2}" fill="var(--rose)" font-size="7.5" font-weight="600">${fmt(maxP)}</text>
-            <text x="${rx}" y="${slowY+6}" fill="var(--text-3)" font-size="6">Slowest</text>
-          </svg>
-        </div>`;
-      }
-    }
-  }
-
-  return `<div class="feed-item" id="feed-${ev.id}">
-    <div class="feed-header">
-      <div class="feed-avatar">${initials}</div>
-      <div style="flex:1">
-        <div class="feed-user">${escHtml(ev.user_name || 'User')}</div>
-        <div class="feed-time">${timeAgo}</div>
-      </div>
-    </div>
-    <div class="feed-body"><b>${escHtml(ev.title)}</b>${descHtml}${metaHtml}${splitsHtml}</div>
-    <div class="feed-actions">
-      <button class="${isLiked ? 'liked' : ''}" data-like="${ev.id}">${icons.heart} <span>${likeCount}</span></button>
-      <button data-comments="${ev.id}">${icons.comment} <span>${commentCount}</span></button>
-    </div>
-    <div id="comments-${ev.id}"></div>
+function statCard(s) {
+  return `<div class="stat" style="--accent:${s.accent};--accent-d:${s.accentD}">
+    <div class="stat-label">${s.label}</div>
+    <div class="stat-value">${s.value}${s.unit ? `<span class="unit">${s.unit}</span>` : ''}</div>
+    ${s.sub ? `<div class="stat-sub"><span class="chip"><span class="dotmark"></span>${escHtml(s.sub)}</span></div>` : ''}
   </div>`;
 }
 
-function bindFeedActions(page) {
-  page.querySelectorAll('[data-like]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const id = btn.dataset.like;
-      try {
-        const res = await apiJson(`/feed/${id}/like`, { method: 'POST' });
-        const span = btn.querySelector('span');
-        if (res.liked) { btn.classList.add('liked'); span.textContent = +span.textContent + 1; }
-        else { btn.classList.remove('liked'); span.textContent = Math.max(0, +span.textContent - 1); }
-      } catch {}
-    });
-  });
+function recentActivitiesCard(activities) {
+  const recent = (activities || []).slice(0, 6);
+  let rows = '';
+  if (recent.length) {
+    rows = `<div class="divlist">${recent.map((act, i) => activityRow(act, i)).join('')}</div>`;
+  } else {
+    rows = emptyState('No activities yet', 'Sync from Garmin to populate your feed.', icons.run);
+  }
+  return `<div class="card" style="height:100%">
+    <div class="card-h">
+      <div class="card-title"><span class="ico">${icons.run}</span>Recent Activity</div>
+      <button class="btn-link" data-jump-cal>Calendar →</button>
+    </div>
+    ${rows}
+  </div>`;
+}
 
-  page.querySelectorAll('[data-comments]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const id = btn.dataset.comments;
-      const container = document.getElementById(`comments-${id}`);
-      if (container.innerHTML) { container.innerHTML = ''; return; }
-      try {
-        const comments = await apiJson(`/feed/${id}/comments`);
-        let ch = '<div class="comment-list">';
-        for (const c of comments || []) {
-          ch += `<div class="comment"><b>${escHtml(c.user_name || 'User')}:</b> ${escHtml(c.body)}</div>`;
-        }
-        ch += `<div class="comment-input">
-          <input placeholder="Add a comment..." id="ci-${id}">
-          <button data-send-comment="${id}">Send</button>
-        </div></div>`;
-        container.innerHTML = ch;
-        const sendBtn = container.querySelector(`[data-send-comment="${id}"]`);
-        sendBtn?.addEventListener('click', async () => {
-          const input = document.getElementById(`ci-${id}`);
-          const body = input.value.trim();
-          if (!body) return;
-          await apiJson(`/feed/${id}/comment`, { method: 'POST', body: JSON.stringify({ body }) });
-          input.value = '';
-          clearCache('feed');
-          const count = btn.querySelector('span');
-          count.textContent = +count.textContent + 1;
-          const updated = await apiJson(`/feed/${id}/comments`);
-          let uch = '';
-          for (const c of updated || []) { uch += `<div class="comment"><b>${escHtml(c.user_name || 'User')}:</b> ${escHtml(c.body)}</div>`; }
-          container.innerHTML = `<div class="comment-list">${uch}<div class="comment-input"><input placeholder="Add a comment..." id="ci-${id}"><button data-send-comment="${id}">Send</button></div></div>`;
-        });
-      } catch {}
+function activityRow(act, i) {
+  const isRun = (act.activity_type || '').toLowerCase().includes('run');
+  const color = isRun ? 'var(--emerald)' : 'var(--violet)';
+  const distKm = act.distance_meters ? (act.distance_meters / 1000).toFixed(1) : null;
+  const pace = act.avg_pace_sec_per_km ? formatPace(act.avg_pace_sec_per_km) + '/km'
+            : (isRun && distKm && act.duration_seconds ? formatPace(act.duration_seconds / (act.distance_meters/1000)) + '/km' : '');
+  const when = act.start_time ? formatTimeAgo(act.start_time) : '';
+  return `<div class="act-item" data-act-idx="${i}">
+    <div class="act-icon" style="color:${color}">${isRun ? icons.run : icons.dumbbell}</div>
+    <div class="act-info">
+      <div class="act-name">${escHtml(act.name || act.activity_type || 'Activity')}</div>
+      <div class="act-meta">${when}${pace ? ' · ' + pace : ''}${act.avg_hr ? ' · ' + Math.round(act.avg_hr) + ' bpm' : ''}</div>
+    </div>
+    <div class="act-stat">
+      <div class="v">${distKm != null ? distKm : (act.duration_seconds ? formatSeconds(act.duration_seconds) : '—')}</div>
+      <div class="l">${distKm != null ? 'km' : 'time'}</div>
+    </div>
+  </div>`;
+}
+
+function bindActivityRows(page, activities) {
+  page.querySelectorAll('[data-act-idx]').forEach(el => {
+    el.addEventListener('click', () => {
+      const act = (activities || [])[+el.dataset.actIdx];
+      if (act) showActivitySheet(act);
     });
   });
 }
+function bindWeekJump(page) {
+  page.querySelectorAll('[data-jump-cal]').forEach(el => el.addEventListener('click', () => goTab('calendar')));
+  page.querySelectorAll('[data-jump-plan]').forEach(el => el.addEventListener('click', () => goTab('plan')));
+}
+
+function thisWeekCard(plan) {
+  if (!plan || !plan.weeks || !plan.weeks.length) {
+    return `<div class="card" style="height:100%"><div class="card-h"><div class="card-title"><span class="ico">${icons.plan}</span>This Week</div></div>${emptyState('No plan loaded', 'Generate one from the Plan tab.', icons.plan)}</div>`;
+  }
+  const idx = currentWeekIndex(plan);
+  const w = plan.weeks[idx];
+  const workouts = (w.workouts || []);
+  const done = workouts.filter(x => x.completed).length;
+  const pct = workouts.length ? Math.round(done / workouts.length * 100) : 0;
+  const upcoming = workouts.slice(0, 4);
+  return `<div class="card" style="height:100%">
+    <div class="card-h">
+      <div class="card-title"><span class="ico">${icons.plan}</span>Week ${idx + 1}</div>
+      <button class="btn-link" data-jump-plan>Open plan →</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+      <div style="flex:1">
+        <div class="eyebrow">${escHtml(w.phase || 'Block')}${w.focus ? ' · ' + escHtml(w.focus) : ''}</div>
+        <div style="font-size:.82rem;color:var(--text-2);margin-top:4px">${w.total_distance_km ? w.total_distance_km.toFixed(0) + ' km planned' : ''} · ${done}/${workouts.length} done</div>
+      </div>
+      <div style="font-family:var(--font-m);font-weight:700;font-size:1.4rem;color:var(--emerald)">${pct}<span style="font-size:.8rem;color:var(--text-3)">%</span></div>
+    </div>
+    <div class="gauge-bar" style="margin-bottom:14px"><div class="gauge-fill" style="width:${pct}%;background:var(--emerald)"></div></div>
+    <div class="divlist">
+      ${upcoming.map(wo => {
+        const c = woColor(wo.workout_type);
+        const dist = wo.estimated_distance_meters ? (wo.estimated_distance_meters/1000).toFixed(1) + ' km' : '';
+        return `<div class="act-item" style="padding:10px 0;cursor:default">
+          <div class="act-bar" style="background:${c}"></div>
+          <div class="act-info">
+            <div class="act-name">${wo.completed ? '✓ ' : ''}${escHtml(wo.name || 'Workout')}</div>
+            <div class="act-meta">${wo.scheduled_date || ''}${dist ? ' · ' + dist : ''}</div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+}
+
+function racePredictionsCard(rp) {
+  const preds = (rp.predictions || []).filter(p => ['5K','10K','Half Marathon','Marathon'].includes(p.distance));
+  if (!preds.length) {
+    return `<div class="card" style="height:100%"><div class="card-h"><div class="card-title"><span class="ico">${icons.hyrox}</span>Race Predictions</div></div>${emptyState('No predictions', '', icons.hyrox)}</div>`;
+  }
+  return `<div class="card" style="height:100%">
+    <div class="card-h"><div class="card-title"><span class="ico">${icons.hyrox}</span>Race Predictions</div>${rp.optimal_distance ? `<span class="chip" style="--accent:var(--sky);--accent-d:var(--sky-d)">Best · ${escHtml(rp.optimal_distance)}</span>` : ''}</div>
+    <div class="divlist">
+      ${preds.map(p => {
+        const conf = p.confidence === 'High' ? 'var(--emerald)' : p.confidence === 'Moderate' ? 'var(--amber)' : 'var(--text-3)';
+        return `<div class="act-item" style="padding:11px 0;cursor:default">
+          <div class="act-info">
+            <div class="act-name">${escHtml(p.distance)}</div>
+            <div class="act-meta">${formatPace(p.pace_sec_per_km)}/km</div>
+          </div>
+          <div class="act-stat">
+            <div class="v" style="color:var(--emerald)">${formatSeconds(p.predicted_seconds)}</div>
+            <div class="l" style="color:${conf}">${p.confidence || ''}</div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+}
+
+function loadRecoveryCard(lr, profile) {
+  const gauges = [
+    ['Body Battery', lr.body_battery ?? profile.body_battery_current, 100, 'var(--emerald)'],
+    ['Sleep Score', lr.sleep_score ?? profile.sleep_score, 100, 'var(--sky)'],
+    ['Training Load 7d', lr.training_load_7day ?? profile.training_load_7day, 800, 'var(--violet)'],
+  ];
+  const tags = [
+    ['Load Status', lr.load_status],
+    ['HRV', lr.hrv_assessment || profile.hrv_status],
+    ['Fatigue Risk', lr.fatigue_risk],
+    ['Load Focus', lr.load_focus || profile.load_focus],
+  ].filter(t => t[1]);
+  return `<div class="card" style="height:100%">
+    <div class="card-h"><div class="card-title"><span class="ico">${icons.heart}</span>Load &amp; Recovery</div><button class="btn-link" data-jump-cal style="display:none"></button></div>
+    <div class="dash-grid" style="gap:14px">
+      <div class="span-7">
+        ${gauges.map(([l,v,max,c]) => {
+          const pct = v != null ? Math.min(100, Math.round(v/max*100)) : 0;
+          return `<div class="gauge-row"><span class="gauge-tag">${l}</span><div class="gauge-bar"><div class="gauge-fill" style="width:${pct}%;background:${c}"></div></div><span class="gauge-num">${v ?? '—'}</span></div>`;
+        }).join('')}
+      </div>
+      <div class="span-5">
+        ${tags.map(([l,v]) => `<div class="lv"><span class="lv-label">${l}</span><span class="lv-val">${escHtml(String(v))}</span></div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+function greeting() { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'; }
+function woColor(type) {
+  const c = { easy_run:'var(--emerald)', recovery_run:'var(--text-3)', tempo:'var(--amber)', threshold:'var(--amber)', long_run:'var(--sky)', intervals:'var(--rose)', speed:'var(--rose)', race_pace:'var(--violet)', fartlek:'var(--sky)', hyrox_mixed:'var(--violet)', cross_training:'var(--text-2)', rest:'var(--text-3)' };
+  return c[type] || 'var(--text-2)';
+}
+function currentWeekIndex(plan) {
+  const weeks = plan.weeks || [];
+  const today = new Date().toISOString().slice(0,10);
+  for (let i = 0; i < weeks.length; i++) {
+    const dates = (weeks[i].workouts || []).map(x => x.scheduled_date).filter(Boolean);
+    if (dates.some(d => d >= today)) return i;
+  }
+  return 0;
+}
 
 // ═══════════════════════════════════════════════════════
-// TAB: FITNESS PROFILE (7 sub-sections)
+// VIEW: FITNESS (sub-sections — renderers preserved)
 // ═══════════════════════════════════════════════════════
 async function renderFitness(page) {
   const analytics = await cached('analytics', () => apiJson('/profile/analytics').catch(() => null));
   if (!analytics) {
-    page.innerHTML = '<div class="fade-in"><div class="section-title">Fitness Profile</div><div class="empty">No data. Sync from Garmin first.</div></div>';
+    page.innerHTML = `<div class="fade-in">${emptyState('No analytics data', 'Sync from Garmin first.', icons.fitness)}</div>`;
     return;
   }
-
   const subTabs = [
-    ['weekly', 'Weekly'],
-    ['snapshot', 'Snapshot'],
-    ['aerobic', 'Aerobic'],
-    ['economy', 'Economy'],
-    ['load', 'Load'],
-    ['races', 'Races'],
-    ['training', 'Training'],
-    ['hyrox_p', 'HYROX'],
+    ['weekly', 'Weekly'], ['snapshot', 'Snapshot'], ['aerobic', 'Aerobic'],
+    ['economy', 'Economy'], ['load', 'Load'], ['races', 'Races'],
+    ['training', 'Training'], ['hyrox_p', 'HYROX'],
   ];
-
   let activeSub = 'snapshot';
 
-  function drawFitness() {
-    let html = `<div class="fade-in">
-      <div class="section-title">Fitness Profile</div>
-      <div class="sub-tabs">
-        ${subTabs.map(([id, label]) => `<button class="sub-tab ${activeSub === id ? 'active' : ''}" data-sub="${id}">${label}</button>`).join('')}
-      </div>
+  function draw() {
+    page.innerHTML = `<div class="fade-in">
+      <div class="sub-tabs">${subTabs.map(([id,l]) => `<button class="sub-tab ${activeSub===id?'active':''}" data-sub="${id}">${l}</button>`).join('')}</div>
       <div id="fitness-content"></div>
     </div>`;
-    page.innerHTML = html;
-
-    page.querySelectorAll('.sub-tab').forEach(btn => {
-      btn.addEventListener('click', () => {
-        activeSub = btn.dataset.sub;
-        page.querySelectorAll('.sub-tab').forEach(b => b.classList.toggle('active', b.dataset.sub === activeSub));
-        drawSubContent();
-      });
-    });
-    drawSubContent();
+    page.querySelectorAll('.sub-tab').forEach(b => b.addEventListener('click', () => {
+      activeSub = b.dataset.sub;
+      page.querySelectorAll('.sub-tab').forEach(x => x.classList.toggle('active', x.dataset.sub === activeSub));
+      drawContent();
+    }));
+    drawContent();
   }
-
-  function drawSubContent() {
+  function drawContent() {
     const el = document.getElementById('fitness-content');
     if (!el) return;
+    el.className = 'grid cols-auto';
     switch (activeSub) {
-      case 'weekly': renderWeeklyOverview(el); break;
+      case 'weekly': el.className = ''; renderWeeklyOverview(el); break;
       case 'snapshot': el.innerHTML = renderSnapshot(analytics); break;
       case 'aerobic': el.innerHTML = renderAerobic(analytics); break;
       case 'economy': el.innerHTML = renderEconomy(analytics); break;
@@ -811,116 +1101,63 @@ async function renderFitness(page) {
       case 'hyrox_p': el.innerHTML = renderHyroxProfile(analytics); break;
     }
   }
-
-  drawFitness();
+  draw();
 }
 
 function renderWeeklyOverview(el) {
-  el.innerHTML = '<div class="loading"><div class="spinner"></div></div><div style="text-align:center;color:var(--text-3);font-size:.85rem;margin-top:8px">Analyzing your week…</div>';
-
+  el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
   apiJson('/weekly-overview').then(data => {
-    if (!data || !data.content) {
-      el.innerHTML = '<div class="empty">No weekly overview available yet.</div>';
-      return;
-    }
-    drawWeeklyContent(el, data, false);
-  }).catch(err => {
-    el.innerHTML = `<div class="card" style="text-align:center">
-      <div style="font-size:1.5rem;margin-bottom:8px">⚠️</div>
-      <div style="font-size:.85rem;color:var(--text-2);margin-bottom:12px">${escHtml(err.message || 'Failed to load weekly overview')}</div>
-      <button class="btn btn-ghost" style="width:auto;padding:8px 20px;display:inline-block" id="weekly-retry">Retry</button>
-    </div>`;
-    document.getElementById('weekly-retry')?.addEventListener('click', () => renderWeeklyOverview(el));
-  });
+    if (!data || !data.content) { el.innerHTML = emptyState('No weekly overview yet', 'Generated by the coach workflow.', icons.calendar); return; }
+    drawWeeklyContent(el, data);
+  }).catch(() => { el.innerHTML = emptyState('Weekly overview unavailable', '', icons.calendar); });
 }
 
-function drawWeeklyContent(el, data, isRegenerating) {
+function drawWeeklyContent(el, data) {
   const { content, week_start, generated_at } = data;
-  const monday = new Date(week_start + 'T00:00:00');
-  const sunday = new Date(monday);
-  sunday.setDate(sunday.getDate() + 6);
   const fmt = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  const updatedAt = generated_at ? new Date(generated_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
-
+  let head = '';
+  if (week_start) {
+    const monday = new Date(week_start + 'T00:00:00'); const sunday = new Date(monday); sunday.setDate(sunday.getDate() + 6);
+    const updatedAt = generated_at ? new Date(generated_at).toLocaleString('en-US', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '';
+    head = `<div style="margin-bottom:16px"><div style="font-family:var(--font-d);font-size:1.05rem;font-weight:700">${fmt(monday)} – ${fmt(sunday)}</div>${updatedAt ? `<div style="font-size:.74rem;color:var(--text-3);margin-top:2px">Updated ${updatedAt}</div>` : ''}</div>`;
+  }
   const sections = [
-    { key: 'summary', title: 'Summary', icon: '📝', color: 'var(--emerald)' },
-    { key: 'plan_adherence', title: 'Plan Adherence', icon: '✅', color: 'var(--sky)' },
-    { key: 'performance', title: 'Performance', icon: '⚡', color: 'var(--amber)' },
-    { key: 'recovery', title: 'Recovery & Wellness', icon: '💤', color: 'var(--violet)' },
-    { key: 'concerns', title: 'Concerns', icon: '⚠️', color: 'var(--rose)' },
-    { key: 'tips', title: 'Tips', icon: '💡', color: 'var(--emerald)' },
+    { key:'summary', title:'Summary', color:'var(--emerald)' },
+    { key:'plan_adherence', title:'Plan Adherence', color:'var(--sky)' },
+    { key:'performance', title:'Performance', color:'var(--amber)' },
+    { key:'recovery', title:'Recovery & Wellness', color:'var(--violet)' },
+    { key:'concerns', title:'Concerns', color:'var(--rose)' },
+    { key:'tips', title:'Tips', color:'var(--emerald)' },
   ];
-
-  let html = `<div class="fade-in">
-    <div style="text-align:center;margin-bottom:16px">
-      <div style="font-family:var(--font-d);font-size:1.1rem;font-weight:700">${fmt(monday)} – ${fmt(sunday)}</div>
-      ${updatedAt ? `<div style="font-size:.72rem;color:var(--text-3);margin-top:2px">Updated ${updatedAt}</div>` : ''}
-    </div>`;
-
-  for (const { key, title, icon, color } of sections) {
+  let cards = '';
+  for (const { key, title, color } of sections) {
     const text = content[key];
     if (!text || text.toLowerCase().trim() === 'none') continue;
-    const isConcern = key === 'concerns';
-    const borderStyle = isConcern ? 'border-color:var(--amber);background:rgba(245,158,11,.04)' : '';
-    html += `<div class="card" style="${borderStyle}">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-        <span style="font-size:.9rem">${icon}</span>
-        <span style="font-weight:700;font-size:.82rem;text-transform:uppercase;letter-spacing:.04em;color:${color}">${title}</span>
-      </div>
-      <div style="font-size:.85rem;color:var(--text-2);line-height:1.6;white-space:pre-line">${escHtml(text)}</div>
+    cards += `<div class="card card-pad-sm">
+      <div class="eyebrow" style="color:${color};margin-bottom:8px">${title}</div>
+      <div style="font-size:.88rem;color:var(--text-2);line-height:1.6;white-space:pre-line">${escHtml(text)}</div>
     </div>`;
   }
-
-  html += `<button class="btn btn-ghost" id="weekly-regen" style="margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px">
-    <span id="regen-icon">🔄</span> Regenerate Analysis
-  </button></div>`;
-
-  el.innerHTML = html;
-
-  document.getElementById('weekly-regen')?.addEventListener('click', () => {
-    const btn = document.getElementById('weekly-regen');
-    if (btn) {
-      btn.disabled = true;
-      btn.innerHTML = '<div class="spinner" style="width:18px;height:18px;border-width:2px"></div> Regenerating…';
-    }
-    apiJson('/weekly-overview/regenerate', { method: 'POST' }).then(newData => {
-      clearCache('weekly');
-      drawWeeklyContent(el, newData, false);
-    }).catch(err => {
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = '<span>🔄</span> Regenerate Analysis';
-      }
-      alert('Failed to regenerate: ' + (err.message || 'Unknown error'));
-    });
-  });
+  el.innerHTML = `<div class="fade-in">${head}<div class="grid cols-auto">${cards}</div></div>`;
 }
 
 function renderSnapshot(a) {
   const s = a.snapshot || {};
-  const levelColors = { Beginner: 'var(--sky)', Intermediate: 'var(--emerald)', Advanced: 'var(--amber)', Elite: 'var(--rose)' };
+  const levelColors = { Beginner:'var(--sky)', Intermediate:'var(--emerald)', Advanced:'var(--amber)', Elite:'var(--rose)' };
   const color = levelColors[s.fitness_level] || 'var(--text-2)';
-
   let html = `<div class="card">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-      <span style="font-family:var(--font-d);font-weight:700;font-size:1.1rem">${s.fitness_level || '—'}</span>
-      <span class="grade-badge" style="background:${color}22;color:${color}">${s.training_status || ''}</span>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+      <span style="font-family:var(--font-d);font-weight:700;font-size:1.3rem">${s.fitness_level || '—'}</span>
+      ${s.training_status ? `<span class="grade-badge" style="background:${color}22;color:${color}">${s.training_status}</span>` : ''}
     </div>
-    ${s.vdot ? `<div style="font-size:.85rem;color:var(--text-2);margin-bottom:8px">VDOT: <span style="font-family:var(--font-m);color:var(--emerald)">${s.vdot.toFixed(1)}</span></div>` : ''}
-    ${s.training_age_estimate ? `<div style="font-size:.82rem;color:var(--text-2)">Training age: ${s.training_age_estimate}</div>` : ''}
+    ${s.vdot != null ? `<div class="lv"><span class="lv-label">VDOT</span><span class="lv-val" style="color:var(--emerald)">${s.vdot.toFixed(1)}</span></div>` : ''}
+    ${s.training_age_estimate ? `<div class="lv"><span class="lv-label">Training age</span><span class="lv-val">${escHtml(String(s.training_age_estimate))}</span></div>` : ''}
   </div>`;
-
   if (s.strengths && s.strengths.length) {
-    html += `<div class="card">
-      <div style="font-weight:600;font-size:.85rem;margin-bottom:8px;color:var(--emerald)">Strengths</div>
-      ${s.strengths.map(x => `<div style="font-size:.82rem;color:var(--text-2);padding:3px 0">+ ${escHtml(x)}</div>`).join('')}
-    </div>`;
+    html += `<div class="card"><div class="card-title" style="font-size:.9rem;color:var(--emerald);margin-bottom:12px">Strengths</div>${s.strengths.map(x => `<div style="font-size:.86rem;color:var(--text-2);padding:5px 0;display:flex;gap:8px"><span style="color:var(--emerald)">+</span>${escHtml(x)}</div>`).join('')}</div>`;
   }
   if (s.weaknesses && s.weaknesses.length) {
-    html += `<div class="card">
-      <div style="font-weight:600;font-size:.85rem;margin-bottom:8px;color:var(--amber)">Areas to Improve</div>
-      ${s.weaknesses.map(x => `<div style="font-size:.82rem;color:var(--text-2);padding:3px 0">- ${escHtml(x)}</div>`).join('')}
-    </div>`;
+    html += `<div class="card"><div class="card-title" style="font-size:.9rem;color:var(--amber);margin-bottom:12px">Areas to Improve</div>${s.weaknesses.map(x => `<div style="font-size:.86rem;color:var(--text-2);padding:5px 0;display:flex;gap:8px"><span style="color:var(--amber)">→</span>${escHtml(x)}</div>`).join('')}</div>`;
   }
   return html;
 }
@@ -928,29 +1165,19 @@ function renderSnapshot(a) {
 function renderAerobic(a) {
   const ae = a.aerobic || {};
   let html = `<div class="card">
-    <div style="font-weight:600;font-size:.85rem;margin-bottom:10px">Aerobic Engine</div>
+    <div class="card-title" style="font-size:.95rem;margin-bottom:14px">Aerobic Engine</div>
     ${labelValue('VO₂max Category', ae.vo2max_category)}
-    ${ae.vo2max_interpretation ? `<div style="font-size:.82rem;color:var(--text-2);margin-bottom:10px">${escHtml(ae.vo2max_interpretation)}</div>` : ''}
+    ${ae.vo2max_interpretation ? `<div style="font-size:.84rem;color:var(--text-2);margin:10px 0;line-height:1.5">${escHtml(ae.vo2max_interpretation)}</div>` : ''}
     ${labelValue('Threshold Quality', ae.threshold_quality)}
     ${labelValue('Cardiac Efficiency', ae.cardiac_efficiency)}
     ${ae.threshold_pct_of_vo2max != null ? labelValue('Threshold % of VO₂max', ae.threshold_pct_of_vo2max.toFixed(0) + '%') : ''}
     ${ae.aerobic_decoupling_pct != null ? labelValue('Aerobic Decoupling', ae.aerobic_decoupling_pct.toFixed(1) + '%') : ''}
   </div>`;
-
   if (ae.aerobic_ratio != null) {
     const aeroW = Math.round(ae.aerobic_ratio * 100);
-    html += `<div class="card">
-      <div style="font-weight:600;font-size:.85rem;margin-bottom:8px">Training Distribution</div>
-      <div class="gauge-row">
-        <span style="font-size:.75rem;color:var(--sky);width:50px">Aerobic</span>
-        <div class="gauge-bar"><div class="gauge-fill" style="width:${aeroW}%;background:var(--sky)"></div></div>
-        <span style="font-family:var(--font-m);font-size:.75rem;width:36px;text-align:right">${aeroW}%</span>
-      </div>
-      <div class="gauge-row">
-        <span style="font-size:.75rem;color:var(--rose);width:50px">Anaero</span>
-        <div class="gauge-bar"><div class="gauge-fill" style="width:${100-aeroW}%;background:var(--rose)"></div></div>
-        <span style="font-family:var(--font-m);font-size:.75rem;width:36px;text-align:right">${100-aeroW}%</span>
-      </div>
+    html += `<div class="card"><div class="card-title" style="font-size:.95rem;margin-bottom:14px">Training Distribution</div>
+      <div class="gauge-row"><span class="gauge-tag" style="color:var(--sky)">Aerobic</span><div class="gauge-bar"><div class="gauge-fill" style="width:${aeroW}%;background:var(--sky)"></div></div><span class="gauge-num">${aeroW}%</span></div>
+      <div class="gauge-row"><span class="gauge-tag" style="color:var(--rose)">Anaerobic</span><div class="gauge-bar"><div class="gauge-fill" style="width:${100-aeroW}%;background:var(--rose)"></div></div><span class="gauge-num">${100-aeroW}%</span></div>
     </div>`;
   }
   return html;
@@ -958,61 +1185,44 @@ function renderAerobic(a) {
 
 function renderEconomy(a) {
   const e = a.economy || {};
-  const gradeColors = { Excellent: 'var(--emerald)', Optimal: 'var(--emerald)', Good: 'var(--sky)', Average: 'var(--amber)', 'Slightly Low': 'var(--amber)', Low: 'var(--rose)', High: 'var(--amber)', 'Needs Work': 'var(--rose)' };
-
+  const gradeColors = { Excellent:'var(--emerald)', Optimal:'var(--emerald)', Good:'var(--sky)', Average:'var(--amber)', 'Slightly Low':'var(--amber)', Low:'var(--rose)', High:'var(--amber)', 'Needs Work':'var(--rose)' };
   function econRow(label, value, unit, grade) {
     const gc = gradeColors[grade] || 'var(--text-2)';
-    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
-      <div><div style="font-size:.85rem;font-weight:500">${label}</div><div style="font-size:.75rem;color:var(--text-3)">${unit}</div></div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <span style="font-family:var(--font-m);font-size:.9rem">${value ?? '—'}</span>
-        ${grade ? `<span class="grade-badge" style="background:${gc}22;color:${gc}">${grade}</span>` : ''}
-      </div>
-    </div>`;
+    return `<div class="lv"><div><div style="font-weight:500">${label}</div><div style="font-size:.74rem;color:var(--text-3)">${unit}</div></div>
+      <div style="display:flex;align-items:center;gap:9px"><span class="lv-val">${value ?? '—'}</span>${grade ? `<span class="grade-badge" style="background:${gc}22;color:${gc}">${grade}</span>` : ''}</div></div>`;
   }
-
   let html = `<div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-      <span style="font-weight:600;font-size:.85rem">Running Economy</span>
-      ${e.overall_grade ? `<span style="font-family:var(--font-m);font-size:1.1rem;font-weight:700;color:var(--emerald)">${e.overall_grade}</span>` : ''}
-    </div>
+    <div class="card-h"><div class="card-title" style="font-size:.95rem">Running Economy</div>${e.overall_grade ? `<span style="font-family:var(--font-m);font-size:1.3rem;font-weight:700;color:var(--emerald)">${e.overall_grade}</span>` : ''}</div>
     ${econRow('Cadence', e.cadence_avg != null ? Math.round(e.cadence_avg) : null, 'spm', e.cadence_grade)}
     ${econRow('Stride Length', e.stride_length_avg != null ? e.stride_length_avg.toFixed(2) : null, 'm', e.stride_grade)}
     ${econRow('Ground Contact', e.gct_avg != null ? Math.round(e.gct_avg) : null, 'ms', e.gct_grade)}
     ${econRow('Vert Oscillation', e.vert_osc_avg != null ? e.vert_osc_avg.toFixed(1) : null, 'cm', e.vert_osc_grade)}
     ${e.vert_ratio_avg != null ? econRow('Vert Ratio', e.vert_ratio_avg.toFixed(1), '%', null) : ''}
   </div>`;
-
   if (e.inefficiencies && e.inefficiencies.length) {
-    html += `<div class="card">
-      <div style="font-weight:600;font-size:.85rem;margin-bottom:8px;color:var(--amber)">Inefficiencies</div>
-      ${e.inefficiencies.map(x => `<div style="font-size:.82rem;color:var(--text-2);padding:3px 0">• ${escHtml(x)}</div>`).join('')}
-    </div>`;
+    html += `<div class="card"><div class="card-title" style="font-size:.95rem;color:var(--amber);margin-bottom:12px">Inefficiencies</div>${e.inefficiencies.map(x => `<div style="font-size:.86rem;color:var(--text-2);padding:5px 0">• ${escHtml(x)}</div>`).join('')}</div>`;
   }
   return html;
 }
 
 function renderLoadRecovery(a) {
   const lr = a.load_recovery || {};
-
   function gaugeCard(label, value, max, color, sub) {
     const pct = value != null ? Math.min(100, Math.round((value / max) * 100)) : 0;
-    return `<div style="text-align:center;padding:12px">
-      <div style="font-size:.7rem;color:var(--text-3);text-transform:uppercase;margin-bottom:6px">${label}</div>
-      <div style="font-family:var(--font-m);font-size:1.4rem;font-weight:700;color:${color}">${value ?? '—'}</div>
-      <div class="gauge-bar" style="margin-top:6px"><div class="gauge-fill" style="width:${pct}%;background:${color}"></div></div>
-      ${sub ? `<div style="font-size:.72rem;color:var(--text-2);margin-top:4px">${sub}</div>` : ''}
+    return `<div style="text-align:center;padding:8px">
+      <div class="eyebrow" style="margin-bottom:8px">${label}</div>
+      <div style="font-family:var(--font-m);font-size:1.6rem;font-weight:700;color:${color}">${value ?? '—'}</div>
+      <div class="gauge-bar" style="margin-top:8px"><div class="gauge-fill" style="width:${pct}%;background:${color}"></div></div>
+      ${sub ? `<div style="font-size:.74rem;color:var(--text-2);margin-top:5px">${sub}</div>` : ''}
     </div>`;
   }
-
   let html = `<div class="card">
-    <div style="font-weight:600;font-size:.85rem;margin-bottom:12px">Load & Recovery</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border-radius:var(--r-sm);overflow:hidden">
-      <div style="background:var(--card)">${gaugeCard('Body Battery', lr.body_battery, 100, 'var(--emerald)', '')}</div>
-      <div style="background:var(--card)">${gaugeCard('Sleep', lr.sleep_score, 100, 'var(--sky)', lr.sleep_quality || '')}</div>
+    <div class="card-title" style="font-size:.95rem;margin-bottom:14px">Load &amp; Recovery</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div style="background:var(--elevated);border-radius:var(--r-md)">${gaugeCard('Body Battery', lr.body_battery, 100, 'var(--emerald)', '')}</div>
+      <div style="background:var(--elevated);border-radius:var(--r-md)">${gaugeCard('Sleep', lr.sleep_score, 100, 'var(--sky)', lr.sleep_quality || '')}</div>
     </div>
   </div>`;
-
   html += `<div class="card">
     ${labelValue('Load Status', lr.load_status)}
     ${labelValue('Training Load (7d)', lr.training_load_7day != null ? lr.training_load_7day.toFixed(0) : '—')}
@@ -1021,12 +1231,8 @@ function renderLoadRecovery(a) {
     ${labelValue('Stress', lr.stress_level)}
     ${labelValue('Fatigue Risk', lr.fatigue_risk)}
   </div>`;
-
   if (lr.recovery_tips && lr.recovery_tips.length) {
-    html += `<div class="card">
-      <div style="font-weight:600;font-size:.85rem;margin-bottom:8px">Recovery Tips</div>
-      ${lr.recovery_tips.map(t => `<div style="font-size:.82rem;color:var(--text-2);padding:3px 0">• ${escHtml(t)}</div>`).join('')}
-    </div>`;
+    html += `<div class="card"><div class="card-title" style="font-size:.95rem;margin-bottom:12px">Recovery Tips</div>${lr.recovery_tips.map(t => `<div style="font-size:.86rem;color:var(--text-2);padding:5px 0">• ${escHtml(t)}</div>`).join('')}</div>`;
   }
   return html;
 }
@@ -1034,51 +1240,29 @@ function renderLoadRecovery(a) {
 function renderRaces(a) {
   const rp = a.race_predictions || {};
   let html = '';
-
   if (rp.predictions && rp.predictions.length) {
-    html += `<div class="card">
-      <div style="font-weight:600;font-size:.85rem;margin-bottom:10px">Race Predictions</div>`;
+    html += `<div class="card"><div class="card-title" style="font-size:.95rem;margin-bottom:12px">Race Predictions</div>`;
     for (const p of rp.predictions) {
-      const time = formatSeconds(p.predicted_seconds);
-      const pace = formatPace(p.pace_sec_per_km);
       const confColor = p.confidence === 'High' ? 'var(--emerald)' : p.confidence === 'Moderate' ? 'var(--amber)' : 'var(--text-3)';
-      html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
-        <div>
-          <div style="font-weight:500;font-size:.88rem">${p.distance}</div>
-          <div style="font-size:.75rem;color:var(--text-3)">${pace}/km</div>
-        </div>
-        <div style="text-align:right">
-          <div style="font-family:var(--font-m);font-size:.9rem;color:var(--emerald)">${time}</div>
-          <div style="font-size:.65rem;color:${confColor}">${p.confidence || ''}</div>
-        </div>
-      </div>`;
+      html += `<div class="lv"><div><div style="font-weight:500">${escHtml(p.distance)}</div><div style="font-size:.74rem;color:var(--text-3)">${formatPace(p.pace_sec_per_km)}/km</div></div>
+        <div style="text-align:right"><div class="lv-val" style="color:var(--emerald)">${formatSeconds(p.predicted_seconds)}</div><div style="font-size:.66rem;color:${confColor}">${p.confidence || ''}</div></div></div>`;
     }
     html += `</div>`;
   }
-
   html += `<div class="card">
     ${labelValue('Fatigue Resistance', rp.fatigue_resistance != null ? rp.fatigue_resistance.toFixed(2) : '—')}
     ${labelValue('Distance Bias', rp.distance_bias || '—')}
     ${labelValue('Optimal Distance', rp.optimal_distance || '—')}
   </div>`;
-
   if (rp.equivalent_performances && rp.equivalent_performances.length) {
-    html += `<div class="card">
-      <div style="font-weight:600;font-size:.85rem;margin-bottom:8px">Equivalent Performances</div>`;
+    html += `<div class="card"><div class="card-title" style="font-size:.95rem;margin-bottom:12px">Equivalent Performances</div>`;
     for (const ep of rp.equivalent_performances) {
-      html += `<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:.82rem">
-        <span>${ep.distance}</span>
-        <span style="font-family:var(--font-m);color:var(--text-2)">${ep.time} (${ep.pace}/km)</span>
-      </div>`;
+      html += `<div class="lv"><span class="lv-label">${escHtml(ep.distance)}</span><span class="lv-val">${escHtml(ep.time)} (${escHtml(ep.pace)}/km)</span></div>`;
     }
     html += `</div>`;
   }
-
   if (rp.consistency_notes && rp.consistency_notes.length) {
-    html += `<div class="card">
-      <div style="font-weight:600;font-size:.85rem;margin-bottom:8px">Notes</div>
-      ${rp.consistency_notes.map(n => `<div style="font-size:.82rem;color:var(--text-2);padding:3px 0">• ${escHtml(n)}</div>`).join('')}
-    </div>`;
+    html += `<div class="card"><div class="card-title" style="font-size:.95rem;margin-bottom:12px">Notes</div>${rp.consistency_notes.map(n => `<div style="font-size:.86rem;color:var(--text-2);padding:5px 0">• ${escHtml(n)}</div>`).join('')}</div>`;
   }
   return html;
 }
@@ -1086,381 +1270,355 @@ function renderRaces(a) {
 function renderTraining(a) {
   const rec = a.recommendations || {};
   let html = '';
-
   if (rec.split_pct) {
     const sp = rec.split_pct;
-    html += `<div class="card">
-      <div style="font-weight:600;font-size:.85rem;margin-bottom:10px">Training Split</div>`;
-    const splits = [
-      ['Aerobic', sp.aerobic, 'var(--sky)'],
-      ['Threshold', sp.threshold, 'var(--amber)'],
-      ['High Intensity', sp.high_intensity, 'var(--rose)'],
-      ['Strength/HYROX', sp.strength_hyrox, 'var(--violet)'],
-    ];
+    html += `<div class="card"><div class="card-title" style="font-size:.95rem;margin-bottom:14px">Training Split</div>`;
+    const splits = [['Aerobic', sp.aerobic, 'var(--sky)'], ['Threshold', sp.threshold, 'var(--amber)'], ['High Intensity', sp.high_intensity, 'var(--rose)'], ['Strength/HYROX', sp.strength_hyrox, 'var(--violet)']];
     for (const [label, pct, color] of splits) {
       if (pct == null) continue;
-      html += `<div class="gauge-row">
-        <span style="font-size:.75rem;color:var(--text-2);width:90px">${label}</span>
-        <div class="gauge-bar"><div class="gauge-fill" style="width:${pct}%;background:${color}"></div></div>
-        <span style="font-family:var(--font-m);font-size:.75rem;width:36px;text-align:right">${pct.toFixed(0)}%</span>
-      </div>`;
+      html += `<div class="gauge-row"><span class="gauge-tag">${label}</span><div class="gauge-bar"><div class="gauge-fill" style="width:${pct}%;background:${color}"></div></div><span class="gauge-num">${pct.toFixed(0)}%</span></div>`;
     }
     html += `</div>`;
   }
-
   if (rec.key_sessions && rec.key_sessions.length) {
-    html += `<div class="card">
-      <div style="font-weight:600;font-size:.85rem;margin-bottom:10px">Key Sessions</div>`;
+    html += `<div class="card"><div class="card-title" style="font-size:.95rem;margin-bottom:12px">Key Sessions</div>`;
     for (const ks of rec.key_sessions) {
-      html += `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
-        <div style="font-weight:600;font-size:.85rem">${escHtml(ks.name)}</div>
-        <div style="font-size:.82rem;color:var(--text-2);margin-top:2px">${escHtml(ks.description)}</div>
-        <div style="font-size:.78rem;color:var(--text-3);margin-top:4px">
-          ${ks.pace_target ? 'Pace: ' + ks.pace_target : ''} ${ks.hr_target ? '· HR: ' + ks.hr_target : ''}
-        </div>
-      </div>`;
+      html += `<div style="padding:11px 0;border-bottom:1px solid var(--border-s)"><div style="font-weight:600;font-size:.88rem">${escHtml(ks.name)}</div><div style="font-size:.84rem;color:var(--text-2);margin-top:3px">${escHtml(ks.description)}</div><div style="font-size:.78rem;color:var(--text-3);margin-top:5px">${ks.pace_target ? 'Pace: ' + ks.pace_target : ''} ${ks.hr_target ? '· HR: ' + ks.hr_target : ''}</div></div>`;
     }
     html += `</div>`;
   }
-
   if (rec.benchmarks && rec.benchmarks.length) {
-    html += `<div class="card">
-      <div style="font-weight:600;font-size:.85rem;margin-bottom:10px">Benchmarks</div>`;
+    html += `<div class="card"><div class="card-title" style="font-size:.95rem;margin-bottom:12px">Benchmarks</div>`;
     for (const b of rec.benchmarks) {
-      html += `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
-        <div style="font-weight:500;font-size:.85rem;margin-bottom:4px">${escHtml(b.metric)}</div>
-        <div style="display:flex;gap:8px;font-size:.75rem">
-          <span style="color:var(--text-2)">Now: <b style="color:var(--text)">${b.current}</b></span>
-          <span style="color:var(--text-3)">4w: ${b.target_4wk}</span>
-          <span style="color:var(--text-3)">8w: ${b.target_8wk}</span>
-          <span style="color:var(--emerald)">12w: ${b.target_12wk}</span>
-        </div>
-      </div>`;
+      html += `<div style="padding:10px 0;border-bottom:1px solid var(--border-s)"><div style="font-weight:500;font-size:.86rem;margin-bottom:5px">${escHtml(b.metric)}</div><div style="display:flex;gap:10px;font-size:.76rem;flex-wrap:wrap"><span style="color:var(--text-2)">Now: <b style="color:var(--text)">${b.current}</b></span><span style="color:var(--text-3)">4w: ${b.target_4wk}</span><span style="color:var(--text-3)">8w: ${b.target_8wk}</span><span style="color:var(--emerald)">12w: ${b.target_12wk}</span></div></div>`;
     }
     html += `</div>`;
   }
-
   if (rec.recovery_optimization && rec.recovery_optimization.length) {
-    html += `<div class="card">
-      <div style="font-weight:600;font-size:.85rem;margin-bottom:8px">Recovery Optimization</div>
-      ${rec.recovery_optimization.map(r => `<div style="font-size:.82rem;color:var(--text-2);padding:3px 0">• ${escHtml(r)}</div>`).join('')}
-    </div>`;
+    html += `<div class="card"><div class="card-title" style="font-size:.95rem;margin-bottom:12px">Recovery Optimization</div>${rec.recovery_optimization.map(r => `<div style="font-size:.86rem;color:var(--text-2);padding:5px 0">• ${escHtml(r)}</div>`).join('')}</div>`;
   }
   return html;
 }
 
 function renderHyroxProfile(a) {
   const h = a.hyrox || {};
-  let html = `<div class="card">
-    <div style="font-weight:600;font-size:.85rem;margin-bottom:10px">HYROX Predictions</div>
+  let html = `<div class="card"><div class="card-title" style="font-size:.95rem;margin-bottom:12px">HYROX Predictions</div>
     ${labelValue('Sustainable 1km Pace', h.sustainable_1km_pace != null ? formatPace(h.sustainable_1km_pace) + '/km' : '—')}
     ${labelValue('Total Running Time', h.total_running_time != null ? formatSeconds(h.total_running_time) : '—')}
     ${labelValue('Pace Fade', h.pace_fade_pct != null ? h.pace_fade_pct.toFixed(1) + '%' : '—')}
     ${labelValue('Fade Pattern', h.fade_pattern || '—')}
     ${labelValue('Compromised Running', h.compromised_running_class || '—')}
   </div>`;
-
   if (h.race_1km_splits && h.race_1km_splits.length) {
-    html += `<div class="card">
-      <div style="font-weight:600;font-size:.85rem;margin-bottom:8px">Predicted 1km Splits</div>`;
+    html += `<div class="card"><div class="card-title" style="font-size:.95rem;margin-bottom:12px">Predicted 1km Splits</div>`;
     const maxSplit = Math.max(...h.race_1km_splits);
     h.race_1km_splits.forEach((s, i) => {
       const pct = Math.round((s / maxSplit) * 100);
-      html += `<div class="gauge-row">
-        <span style="font-size:.75rem;color:var(--text-3);width:30px">R${i + 1}</span>
-        <div class="gauge-bar"><div class="gauge-fill" style="width:${pct}%;background:var(--emerald)"></div></div>
-        <span style="font-family:var(--font-m);font-size:.75rem;width:44px;text-align:right">${formatPace(s)}</span>
-      </div>`;
+      html += `<div class="gauge-row"><span class="gauge-tag" style="width:36px">R${i+1}</span><div class="gauge-bar"><div class="gauge-fill" style="width:${pct}%;background:var(--emerald)"></div></div><span class="gauge-num">${formatPace(s)}</span></div>`;
     });
     html += `</div>`;
   }
-
   if (h.energy_system_pct) {
     const esp = h.energy_system_pct;
-    html += `<div class="card">
-      <div style="font-weight:600;font-size:.85rem;margin-bottom:8px">Energy Systems</div>`;
-    const systems = [
-      ['Aerobic', esp.aerobic, 'var(--sky)'],
-      ['Threshold', esp.threshold, 'var(--amber)'],
-      ['Anaerobic', esp.anaerobic, 'var(--rose)'],
-      ['Muscular', esp.muscular_endurance, 'var(--violet)'],
-    ];
+    html += `<div class="card"><div class="card-title" style="font-size:.95rem;margin-bottom:12px">Energy Systems</div>`;
+    const systems = [['Aerobic', esp.aerobic, 'var(--sky)'], ['Threshold', esp.threshold, 'var(--amber)'], ['Anaerobic', esp.anaerobic, 'var(--rose)'], ['Muscular', esp.muscular_endurance, 'var(--violet)']];
     for (const [label, pct, color] of systems) {
       if (pct == null) continue;
-      html += `<div class="gauge-row">
-        <span style="font-size:.75rem;color:var(--text-2);width:70px">${label}</span>
-        <div class="gauge-bar"><div class="gauge-fill" style="width:${pct}%;background:${color}"></div></div>
-        <span style="font-family:var(--font-m);font-size:.75rem;width:36px;text-align:right">${pct.toFixed(0)}%</span>
-      </div>`;
+      html += `<div class="gauge-row"><span class="gauge-tag">${label}</span><div class="gauge-bar"><div class="gauge-fill" style="width:${pct}%;background:${color}"></div></div><span class="gauge-num">${pct.toFixed(0)}%</span></div>`;
     }
     html += `</div>`;
   }
-
   if (h.top_limiters && h.top_limiters.length) {
-    html += `<div class="card">
-      <div style="font-weight:600;font-size:.85rem;margin-bottom:8px;color:var(--amber)">Top Limiters</div>
-      ${h.top_limiters.map(l => `<div style="font-size:.82rem;color:var(--text-2);padding:3px 0">• ${escHtml(l)}</div>`).join('')}
-    </div>`;
+    html += `<div class="card"><div class="card-title" style="font-size:.95rem;color:var(--amber);margin-bottom:12px">Top Limiters</div>${h.top_limiters.map(l => `<div style="font-size:.86rem;color:var(--text-2);padding:5px 0">• ${escHtml(l)}</div>`).join('')}</div>`;
   }
   return html;
 }
 
 // ═══════════════════════════════════════════════════════
-// TAB: PLAN (Full details)
+// VIEW: PLAN (editable — reads/writes planStore)
 // ═══════════════════════════════════════════════════════
-async function renderPlan(page) {
-  const plans = await cached('plans', () => apiJson('/plans').catch(() => []));
-  const active = plans.find(p => p.accepted);
+let planSelectedWeek = null;
 
-  if (!active) {
-    page.innerHTML = `<div class="fade-in">
-      <div class="section-title">Training Plan</div>
-      <div style="margin:16px 0;padding:14px 16px;background:#F59E0B18;border:1px solid #F59E0B44;border-radius:10px;display:flex;align-items:center;gap:10px">
-        <span style="font-size:1.3rem">💻</span>
-        <div>
-          <div style="font-weight:600;font-size:.88rem;color:var(--text-1)">No plan created yet</div>
-          <div style="font-size:.78rem;color:var(--text-2);margin-top:2px">Plan creation is available on the desktop website. Head there to generate your training plan!</div>
-        </div>
-      </div>
-    </div>`;
+async function renderPlan(page) {
+  const active = await planStore.get().catch(() => null);
+
+  if (!active || !active.accepted) {
+    page.innerHTML = `<div class="fade-in">${emptyState('No training plan yet', 'Use “Ask the Coach” to generate one.', icons.plan)}
+      <div style="text-align:center;margin-top:18px"><button class="btn btn-primary" id="plan-coach">${icons.spark} Ask the Coach</button></div></div>`;
+    on('plan-coach', 'click', () => openCoachModal());
     return;
   }
 
   const weeks = active.weeks || [];
-  let currentWeek = 0;
-  const today = new Date().toISOString().slice(0, 10);
-  weeks.forEach((w, i) => {
-    const wDates = (w.workouts || []).map(x => x.scheduled_date).filter(Boolean);
-    if (wDates.some(d => d >= today)) currentWeek = currentWeek || i;
-  });
+  if (planSelectedWeek == null) planSelectedWeek = currentWeekIndex(active);
 
-  // Plan header with full details
-  let html = `<div class="fade-in">
-    <div class="plan-header">
-      <div class="plan-title">${escHtml(active.name || 'Training Plan')}</div>
-      <div class="plan-meta">
-        ${active.goal_type || ''} ${active.target_date ? '· Target: ' + active.target_date : ''}
-        ${active.target_time_seconds ? '· Goal: ' + formatSeconds(active.target_time_seconds) : ''}
-        ${active.total_weeks ? '· ' + active.total_weeks + ' weeks' : ''}
-      </div>
-      ${active.created_at ? `<div style="font-size:.75rem;color:var(--text-3)">Created ${active.created_at}${active.pace_source ? ' · Paces from ' + active.pace_source : ''}</div>` : ''}
-      ${active.vdot ? `<div style="font-size:.78rem;color:var(--text-2);margin-top:6px">VDOT: <span style="font-family:var(--font-m);color:var(--emerald)">${active.vdot.toFixed(1)}</span></div>` : ''}
+  setTopbar('Plan', `${escHtml(active.name || 'Training Plan')} · ${active.total_weeks || weeks.length} weeks`,
+    `<button class="btn btn-ghost btn-sm" id="plan-edit-paces">${icons.edit} Edit Paces</button>
+     <button class="btn btn-ghost btn-sm" id="plan-coach">${icons.spark} Ask Coach</button>
+     <button class="btn btn-outline btn-sm" id="plan-export">${icons.download} Export</button>
+     <button class="btn btn-outline btn-sm" id="plan-reset">Reset</button>`);
 
-      <div class="pace-grid">
-        ${paceItem('Easy', active.easy_pace)}
-        ${paceItem('Marathon', active.marathon_pace)}
-        ${paceItem('Threshold', active.threshold_pace)}
-        ${paceItem('Interval', active.interval_pace)}
-        ${paceItem('Repetition', active.repetition_pace)}
-      </div>
-    </div>`;
-
-  // Rationale
-  if (active.rationale) {
-    html += `<div class="card">
-      <div style="font-weight:600;font-size:.85rem;margin-bottom:6px">Plan Rationale</div>
-      <div style="font-size:.82rem;color:var(--text-2);line-height:1.5">${escHtml(active.rationale)}</div>
-    </div>`;
-  }
-
-  // Tips
-  if (active.tips && active.tips.length) {
-    html += `<div class="card">
-      <div style="font-weight:600;font-size:.85rem;margin-bottom:6px">Tips</div>
-      ${active.tips.map(t => `<div style="font-size:.82rem;color:var(--text-2);padding:3px 0">• ${escHtml(t)}</div>`).join('')}
-    </div>`;
-  }
-
-  // Athlete summary
-  if (active.athlete_summary) {
-    html += `<div class="card">
-      <div style="font-weight:600;font-size:.85rem;margin-bottom:6px">Athlete Summary</div>
-      <div style="font-size:.82rem;color:var(--text-2);line-height:1.5">${escHtml(active.athlete_summary)}</div>
-    </div>`;
-  }
-
-  // Week selector
-  html += `<div class="week-nav" id="week-nav">
-    ${weeks.map((w, i) => {
-      const phaseLabel = w.phase ? ` · ${w.phase}` : '';
-      return `<button class="week-btn ${i === currentWeek ? 'active' : ''}" data-week="${i}" title="${w.focus || ''}">W${i + 1}${phaseLabel}</button>`;
-    }).join('')}
-  </div>
-  <div id="week-info"></div>
-  <div id="week-content"></div>
+  page.innerHTML = `<div class="fade-in">
+    ${planHeaderHtml(active)}
+    <div class="week-nav" id="week-nav">
+      ${weeks.map((w, i) => `<button class="week-btn ${i===planSelectedWeek?'active':''}" data-week="${i}" title="${escHtml(w.focus || '')}">W${i+1}<small>${escHtml(w.phase || '')}</small></button>`).join('')}
+    </div>
+    <div id="week-info"></div>
+    <div id="week-content"></div>
   </div>`;
 
-  page.innerHTML = html;
+  on('plan-edit-paces', 'click', () => openPaceEditor());
+  on('plan-coach', 'click', () => openCoachModal('Week ' + (planSelectedWeek + 1)));
+  on('plan-export', 'click', () => { planStore.export(); toast('ok', 'Exported', 'plan.json downloaded.'); });
+  on('plan-reset', 'click', () => confirmResetPlan());
 
-  function renderWeekContent(wi) {
-    const w = weeks[wi];
-    if (!w) return;
+  page.querySelector('.week-btn.active')?.scrollIntoView({ inline: 'center', block: 'nearest' });
+  page.querySelectorAll('.week-btn').forEach(btn => btn.addEventListener('click', () => {
+    planSelectedWeek = +btn.dataset.week;
+    page.querySelectorAll('.week-btn').forEach(b => b.classList.toggle('active', b === btn));
+    drawWeek(active);
+  }));
 
-    // Week info
-    const infoEl = document.getElementById('week-info');
-    if (infoEl) {
-      let info = '';
-      if (w.phase || w.focus || w.total_distance_km) {
-        info = `<div class="card" style="padding:12px">
-          <div style="font-size:.82rem;color:var(--text-2)">
-            ${w.phase ? `<b>${w.phase}</b>` : ''} ${w.focus ? '· ' + escHtml(w.focus) : ''}
-            ${w.total_distance_km ? ` · ${w.total_distance_km.toFixed(0)} km total` : ''}
-          </div>
-        </div>`;
-      }
-      infoEl.innerHTML = info;
-    }
+  drawWeek(active);
+}
 
-    // Workouts
-    const contentEl = document.getElementById('week-content');
-    if (!contentEl) return;
-    let whtml = '';
-    for (const wo of w.workouts || []) {
-      const typeColors = { easy_run: 'var(--emerald)', tempo: 'var(--amber)', long_run: 'var(--sky)', intervals: 'var(--rose)', speed: 'var(--rose)', threshold: 'var(--amber)', recovery_run: 'var(--text-3)', rest: 'var(--text-3)', race_pace: 'var(--violet)', fartlek: 'var(--sky)', hyrox_mixed: 'var(--violet)', cross_training: 'var(--text-2)' };
-      const color = typeColors[wo.workout_type] || 'var(--text-2)';
-      const dist = wo.estimated_distance_meters ? (wo.estimated_distance_meters / 1000).toFixed(1) + ' km' : '';
-      const dur = wo.estimated_duration_seconds ? Math.round(wo.estimated_duration_seconds / 60) + ' min' : '';
-      const badge = wo.completed ? `<span class="wo-badge" style="background:var(--emerald-d);color:var(--emerald)">Done</span>` : '';
-      whtml += `<div class="workout-card" data-wo='${JSON.stringify(wo).replace(/'/g, "&#39;")}'>
-        <div class="wo-bar" style="background:${color}"></div>
-        <div class="wo-info">
-          <div class="wo-name">${escHtml(wo.name || 'Workout')}</div>
-          <div class="wo-meta">${wo.scheduled_date || ''} ${dist ? '· ' + dist : ''} ${dur ? '· ~' + dur : ''}</div>
-          ${wo.purpose ? `<div class="wo-meta" style="color:var(--text-3)">${wo.purpose.replace(/_/g, ' ')}</div>` : ''}
+function planHeaderHtml(p) {
+  return `<div class="card" style="margin-bottom:18px">
+    <div class="card-h">
+      <div>
+        <div class="card-title" style="font-size:1.15rem">${escHtml(p.name || 'Training Plan')}</div>
+        <div style="font-size:.82rem;color:var(--text-2);margin-top:5px">
+          ${p.goal_type ? escHtml(p.goal_type) : ''}${p.target_date ? ' · Target ' + p.target_date : ''}${p.target_time_seconds ? ' · Goal ' + formatSeconds(p.target_time_seconds) : ''}
         </div>
-        ${badge}
-      </div>`;
-    }
-    contentEl.innerHTML = whtml;
-    bindWorkoutCards();
-  }
-
-  // Scroll to active week
-  const activeBtn = page.querySelector('.week-btn.active');
-  if (activeBtn) activeBtn.scrollIntoView({ inline: 'center', block: 'nearest' });
-
-  page.querySelectorAll('.week-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      page.querySelectorAll('.week-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      renderWeekContent(+btn.dataset.week);
-    });
-  });
-
-  renderWeekContent(currentWeek);
+      </div>
+      ${p.vdot != null ? `<div style="text-align:right"><div class="eyebrow">VDOT</div><div style="font-family:var(--font-m);font-weight:700;font-size:1.4rem;color:var(--emerald)">${p.vdot.toFixed(1)}</div></div>` : ''}
+    </div>
+    <div class="pace-grid">
+      ${paceItem('Easy', p.easy_pace)}${paceItem('Marathon', p.marathon_pace)}${paceItem('Threshold', p.threshold_pace)}${paceItem('Interval', p.interval_pace)}${paceItem('Repetition', p.repetition_pace)}
+    </div>
+    ${p.pace_source ? `<div style="font-size:.74rem;color:var(--text-3);margin-top:12px">Paces from ${escHtml(p.pace_source)}</div>` : ''}
+    ${p.rationale ? `<div style="font-size:.84rem;color:var(--text-2);line-height:1.55;margin-top:12px;border-top:1px solid var(--border-s);padding-top:12px">${escHtml(p.rationale)}</div>` : ''}
+  </div>`;
 }
 
 function paceItem(label, secPerKm) {
   if (!secPerKm) return '';
-  return `<div class="pace-item"><span class="pace-label">${label}</span><span class="pace-val">${formatPace(secPerKm)}/km</span></div>`;
+  return `<div class="pace-item"><div class="pl">${label}</div><div class="pv">${formatPace(secPerKm)}<span class="u">/km</span></div></div>`;
 }
 
-function bindWorkoutCards() {
-  document.querySelectorAll('.workout-card[data-wo]').forEach(card => {
-    card.addEventListener('click', () => {
-      try { showWorkoutSheet(JSON.parse(card.dataset.wo)); } catch {}
-    });
-  });
+function drawWeek(plan) {
+  const wi = planSelectedWeek;
+  const w = (plan.weeks || [])[wi];
+  if (!w) return;
+  const infoEl = document.getElementById('week-info');
+  if (infoEl) {
+    const done = (w.workouts || []).filter(x => x.completed).length;
+    infoEl.innerHTML = `<div class="card card-pad-sm" style="margin-bottom:14px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <div style="flex:1;min-width:160px">
+        <div class="eyebrow">${escHtml(w.phase || 'Block')}${w.focus ? ' · ' + escHtml(w.focus) : ''}</div>
+        <div style="font-size:.84rem;color:var(--text-2);margin-top:4px">${w.total_distance_km ? w.total_distance_km.toFixed(0) + ' km total' : ''} · ${done}/${(w.workouts||[]).length} workouts done</div>
+      </div>
+      <button class="btn btn-primary btn-sm" id="push-week">${icons.push} Push Week ${w.week_number || wi+1} to Garmin</button>
+    </div>`;
+    on('push-week', 'click', e => pushWeekToGarmin(w.week_number || (wi + 1), e.currentTarget));
+  }
+  const contentEl = document.getElementById('week-content');
+  if (!contentEl) return;
+  contentEl.className = 'grid cols-auto';
+  contentEl.innerHTML = (w.workouts || []).map((wo, woIdx) => workoutCardHtml(wo, wi, woIdx)).join('') || emptyState('No workouts this week', '', icons.plan);
+  contentEl.querySelectorAll('[data-open-wo]').forEach(el => el.addEventListener('click', () => {
+    const [wkIdx, woIdx] = el.dataset.openWo.split(':').map(Number);
+    showWorkoutSheet(plan.weeks[wkIdx].workouts[woIdx], wkIdx, woIdx);
+  }));
+  contentEl.querySelectorAll('[data-toggle-wo]').forEach(el => el.addEventListener('click', async (ev) => {
+    ev.stopPropagation();
+    const [wkIdx, woIdx] = el.dataset.toggleWo.split(':').map(Number);
+    await planStore.toggleComplete(wkIdx, woIdx);
+    const fresh = await planStore.get();
+    drawWeek(fresh);
+  }));
 }
 
-function showWorkoutSheet(wo) {
-  const dist = wo.estimated_distance_meters ? (wo.estimated_distance_meters / 1000).toFixed(1) + ' km' : '';
-  const dur = wo.estimated_duration_seconds ? Math.round(wo.estimated_duration_seconds / 60) + ' min' : '';
+function workoutCardHtml(wo, wkIdx, woIdx) {
+  const color = woColor(wo.workout_type);
+  const dist = wo.estimated_distance_meters ? (wo.estimated_distance_meters/1000).toFixed(1) + ' km' : '';
+  const dur = wo.estimated_duration_seconds ? Math.round(wo.estimated_duration_seconds/60) + ' min' : '';
+  return `<div class="card card-pad-sm" style="display:flex;align-items:center;gap:14px">
+    <div class="act-bar" style="background:${color};min-height:42px"></div>
+    <div class="act-info" data-open-wo="${wkIdx}:${woIdx}" style="cursor:pointer">
+      <div class="act-name">${escHtml(wo.name || 'Workout')}</div>
+      <div class="act-meta">${wo.scheduled_date || ''}${dist ? ' · ' + dist : ''}${dur ? ' · ~' + dur : ''}</div>
+      ${wo.purpose ? `<div class="act-meta" style="color:var(--text-3)">${escHtml(wo.purpose.replace(/_/g,' '))}</div>` : ''}
+    </div>
+    <button class="btn btn-sm ${wo.completed ? 'btn-ghost' : 'btn-outline'}" data-toggle-wo="${wkIdx}:${woIdx}" title="Toggle complete" style="${wo.completed ? 'color:var(--emerald)' : ''}">
+      ${wo.completed ? icons.check + ' Done' : 'Mark done'}
+    </button>
+  </div>`;
+}
 
+function showWorkoutSheet(wo, wkIdx, woIdx) {
+  const dist = wo.estimated_distance_meters ? (wo.estimated_distance_meters/1000).toFixed(1) + ' km' : '';
+  const dur = wo.estimated_duration_seconds ? Math.round(wo.estimated_duration_seconds/60) + ' min' : '';
   let stepsHtml = '';
   if (wo.steps && wo.steps.length) {
-    stepsHtml = `<div style="margin-top:12px"><div style="font-weight:600;font-size:.85rem;margin-bottom:8px">Steps</div>`;
+    stepsHtml = `<div style="margin-top:16px"><div class="eyebrow" style="margin-bottom:10px">Steps</div>`;
     for (const s of wo.steps) {
-      stepsHtml += `<div style="padding:8px 12px;background:var(--elevated);border-radius:var(--r-sm);margin-bottom:6px;font-size:.82rem">
-        <div style="font-weight:500">${escHtml(s.description || s.type || 'Step')}</div>
-        ${s.duration ? `<div style="color:var(--text-2);margin-top:2px">${s.duration}</div>` : ''}
-        ${s.target_pace ? `<div style="color:var(--emerald);margin-top:2px">Pace: ${s.target_pace}</div>` : ''}
-        ${s.target_hr ? `<div style="color:var(--sky);margin-top:2px">HR: ${s.target_hr}</div>` : ''}
+      const paceTxt = s.target_pace || (s.target_low ? formatPace(s.target_low) + (s.target_high && s.target_high !== s.target_low ? '–' + formatPace(s.target_high) : '') + '/km' : '');
+      const durTxt = s.duration || (s.duration_seconds ? formatSeconds(s.duration_seconds) : (s.distance_meters ? (s.distance_meters/1000).toFixed(1) + ' km' : ''));
+      stepsHtml += `<div class="step-item">
+        <div style="font-weight:600">${escHtml(s.description || s.step_type || s.type || 'Step')}</div>
+        ${durTxt ? `<div style="color:var(--text-2);margin-top:3px;font-size:.8rem">${escHtml(durTxt)}</div>` : ''}
+        ${paceTxt ? `<div style="color:var(--emerald);margin-top:3px;font-size:.8rem">Pace: ${escHtml(paceTxt)}</div>` : ''}
+        ${s.target_hr ? `<div style="color:var(--sky);margin-top:3px;font-size:.8rem">HR: ${escHtml(String(s.target_hr))}</div>` : ''}
       </div>`;
     }
     stepsHtml += '</div>';
   }
-
-  // Completion metrics
   let metricsHtml = '';
   if (wo.completed && wo.completion_metrics) {
     const cm = wo.completion_metrics;
-    metricsHtml = `<div style="margin-top:12px">
-      <div style="font-weight:600;font-size:.85rem;margin-bottom:8px">Completion Data</div>
-      <div class="detail-grid">
-        ${detailItem(cm.distance_meters ? (cm.distance_meters / 1000).toFixed(2) : '—', 'Distance')}
-        ${detailItem(cm.duration_seconds ? formatSeconds(cm.duration_seconds) : '—', 'Duration')}
-        ${detailItem(cm.avg_pace_sec_per_km ? formatPace(cm.avg_pace_sec_per_km) : '—', 'Pace')}
-        ${detailItem(cm.avg_hr || '—', 'Avg HR')}
-        ${detailItem(cm.max_hr || '—', 'Max HR')}
-        ${detailItem(cm.calories || '—', 'Calories')}
+    metricsHtml = `<div style="margin-top:16px"><div class="eyebrow" style="margin-bottom:10px">Completion Data</div><div class="detail-grid">
+      ${detailItem(cm.distance_meters ? (cm.distance_meters/1000).toFixed(2) : '—', 'Distance')}
+      ${detailItem(cm.duration_seconds ? formatSeconds(cm.duration_seconds) : '—', 'Duration')}
+      ${detailItem(cm.avg_pace_sec_per_km ? formatPace(cm.avg_pace_sec_per_km) : '—', 'Pace')}
+      ${detailItem(cm.avg_hr || '—', 'Avg HR')}
+      ${detailItem(cm.max_hr || '—', 'Max HR')}
+      ${detailItem(cm.calories || '—', 'Calories')}
+    </div></div>`;
+  }
+
+  const editable = wkIdx != null && woIdx != null;
+  openModal(`
+    <div class="modal-h">
+      <div>
+        <div class="modal-title">${escHtml(wo.name || 'Workout')}</div>
+        <div class="modal-sub">${escHtml((wo.workout_type || '').replace(/_/g,' '))}${dist ? ' · ' + dist : ''}${dur ? ' · ~' + dur : ''}</div>
       </div>
-    </div>`;
-  }
-
-  let analysisHtml = '';
-  if (wo.completion_analysis) {
-    analysisHtml = `<div style="margin-top:8px;font-size:.82rem;color:var(--text-2);line-height:1.4">${escHtml(wo.completion_analysis)}</div>`;
-  }
-
-  openSheet(`
-    <h3 style="font-family:var(--font-d);font-weight:700;font-size:1.1rem;margin-bottom:4px">${escHtml(wo.name || 'Workout')}</h3>
-    <div style="font-size:.82rem;color:var(--text-2);margin-bottom:8px">
-      ${wo.workout_type?.replace(/_/g, ' ') || ''} ${dist ? '· ' + dist : ''} ${dur ? '· ~' + dur : ''}
+      <button class="modal-close" data-close>${icons.x}</button>
     </div>
-    ${wo.description ? `<div style="font-size:.85rem;color:var(--text-2);margin-bottom:8px;line-height:1.4">${escHtml(wo.description)}</div>` : ''}
-    ${wo.notes ? `<div style="font-size:.82rem;color:var(--text-3);margin-bottom:8px">${escHtml(wo.notes)}</div>` : ''}
+    ${wo.description ? `<div style="font-size:.88rem;color:var(--text-2);line-height:1.55;margin-bottom:8px">${escHtml(wo.description)}</div>` : ''}
     ${stepsHtml}
     ${metricsHtml}
-    ${analysisHtml}
-    ${wo.completed ? `<div style="margin-top:12px;font-size:.85rem;color:var(--emerald);font-weight:600">Completed</div>` : ''}
+    ${editable ? `
+      <div style="margin-top:18px;border-top:1px solid var(--border-s);padding-top:16px">
+        <div class="field">
+          <label for="wo-date">Reschedule date</label>
+          <input type="date" id="wo-date" value="${wo.scheduled_date || ''}" class="mono-input">
+        </div>
+        <div class="field">
+          <label for="wo-note">Note</label>
+          <textarea id="wo-note" rows="3">${escHtml(wo.notes || '')}</textarea>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn ${wo.completed ? 'btn-ghost' : 'btn-outline'}" id="wo-toggle" style="${wo.completed ? 'color:var(--emerald)' : ''}">${wo.completed ? icons.check + ' Completed' : 'Mark complete'}</button>
+          <button class="btn btn-primary" id="wo-save" style="margin-left:auto">Save changes</button>
+        </div>
+      </div>` : (wo.notes ? `<div style="margin-top:12px;font-size:.84rem;color:var(--text-3)">${escHtml(wo.notes)}</div>` : '')}
   `);
+
+  if (editable) {
+    on('wo-toggle', 'click', async () => {
+      await planStore.toggleComplete(wkIdx, woIdx);
+      const fresh = await planStore.get();
+      closeModal();
+      drawWeek(fresh);
+      toast('ok', 'Updated', 'Workout completion toggled.');
+    });
+    on('wo-save', 'click', async () => {
+      const date = val('wo-date');
+      const note = document.getElementById('wo-note')?.value || '';
+      if (date) await planStore.reschedule(wkIdx, woIdx, date);
+      await planStore.setNote(wkIdx, woIdx, note);
+      const fresh = await planStore.get();
+      closeModal();
+      drawWeek(fresh);
+      toast('ok', 'Saved', 'Workout updated locally. Export or push to apply.');
+    });
+  }
+}
+
+function openPaceEditor() {
+  planStore.get().then(p => {
+    const f = (k) => p[k] != null ? p[k] : '';
+    const row = (id, label, k) => `<div class="field">
+      <label for="${id}">${label} pace <span style="color:var(--text-3);font-weight:400">(sec/km · currently ${p[k] != null ? formatPace(p[k]) + '/km' : '—'})</span></label>
+      <input type="number" id="${id}" value="${f(k)}" class="mono-input" min="120" max="600" step="0.1">
+    </div>`;
+    openModal(`
+      <div class="modal-h">
+        <div><div class="modal-title">Edit Training Paces</div><div class="modal-sub">Stored locally. Export plan.json or push to Garmin to apply.</div></div>
+        <button class="modal-close" data-close>${icons.x}</button>
+      </div>
+      ${row('pace-easy','Easy','easy_pace')}
+      ${row('pace-mara','Marathon','marathon_pace')}
+      ${row('pace-thr','Threshold','threshold_pace')}
+      ${row('pace-int','Interval','interval_pace')}
+      ${row('pace-rep','Repetition','repetition_pace')}
+      <div class="modal-foot">
+        <button class="btn btn-outline" data-close>Cancel</button>
+        <button class="btn btn-primary" id="pace-save">Save paces</button>
+      </div>
+    `);
+    on('pace-save', 'click', async () => {
+      const num = id => { const v = parseFloat(val(id)); return isNaN(v) ? null : v; };
+      await planStore.setPaces({
+        easy_pace: num('pace-easy'), marathon_pace: num('pace-mara'), threshold_pace: num('pace-thr'),
+        interval_pace: num('pace-int'), repetition_pace: num('pace-rep'),
+      });
+      closeModal();
+      toast('ok', 'Paces updated', 'Saved locally. Reloading plan…');
+      loadTab('plan');
+    });
+  });
+}
+
+function confirmResetPlan() {
+  openModal(`
+    <div class="modal-h"><div><div class="modal-title">Reset plan?</div><div class="modal-sub">Discards local edits (paces, completions, notes, dates) and reloads the synced ./data/plan.json.</div></div><button class="modal-close" data-close>${icons.x}</button></div>
+    <div class="modal-foot"><button class="btn btn-outline" data-close>Cancel</button><button class="btn btn-danger" id="reset-confirm">Reset to synced</button></div>
+  `);
+  on('reset-confirm', 'click', async () => {
+    await planStore.reset();
+    planSelectedWeek = null;
+    closeModal();
+    toast('ok', 'Plan reset', 'Reverted to the last synced plan.');
+    loadTab('plan');
+  });
 }
 
 // ═══════════════════════════════════════════════════════
-// TAB: CALENDAR (Improved with activity drill-down)
+// VIEW: CALENDAR
 // ═══════════════════════════════════════════════════════
 async function renderCalendar(page) {
   const now = new Date();
   let viewYear = now.getFullYear(), viewMonth = now.getMonth();
   const calEntries = {};
-  const activityMap = {};
 
-  const [plans, activities] = await Promise.all([
-    cached('plans', () => apiJson('/plans').catch(() => [])),
-    cached('activities', () => apiJson('/activities?days=240').catch(() => [])),
+  const [plan, activities] = await Promise.all([
+    planStore.get().catch(() => null),
+    cached('activities', () => apiJson('/activities').catch(() => [])),
   ]);
 
-  // Build activity map by date
   for (const act of activities || []) {
     const d = (act.start_time || '').slice(0, 10);
     if (!d) continue;
-    const distKm = act.distance_meters ? (act.distance_meters / 1000).toFixed(1) : null;
-    const name = act.name || act.activity_type || 'Activity';
-    const isRun = (act.activity_type || '').toLowerCase().includes('running');
+    const distKm = act.distance_meters ? (act.distance_meters/1000).toFixed(1) : null;
+    const isRun = (act.activity_type || '').toLowerCase().includes('run');
     let sub = '';
-    if (isRun && distKm && act.duration_seconds) {
-      const ps = act.duration_seconds / (act.distance_meters / 1000);
-      sub = `${distKm} km · ${formatPace(ps)}/km`;
-    } else if (distKm) { sub = `${distKm} km`; }
-    if (!calEntries[d]) calEntries[d] = [];
-    calEntries[d].push({ type: 'activity', title: name, sub, color: isRun ? 'var(--emerald)' : 'var(--violet)', activity: act });
-    activityMap[act.activity_id] = act;
+    if (isRun && distKm && act.duration_seconds) sub = `${distKm} km · ${formatPace(act.duration_seconds/(act.distance_meters/1000))}/km`;
+    else if (distKm) sub = `${distKm} km`;
+    (calEntries[d] ||= []).push({ type:'activity', title: act.name || act.activity_type || 'Activity', sub, color: isRun ? 'var(--emerald)' : 'var(--violet)', activity: act });
   }
 
-  // Plan workouts
-  const active = (plans || []).find(p => p.accepted);
-  if (active) {
-    for (const w of active.weeks || []) {
+  if (plan && plan.accepted) {
+    for (const w of plan.weeks || []) {
       for (const wo of w.workouts || []) {
         if (!wo.scheduled_date) continue;
-        const d = wo.scheduled_date;
-        if (!calEntries[d]) calEntries[d] = [];
-        const distKm = wo.estimated_distance_meters ? (wo.estimated_distance_meters / 1000).toFixed(1) + ' km' : '';
-        calEntries[d].push({
-          type: 'planned', title: (wo.completed ? '✓ ' : '○ ') + (wo.name || 'Workout'),
-          sub: [wo.workout_type?.replace(/_/g, ' '), distKm].filter(Boolean).join(' · '),
-          color: wo.completed ? 'var(--emerald)' : 'var(--sky)', wo
+        const distKm = wo.estimated_distance_meters ? (wo.estimated_distance_meters/1000).toFixed(1) + ' km' : '';
+        (calEntries[wo.scheduled_date] ||= []).push({
+          type:'planned', title: (wo.completed ? '✓ ' : '○ ') + (wo.name || 'Workout'),
+          sub: [wo.workout_type?.replace(/_/g,' '), distKm].filter(Boolean).join(' · '),
+          color: wo.completed ? 'var(--emerald)' : 'var(--sky)', wo,
         });
       }
     }
@@ -1470,301 +1628,211 @@ async function renderCalendar(page) {
     const first = new Date(viewYear, viewMonth, 1);
     const last = new Date(viewYear, viewMonth + 1, 0);
     const startDay = first.getDay();
-    const monthName = first.toLocaleString('default', { month: 'long', year: 'numeric' });
-
+    const monthName = first.toLocaleString('default', { month:'long', year:'numeric' });
     let grid = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => `<div class="cal-day-label">${d}</div>`).join('');
-
     const prevLast = new Date(viewYear, viewMonth, 0).getDate();
-    for (let i = startDay - 1; i >= 0; i--) {
-      grid += `<div class="cal-day other-month">${prevLast - i}</div>`;
-    }
-
+    for (let i = startDay - 1; i >= 0; i--) grid += `<div class="cal-day other-month"><div class="cal-num">${prevLast - i}</div></div>`;
+    const todayStr = new Date().toISOString().slice(0,10);
     for (let d = 1; d <= last.getDate(); d++) {
-      const ds = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-      const isToday = ds === new Date().toISOString().slice(0, 10);
+      const ds = `${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
       const entries = calEntries[ds] || [];
-      const dots = entries.slice(0, 3).map(e => `<div class="cal-dot" style="background:${e.color}"></div>`).join('');
-      grid += `<div class="cal-day ${isToday ? 'today' : ''}" data-date="${ds}">
-        ${d}
-        ${dots ? `<div class="cal-dots">${dots}</div>` : ''}
-      </div>`;
+      const pills = entries.slice(0,2).map(e => `<div class="cal-pill" style="background:${e.color}22;color:${e.color}">${escHtml((e.title||'').replace(/^[✓○]\s/,''))}</div>`).join('');
+      const more = entries.length > 2 ? `<div class="cal-pill" style="color:var(--text-3)">+${entries.length-2}</div>` : '';
+      grid += `<div class="cal-day ${ds===todayStr?'today':''}" data-date="${ds}" data-dots="${entries.length?'•'.repeat(Math.min(entries.length,3)):''}"><div class="cal-num">${d}</div>${pills}${more}</div>`;
     }
-
-    const totalCells = startDay + last.getDate();
-    const remaining = (7 - totalCells % 7) % 7;
-    for (let i = 1; i <= remaining; i++) {
-      grid += `<div class="cal-day other-month">${i}</div>`;
-    }
-
-    return `<div class="fade-in">
-      <div class="cal-header">
-        <h3>${monthName}</h3>
-        <div class="cal-nav">
-          <button id="cal-prev">‹</button>
-          <button id="cal-next">›</button>
-        </div>
-      </div>
-      <div class="cal-grid">${grid}</div>
-      <div id="cal-details" style="margin-top:12px"></div>
-    </div>`;
+    const remaining = (7 - (startDay + last.getDate()) % 7) % 7;
+    for (let i = 1; i <= remaining; i++) grid += `<div class="cal-day other-month"><div class="cal-num">${i}</div></div>`;
+    return `<div class="fade-in"><div class="dash-grid"><div class="span-8">
+      <div class="card">
+        <div class="card-h"><div class="card-title">${monthName}</div><div style="display:flex;gap:8px"><button class="btn-icon" id="cal-prev" aria-label="Previous month">‹</button><button class="btn-icon" id="cal-next" aria-label="Next month">›</button></div></div>
+        <div class="cal-grid">${grid}</div>
+      </div></div>
+      <div class="span-4"><div class="card" style="height:100%" id="cal-details"><div class="empty" style="border:none;padding:32px 12px">Select a day to see details.</div></div></div>
+    </div></div>`;
   }
 
   function reDraw() {
     page.innerHTML = drawMonth();
-    page.querySelectorAll('.cal-day[data-date]').forEach(el => {
-      el.addEventListener('click', () => {
-        page.querySelectorAll('.cal-day.selected').forEach(s => s.classList.remove('selected'));
-        el.classList.add('selected');
-        const entries = calEntries[el.dataset.date] || [];
-        const details = document.getElementById('cal-details');
-        if (!entries.length) { details.innerHTML = '<div class="empty" style="padding:16px 0">No activities</div>'; return; }
-        details.innerHTML = entries.map(e => `
-          <div class="cal-entry" data-entry-type="${e.type}" data-entry='${JSON.stringify(e.activity || e.wo || {}).replace(/'/g, "&#39;")}'>
-            <div class="cal-entry-bar" style="background:${e.color}"></div>
-            <div class="cal-entry-info">
-              <div class="cal-entry-title">${escHtml(e.title)}</div>
-              ${e.sub ? `<div class="cal-entry-sub">${e.sub}</div>` : ''}
-            </div>
-          </div>`).join('');
-
-        details.querySelectorAll('.cal-entry').forEach(c => {
-          c.addEventListener('click', () => {
-            try {
-              const type = c.dataset.entryType;
-              const data = JSON.parse(c.dataset.entry);
-              if (type === 'activity' && data.activity_id) showActivitySheet(data);
-              else if (type === 'planned' && data.name) showWorkoutSheet(data);
-            } catch {}
-          });
-        });
-      });
-    });
-    on('cal-prev', 'click', () => { viewMonth--; if (viewMonth < 0) { viewMonth = 11; viewYear--; } reDraw(); });
-    on('cal-next', 'click', () => { viewMonth++; if (viewMonth > 11) { viewMonth = 0; viewYear++; } reDraw(); });
+    page.querySelectorAll('.cal-day[data-date]').forEach(el => el.addEventListener('click', () => {
+      page.querySelectorAll('.cal-day.selected').forEach(s => s.classList.remove('selected'));
+      el.classList.add('selected');
+      const entries = calEntries[el.dataset.date] || [];
+      const details = document.getElementById('cal-details');
+      const dateLabel = new Date(el.dataset.date + 'T00:00:00').toLocaleDateString('en-US', { weekday:'long', month:'short', day:'numeric' });
+      if (!entries.length) { details.innerHTML = `<div class="card-h"><div class="card-title" style="font-size:.95rem">${dateLabel}</div></div><div class="empty" style="border:none;padding:24px 0">Nothing scheduled.</div>`; return; }
+      details.innerHTML = `<div class="card-h"><div class="card-title" style="font-size:.95rem">${dateLabel}</div></div>` + entries.map((e, i) => `
+        <div class="act-item" data-cal-idx="${i}"><div class="act-bar" style="background:${e.color}"></div>
+          <div class="act-info"><div class="act-name">${escHtml(e.title)}</div>${e.sub ? `<div class="act-meta">${escHtml(e.sub)}</div>` : ''}</div></div>`).join('');
+      details.querySelectorAll('[data-cal-idx]').forEach(c => c.addEventListener('click', () => {
+        const e = entries[+c.dataset.calIdx];
+        if (e.type === 'activity' && e.activity) showActivitySheet(e.activity);
+        else if (e.type === 'planned' && e.wo) showWorkoutSheet(e.wo);
+      }));
+    }));
+    on('cal-prev', 'click', () => { viewMonth--; if (viewMonth<0){viewMonth=11;viewYear--;} reDraw(); });
+    on('cal-next', 'click', () => { viewMonth++; if (viewMonth>11){viewMonth=0;viewYear++;} reDraw(); });
   }
-
   reDraw();
 }
 
 function showActivitySheet(act) {
-  const distKm = act.distance_meters ? (act.distance_meters / 1000).toFixed(2) : '—';
+  const distKm = act.distance_meters ? (act.distance_meters/1000).toFixed(2) : '—';
   const duration = act.duration_seconds ? formatSeconds(act.duration_seconds) : '—';
   const pace = act.avg_pace_sec_per_km ? formatPace(act.avg_pace_sec_per_km) + '/km' : '—';
-
-  let metricsHtml = `<div class="detail-grid">
-    ${detailItem(distKm, 'Distance km')}
-    ${detailItem(duration, 'Duration')}
-    ${detailItem(pace, 'Avg Pace')}
-    ${detailItem(act.avg_hr || '—', 'Avg HR')}
-    ${detailItem(act.max_hr || '—', 'Max HR')}
-    ${detailItem(act.calories || '—', 'Calories')}
-    ${detailItem(act.avg_running_cadence ? Math.round(act.avg_running_cadence) : '—', 'Cadence')}
-    ${detailItem(act.avg_stride_length ? act.avg_stride_length.toFixed(2) + 'm' : '—', 'Stride')}
-    ${detailItem(act.avg_ground_contact_time ? Math.round(act.avg_ground_contact_time) + 'ms' : '—', 'GCT')}
-    ${detailItem(act.avg_vertical_oscillation ? act.avg_vertical_oscillation.toFixed(1) + 'cm' : '—', 'Vert Osc')}
-    ${detailItem(act.avg_power ? Math.round(act.avg_power) + 'W' : '—', 'Power')}
-    ${detailItem(act.elevation_gain ? Math.round(act.elevation_gain) + 'm' : '—', 'Elevation')}
-  </div>`;
-
-  // Training effects
   let teHtml = '';
   if (act.training_effect_aerobic || act.training_effect_anaerobic) {
-    teHtml = `<div style="margin-top:8px">
-      <div style="font-weight:600;font-size:.82rem;margin-bottom:6px">Training Effect</div>`;
+    teHtml = `<div style="margin-top:16px"><div class="eyebrow" style="margin-bottom:10px">Training Effect</div>`;
     if (act.training_effect_aerobic) {
-      const pct = Math.min(100, Math.round((act.training_effect_aerobic / 5) * 100));
-      teHtml += `<div class="te-bar">
-        <span class="te-label">Aerobic</span>
-        <div class="te-track"><div class="te-fill" style="width:${pct}%;background:var(--sky)"></div></div>
-        <span class="te-val">${act.training_effect_aerobic.toFixed(1)}</span>
-      </div>`;
+      const pct = Math.min(100, Math.round(act.training_effect_aerobic/5*100));
+      teHtml += `<div class="gauge-row"><span class="gauge-tag">Aerobic</span><div class="gauge-bar"><div class="gauge-fill" style="width:${pct}%;background:var(--sky)"></div></div><span class="gauge-num">${act.training_effect_aerobic.toFixed(1)}</span></div>`;
     }
     if (act.training_effect_anaerobic) {
-      const pct = Math.min(100, Math.round((act.training_effect_anaerobic / 5) * 100));
-      teHtml += `<div class="te-bar">
-        <span class="te-label">Anaerobic</span>
-        <div class="te-track"><div class="te-fill" style="width:${pct}%;background:var(--rose)"></div></div>
-        <span class="te-val">${act.training_effect_anaerobic.toFixed(1)}</span>
-      </div>`;
+      const pct = Math.min(100, Math.round(act.training_effect_anaerobic/5*100));
+      teHtml += `<div class="gauge-row"><span class="gauge-tag">Anaerobic</span><div class="gauge-bar"><div class="gauge-fill" style="width:${pct}%;background:var(--rose)"></div></div><span class="gauge-num">${act.training_effect_anaerobic.toFixed(1)}</span></div>`;
     }
     teHtml += '</div>';
   }
-
-  openSheet(`
-    <h3 style="font-family:var(--font-d);font-weight:700;font-size:1.1rem;margin-bottom:4px">${escHtml(act.name || 'Activity')}</h3>
-    <div style="font-size:.82rem;color:var(--text-2);margin-bottom:12px">
-      ${act.activity_type || ''} · ${act.start_time ? new Date(act.start_time).toLocaleString() : ''}
+  openModal(`
+    <div class="modal-h"><div><div class="modal-title">${escHtml(act.name || 'Activity')}</div><div class="modal-sub">${escHtml(act.activity_type || '')}${act.start_time ? ' · ' + new Date(act.start_time).toLocaleString() : ''}</div></div><button class="modal-close" data-close>${icons.x}</button></div>
+    <div class="detail-grid">
+      ${detailItem(distKm, 'Distance km')}${detailItem(duration, 'Duration')}${detailItem(pace, 'Avg Pace')}
+      ${detailItem(act.avg_hr || '—', 'Avg HR')}${detailItem(act.max_hr || '—', 'Max HR')}${detailItem(act.calories || '—', 'Calories')}
+      ${detailItem(act.avg_running_cadence ? Math.round(act.avg_running_cadence) : '—', 'Cadence')}
+      ${detailItem(act.avg_stride_length ? act.avg_stride_length.toFixed(2)+'m' : '—', 'Stride')}
+      ${detailItem(act.avg_ground_contact_time ? Math.round(act.avg_ground_contact_time)+'ms' : '—', 'GCT')}
+      ${detailItem(act.avg_vertical_oscillation ? act.avg_vertical_oscillation.toFixed(1)+'cm' : '—', 'Vert Osc')}
+      ${detailItem(act.avg_power ? Math.round(act.avg_power)+'W' : '—', 'Power')}
+      ${detailItem(act.elevation_gain ? Math.round(act.elevation_gain)+'m' : '—', 'Elevation')}
     </div>
-    ${metricsHtml}
     ${teHtml}
   `);
 }
 
 // ═══════════════════════════════════════════════════════
-// SETTINGS PAGE (via icon on Home)
-// ═══════════════════════════════════════════════════════
-async function renderSettings(page) {
-  page.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-  try {
-    const profile = await apiJson('/auth/profile');
-    state.user = { name: profile.name, email: profile.email, role: profile.role };
-    localStorage.setItem('pf_user', JSON.stringify(state.user));
-
-    let garminStatus = 'Unknown';
-    try { const gs = await apiJson('/garmin/status'); garminStatus = gs.connected ? 'Connected' : 'Not connected'; } catch { garminStatus = 'Not connected'; }
-
-    let stravaStatus = null;
-    try { stravaStatus = await apiJson('/strava/status'); } catch {}
-    const stravaConnected = stravaStatus && stravaStatus.connected;
-    const stravaAuto = stravaStatus ? !!stravaStatus.auto_update : false;
-
-    page.innerHTML = `<div class="fade-in">
-      <div class="profile-header">
-        <div class="profile-avatar">${(profile.name || '?')[0].toUpperCase()}</div>
-        <div class="profile-name">${escHtml(profile.name)}</div>
-        <div class="profile-email">${escHtml(profile.email)}</div>
-      </div>
-      <div class="card">
-        <div class="settings-row"><span class="settings-label">Role</span><span class="settings-value">${profile.role}</span></div>
-        <div class="settings-row"><span class="settings-label">Status</span><span class="settings-value">${profile.status}</span></div>
-        <div class="settings-row"><span class="settings-label">Garmin</span><span class="settings-value">${garminStatus}</span></div>
-        ${profile.garmin_email ? `<div class="settings-row"><span class="settings-label">Garmin Email</span><span class="settings-value" style="font-size:.78rem">${escHtml(profile.garmin_email)}</span></div>` : ''}
-        <div class="settings-row"><span class="settings-label">Registered</span><span class="settings-value">${(profile.created_at || '').slice(0, 10)}</span></div>
-      </div>
-      ${stravaConnected ? `<div class="card">
-        <div class="settings-row">
-          <span class="settings-label" style="color:#FC4C02;font-weight:600">Strava</span>
-          <span class="settings-value" style="color:var(--emerald)">${escHtml(stravaStatus.athlete_name || 'Connected')}</span>
-        </div>
-        <div class="settings-row" style="border-bottom:none">
-          <div>
-            <span class="settings-label">Auto-update activities</span>
-            <div style="font-size:.72rem;color:var(--text-3);margin-top:2px">Push AI analysis to Strava on sync</div>
-          </div>
-          <label style="position:relative;width:44px;height:24px;flex-shrink:0">
-            <input type="checkbox" id="strava-auto-toggle" ${stravaAuto ? 'checked' : ''}
-              style="opacity:0;width:0;height:0;position:absolute">
-            <span style="position:absolute;inset:0;border-radius:12px;cursor:pointer;transition:background .2s;
-              background:${stravaAuto ? 'var(--emerald)' : 'var(--elevated)'}"></span>
-            <span style="position:absolute;top:2px;left:${stravaAuto ? '22px' : '2px'};width:20px;height:20px;
-              border-radius:50%;background:#fff;transition:left .2s;pointer-events:none"></span>
-          </label>
-        </div>
-      </div>` : ''}
-      <button class="btn btn-ghost" onclick="state.tab='hyrox';loadTab('hyrox')">HYROX Race Results</button>
-      <button class="btn btn-ghost" style="margin-top:8px" id="export-plan-btn">Export Plan (plan.json)</button>
-      <button class="btn-link" style="margin-top:12px" onclick="state.tab='home';document.querySelectorAll('.tab-bar button')[0].click()">← Back</button>
-    </div>`;
-
-    on('export-plan-btn', 'click', exportPlan);
-
-    // Strava auto-update toggle
-    const autoToggle = document.getElementById('strava-auto-toggle');
-    if (autoToggle) {
-      autoToggle.addEventListener('change', async () => {
-        try {
-          await apiJson('/strava/auto-update', { method: 'POST', body: JSON.stringify({ enabled: autoToggle.checked }) });
-          renderSettings(page);
-        } catch {}
-      });
-    }
-  } catch (e) { page.innerHTML = `<div class="empty">Failed: ${escHtml(e.message)}</div>`; }
-}
-
-// ═══════════════════════════════════════════════════════
-// HYROX RESULTS PAGE
+// VIEW: HYROX
 // ═══════════════════════════════════════════════════════
 async function renderHyroxPage(page) {
-  page.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-  try {
-    const results = await apiJson('/hyrox/results').catch(() => []);
-    let html = `<div class="fade-in"><div class="section-title">HYROX Results</div>`;
-    if (!results || !results.length) {
-      html += '<div class="empty">No HYROX results found. Search from the desktop app.</div>';
-    } else {
-      for (const race of results) {
-        html += `<div class="card">
-          <div style="font-weight:600;margin-bottom:8px">${escHtml(race.race_name || 'Race')} — ${race.overall_time || ''}</div>`;
-        if (race.stations && race.stations.length) {
-          for (const s of race.stations) {
-            html += `<div class="hyrox-station"><span class="hyrox-name">${escHtml(s.name || s.station)}</span><span class="hyrox-time">${s.time || ''}</span></div>`;
-          }
-        }
-        html += '</div>';
-      }
-    }
-    html += '<button class="btn-link" style="margin-top:12px" onclick="state.tab=\'settings\';loadTab(\'settings\')">← Back</button></div>';
-    page.innerHTML = html;
-  } catch (e) { page.innerHTML = `<div class="empty">Failed: ${escHtml(e.message)}</div>`; }
+  const results = await apiJson('/hyrox/results').catch(() => []);
+  if (!results || !results.length) { page.innerHTML = `<div class="fade-in">${emptyState('No HYROX results yet', 'Race results appear here after sync.', icons.hyrox)}</div>`; return; }
+  page.innerHTML = `<div class="fade-in"><div class="grid cols-auto">${results.map(race => `
+    <div class="card">
+      <div class="card-h"><div class="card-title" style="font-size:.95rem">${escHtml(race.race_name || 'Race')}</div>${race.overall_time ? `<span style="font-family:var(--font-m);font-weight:700;color:var(--emerald)">${race.overall_time}</span>` : ''}</div>
+      ${(race.stations || []).map(s => `<div class="hyrox-station"><span class="hyrox-name">${escHtml(s.name || s.station || '')}</span><span class="hyrox-time">${s.time || ''}</span></div>`).join('')}
+    </div>`).join('')}</div></div>`;
 }
 
 // ═══════════════════════════════════════════════════════
-// UTILITIES
+// VIEW: SETTINGS (incl. GitHub integration)
+// ═══════════════════════════════════════════════════════
+async function renderSettings(page) {
+  const profile = await apiJson('/auth/profile');
+  state.user = { name: profile.name, email: profile.email, role: profile.role };
+  try { localStorage.setItem('pf_user', JSON.stringify(state.user)); } catch {}
+  let garminStatus = 'Not connected';
+  try { const gs = await apiJson('/garmin/status'); garminStatus = gs.connected ? 'Connected' : 'Not connected'; } catch {}
+  const tokenSet = githubToken.has();
+
+  page.innerHTML = `<div class="fade-in"><div class="dash-grid">
+    <div class="span-6">
+      <div class="card">
+        <div class="card-h"><div class="card-title"><span class="ico">${icons.settings}</span>Account</div></div>
+        <div class="settings-row"><span class="settings-label">Name</span><span class="settings-value">${escHtml(profile.name)}</span></div>
+        <div class="settings-row"><span class="settings-label">Email</span><span class="settings-value">${escHtml(profile.email)}</span></div>
+        <div class="settings-row"><span class="settings-label">Garmin</span><span class="settings-value"><span class="conn-status ${garminStatus==='Connected'?'conn-on':'conn-off'}"><span class="dotmark"></span>${garminStatus}</span></span></div>
+        <div class="settings-row"><span class="settings-label">Profile updated</span><span class="settings-value">${(profile.created_at || '').slice(0,10) || '—'}</span></div>
+      </div>
+    </div>
+
+    <div class="span-6">
+      <div class="card">
+        <div class="card-h">
+          <div class="card-title"><span class="ico">${icons.github}</span>GitHub Integration</div>
+          <span class="conn-status ${tokenSet?'conn-on':'conn-off'}"><span class="dotmark"></span>${tokenSet?'Connected':'Not connected'}</span>
+        </div>
+        <div class="field">
+          <label for="gh-token">Fine-grained Personal Access Token</label>
+          <input type="password" id="gh-token" class="mono-input" placeholder="${tokenSet ? '•••••••••••••••• (stored)' : 'github_pat_…'}" autocomplete="off">
+          <div class="hint">Needs <b>Actions: write</b> and <b>Issues: write</b> on <b>${REPO}</b>. Stored only in this browser's localStorage (<code>pf_gh_token</code>) — never committed.</div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" id="gh-save">Save token</button>
+          ${tokenSet ? `<button class="btn btn-outline btn-sm" id="gh-test">Test connection</button><button class="btn btn-danger btn-sm" id="gh-clear">Remove</button>` : ''}
+        </div>
+      </div>
+
+      <div class="card mt">
+        <div class="card-h"><div class="card-title"><span class="ico">${icons.sync}</span>Actions</div></div>
+        ${!tokenSet ? `<div class="banner warn" style="margin-bottom:14px"><span class="b-ico">${icons.alert}</span><div>Add a GitHub token above to enable these actions.</div></div>` : ''}
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <button class="btn btn-ghost btn-block" id="set-sync">${icons.sync} Sync latest from Garmin</button>
+          <button class="btn btn-ghost btn-block" id="set-coach">${icons.spark} Generate / adapt plan (ask Coach)</button>
+          <button class="btn btn-outline btn-block" id="set-export">${icons.download} Export plan.json</button>
+          <button class="btn btn-outline btn-block" id="set-hyrox">${icons.hyrox} View HYROX results</button>
+        </div>
+      </div>
+    </div>
+  </div></div>`;
+
+  on('gh-save', 'click', () => {
+    const v = val('gh-token');
+    if (!v) { toast('err', 'Empty token', 'Paste a token before saving.'); return; }
+    githubToken.set(v);
+    toast('ok', 'Token saved', 'GitHub actions are now enabled.');
+    renderSettings(page);
+  });
+  on('gh-clear', 'click', () => { githubToken.clear(); toast('info', 'Token removed', 'GitHub actions disabled.'); renderSettings(page); });
+  on('gh-test', 'click', e => withBusy(e.currentTarget, 'Testing…', async () => {
+    const res = await fetch(`https://api.github.com/repos/${REPO}`, { headers: ghHeaders() });
+    if (res.ok) { const j = await res.json(); toast('ok', 'Connected', `Authenticated for ${escHtml(j.full_name || REPO)}.`); }
+    else throw new Error(await ghError(res));
+  }));
+  on('set-sync', 'click', e => syncFromGarmin(e.currentTarget));
+  on('set-coach', 'click', () => openCoachModal());
+  on('set-export', 'click', () => { planStore.export(); toast('ok', 'Exported', 'plan.json downloaded.'); });
+  on('set-hyrox', 'click', () => goTab('hyrox'));
+}
+
+// ═══════════════════════════════════════════════════════
+// UTILITIES (preserved)
 // ═══════════════════════════════════════════════════════
 function on(id, event, handler) { document.getElementById(id)?.addEventListener(event, handler); }
 function val(id) { return (document.getElementById(id)?.value || '').trim(); }
-function disableBtn(id) { const b = document.getElementById(id); if (b) { b.disabled = true; b.textContent = '...'; } }
-function enableBtn(id, text) { const b = document.getElementById(id); if (b) { b.disabled = false; b.textContent = text; } }
-function escHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-
-function metricCard(label, value, sub) {
-  return `<div class="metric"><div class="metric-label">${label}</div><div class="metric-value">${value}</div>${sub ? `<div class="metric-sub">${sub}</div>` : ''}</div>`;
-}
+function escHtml(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
 
 function labelValue(label, value) {
-  if (!value) return '';
-  return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:.85rem">
-    <span style="color:var(--text-2)">${label}</span>
-    <span style="font-weight:500">${value}</span>
-  </div>`;
+  if (value == null || value === '') return '';
+  return `<div class="lv"><span class="lv-label">${label}</span><span class="lv-val">${escHtml(String(value))}</span></div>`;
 }
-
 function detailItem(value, label) {
   return `<div class="detail-item"><div class="d-val">${value}</div><div class="d-lbl">${label}</div></div>`;
+}
+function metricCard(label, value, sub) {
+  return `<div class="stat"><div class="stat-label">${label}</div><div class="stat-value">${value}</div>${sub ? `<div class="stat-sub">${escHtml(sub)}</div>` : ''}</div>`;
 }
 
 function formatPace(secPerKm) {
   if (!secPerKm || secPerKm <= 0) return '—';
-  const m = Math.floor(secPerKm / 60);
-  const s = Math.round(secPerKm % 60);
-  return `${m}:${String(s).padStart(2, '0')}`;
+  const m = Math.floor(secPerKm / 60); const s = Math.round(secPerKm % 60);
+  return `${m}:${String(s).padStart(2,'0')}`;
 }
-
 function formatSeconds(totalSec) {
   if (!totalSec || totalSec <= 0) return '—';
-  const h = Math.floor(totalSec / 3600);
-  const m = Math.floor((totalSec % 3600) / 60);
-  const s = Math.round(totalSec % 60);
-  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  return `${m}:${String(s).padStart(2, '0')}`;
+  const h = Math.floor(totalSec/3600), m = Math.floor((totalSec%3600)/60), s = Math.round(totalSec%60);
+  if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  return `${m}:${String(s).padStart(2,'0')}`;
 }
-
 function formatTimeAgo(iso) {
   if (!iso) return '';
   const diff = (Date.now() - new Date(iso).getTime()) / 1000;
   if (diff < 60) return 'just now';
-  if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
-  if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
-  if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+  if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+  if (diff < 604800) return Math.floor(diff/86400) + 'd ago';
   return new Date(iso).toLocaleDateString();
 }
 
-function formatMarkdown(text) {
-  return escHtml(text)
-    .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
-    .replace(/\n/g, '<br>');
-}
-
-function openSheet(content) {
-  document.querySelectorAll('.sheet-overlay').forEach(e => e.remove());
-  document.body.insertAdjacentHTML('beforeend', `
-    <div class="sheet-overlay open" id="sheet-overlay">
-      <div class="sheet"><div class="sheet-handle"></div>${content}</div>
-    </div>`);
-  on('sheet-overlay', 'click', (e) => { if (e.target.id === 'sheet-overlay') e.target.remove(); });
-}
-
 // ── Boot ───────────────────────────────────────────────
+try { const u = JSON.parse(localStorage.getItem('pf_user') || 'null'); if (u && u.name) state.user = u; } catch {}
 render();
 </script>
 </body>
