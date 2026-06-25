@@ -30,6 +30,7 @@ def _write(name: str, payload: object) -> None:
 
 def main() -> int:
     _write("analytics.json", actions.analyze())
+    _write("fitness.json", actions.fitness())
 
     hyrox = json.loads((DATA / "hyrox.json").read_text())
     analyses = [
