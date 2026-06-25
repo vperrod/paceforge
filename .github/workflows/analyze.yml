@@ -54,10 +54,12 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Owner-gated CI job — let the coach actually run paceforge/git and write files.
+          claude_args: '--allowedTools "Bash,Read,Write,Edit,MultiEdit,Glob,Grep,TodoWrite"'
           prompt: |
             Use the coach skill in .claude/skills/coach/ — the "Per-activity analysis"
             section. Write data/analyses/{id}.md for each of these Garmin activity ids
             that doesn't have one yet: ${{ steps.pending.outputs.ids }}.
             Use data/activities.json, data/details/{id}.json, the matched plan workout
             in data/plan.json, and data/profile.json. Be specific (real pace/HR/distance
-            numbers). Then commit the new data/analyses/*.md files.
+            numbers). Then commit the new data/analyses/*.md files and push to master.
