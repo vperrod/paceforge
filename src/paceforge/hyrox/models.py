@@ -10,6 +10,8 @@ class HyroxSplit(BaseModel):
 
     name: str = Field(description="Segment name, e.g. 'Running_1', 'SkiErg_1000m'")
     time_seconds: float | None = Field(None, description="Time in seconds (None if N/A)")
+    rank: str = Field("", description="Rank for this segment within the field")
+    field_size: str = Field("", description="Number of athletes in the ranked field")
 
 
 class HyroxRaceResult(BaseModel):
@@ -18,6 +20,7 @@ class HyroxRaceResult(BaseModel):
     rank: str = ""
     rank_gender: str = ""
     rank_age_group: str = ""
+    field_size: str = Field("", description="Athletes in the gender field for this race")
     name: str = ""
     nationality: str = ""
     city: str = Field("", description="Race city / event name")

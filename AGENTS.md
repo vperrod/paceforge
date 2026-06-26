@@ -23,7 +23,7 @@ src/paceforge/
 │   ├── strength.py           # HYROX stations, hybrid balance (needs benchmarks)
 │   └── limiters.py           # ranks limiters → coach_input contract
 ├── garmin/client.py  # reads metrics + per-sample series, uploads workouts
-└── hyrox/            # scraper.py (results.hyrox.com), analyzer.py (vs field benchmarks)
+└── hyrox/            # hyresult.py (per-race ranks+splits via hyresult.com), analyzer.py (vs field benchmarks)
 web/index.html        # the GitHub Pages dashboard (reads committed data/*.json)
 scripts/build_site_data.py  # precomputes analytics/fitness/hyrox_analysis.json for the web (CI)
 data/                 # profile.json, plan.json, activities.json, history.jsonl,
@@ -35,8 +35,10 @@ data/                 # profile.json, plan.json, activities.json, history.jsonl,
 The browser dispatches a GitHub Action with the user's PAT → the Action runs a CLI command
 that writes `data/*.json` + commits → `pages.yml` (which reacts to those workflows in its
 `workflow_run` list) rebuilds and redeploys. Mirror this for any new browser-driven write:
-- `hyrox.yml` → `paceforge hyrox-search|hyrox-import` → `data/hyrox_preview.json` (pick-list
-  the UI polls on raw.githubusercontent.com) then `data/hyrox.json`.
+- `hyrox-import-profile <slug>` → `data/hyrox.json` from a hyresult.com athlete profile
+  (the source of truth: results.hyrox.com's season-overall ranking drops races and reports
+  season-cumulative ranks; hyresult has every race with per-race Overall + Age-group ranks
+  and full splits). The legacy `hyrox.yml`/`hyrox-search` name-search path remains for now.
 - `save-events.yml` → `data/events.json`.
 - `build_site_data.py` derives `data/hyrox_analysis.json` (`{races, priorities, progression}`)
   from `hyrox.json` at deploy time.
@@ -50,7 +52,7 @@ Never invent paces — the engine derives them.
 ```bash
 .venv/bin/ruff check src/ tests/    # lint (must pass before commit)
 .venv/bin/pytest tests/ -q          # tests (must pass before push)
-.venv/bin/paceforge sync|analyze|plan|validate|push|status|hyrox-search|hyrox-import
+.venv/bin/paceforge sync|analyze|plan|validate|push|status|hyrox-import-profile
 ```
 
 ## Conventions

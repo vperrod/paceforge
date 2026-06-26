@@ -2309,11 +2309,20 @@ function pill(text, color) {
   return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:.72rem;font-weight:600;padding:3px 9px;border-radius:99px;background:color-mix(in srgb,${color} 16%,transparent);color:${color}">${text}</span>`;
 }
 
+// Per-race ranks: Overall (position in the gender field) + Age-group.
+// results.hyrox.com only had a season-cumulative number; hyresult gives these per race.
+function hyroxRankText(r) {
+  const parts = [];
+  if (r.rank) parts.push('#' + r.rank + (r.field_size ? '/' + r.field_size : '') + ' overall');
+  if (r.rank_age_group) parts.push('#' + r.rank_age_group + (r.age_group ? ' in ' + r.age_group : ' AG'));
+  return parts.length ? ' · ' + parts.join(' · ') : '';
+}
+
 function hyroxRaceCard(r) {
   return `<div class="card" data-race="${escHtml(r.id)}" style="cursor:pointer">
     <div class="card-h"><div class="card-title" style="font-size:.95rem">${escHtml(r.city || r.event_date || 'Race')}</div>
       <span style="font-family:var(--font-m);font-weight:700;color:var(--emerald)">${escHtml(r.total_display || r.total_time_display || '—')}</span></div>
-    <div class="hint">${escHtml(r.event_date || '')}${r.division ? ' · ' + escHtml(r.division) : ''}${r.rank ? ' · rank ' + escHtml(String(r.rank)) : ''}</div>
+    <div class="hint">${escHtml(r.event_date || '')}${r.division ? ' · ' + escHtml(r.division) : ''}${hyroxRankText(r)}</div>
     <div style="display:flex;gap:7px;margin-top:11px;flex-wrap:wrap">
       ${pill('Run fade ' + r.fade_pct + '%', fadeColor(r.fade_pct))}
       ${pill('Run ' + r.running_pct + '%', 'var(--sky)')}
@@ -2419,6 +2428,15 @@ function hyroxRaceFeedback(r) {
 
 function hyroxDetailBody(r, coachMd) {
   const bar = (label, pct, color) => hrZoneLikeBar(label, pct, color);
+  const rankCell = (label, value, sub) => `<div style="flex:1;min-width:90px">
+      <div class="eyebrow">${label}</div>
+      <div style="font-family:var(--font-m);font-size:1.3rem;font-weight:700">${value}</div>
+      <div class="hint">${sub}</div></div>`;
+  const ranks = (r.rank || r.rank_age_group) ? fxCard('Placing', icons.hyrox, `
+    <div style="display:flex;gap:14px;flex-wrap:wrap">
+      ${r.rank ? rankCell('Overall', '#' + escHtml(String(r.rank)), r.field_size ? 'of ' + escHtml(String(r.field_size)) : '') : ''}
+      ${r.rank_age_group ? rankCell('Age group', '#' + escHtml(String(r.rank_age_group)), escHtml(r.age_group || r.division || '')) : ''}
+    </div>`) : '';
   const breakdown = fxCard('Time breakdown', icons.hyrox, `
     ${bar('Running', r.running_pct, 'var(--sky)')}
     ${bar('Stations', r.station_pct, 'var(--violet)')}
@@ -2459,12 +2477,12 @@ function hyroxDetailBody(r, coachMd) {
         <div class="hint" style="margin-bottom:10px">No written review yet. Ask the coach for a personalised breakdown of this race.</div>
         <button class="btn btn-outline btn-sm" id="hyrox-coach">${icons.spark} Ask coach to review this race</button></div>`;
 
-  return breakdown + feedback + table + coach;
+  return ranks + breakdown + feedback + table + coach;
 }
 
 function askCoachAboutRace(r) {
   const body =
-`**Race:** ${r.city || ''} (${r.event_date || ''}) — finish ${r.total_display || ''}, rank ${r.rank || '—'}.
+`**Race:** ${r.city || ''} (${r.event_date || ''}) — finish ${r.total_display || ''}, #${r.rank || '—'} overall${r.field_size ? '/' + r.field_size : ''}${r.rank_age_group ? `, #${r.rank_age_group} in ${r.age_group || 'AG'}` : ''}.
 
 **Please review this HYROX race and write \`data/analyses/hyrox-${r.id}.md\`:**
 - Biggest weaknesses vs the top-3 field and why.

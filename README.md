@@ -33,8 +33,9 @@ deployed by `pages.yml` and re-deployed automatically after each sync:
   charts over time (with an efficient-range band on cadence & stride), an HR-zone
   distribution, a pace histogram, per-km splits, planned-vs-actual, and a Claude-written
   coaching analysis.
-- **HYROX** — import your races from results.hyrox.com (Settings → search by name, tick
-  which are yours), then open each race for a full breakdown: time split running vs
+- **HYROX** — import every race from your hyresult.com athlete profile (`paceforge
+  hyrox-import-profile <slug>`), then open each race for a full breakdown: per-race
+  Overall and Age-group placing, time split running vs
   stations vs roxzone, every split vs the field & top-3 average, a deterministic coach
   read (weaknesses, pacing mistakes, strengths), an optional Claude-written race review,
   and a cross-race **progression** view (finish-time trend, per-station evolution, and
@@ -84,8 +85,8 @@ paceforge plan --goal MARATHON --date 2026-10-04 --level intermediate
 paceforge validate                          # check data/plan.json against the rules
 paceforge push --dry-run                    # preview the week's workouts
 paceforge push                              # upload to Garmin
-paceforge hyrox-search "Surname" --gender M # find your HYROX races (pick-list)
-paceforge hyrox-import "Surname" --urls ... # import chosen races with full splits
+paceforge hyrox-import-profile <slug>       # import all races from a hyresult.com profile
+paceforge hyrox-search "Surname" --gender M # (legacy) results.hyrox.com name search
 ```
 
 Or just ask Claude: *"sync and review my week"*, *"build my marathon block"*,

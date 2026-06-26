@@ -53,6 +53,11 @@ def main(argv: list[str] | None = None) -> int:
         if cmd == "hyrox-import":
             p.add_argument("--urls", default="", help="comma-separated athlete URLs to import")
 
+    p_hp = sub.add_parser("hyrox-import-profile",
+                          help="import every race from a hyresult.com athlete profile")
+    p_hp.add_argument("slug", help="hyresult athlete slug, e.g. victor-perez-rodriguez")
+    p_hp.add_argument("--gender", default="M", choices=["M", "F"])
+
     args = parser.parse_args(argv)
 
     try:
@@ -92,6 +97,8 @@ def main(argv: list[str] | None = None) -> int:
             urls = [u.strip() for u in args.urls.split(",") if u.strip()] or None
             _emit(actions.hyrox_import(
                 args.name, gender=args.gender, firstname=args.firstname, selected_urls=urls))
+        elif args.cmd == "hyrox-import-profile":
+            _emit(actions.hyrox_import_profile(args.slug, gender=args.gender))
     except (RuntimeError, KeyError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 1
