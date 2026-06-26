@@ -144,7 +144,7 @@ def _extract_series(metrics: dict, max_points: int = 120) -> list | None:
         m = row.get("metrics") if isinstance(row, dict) else None
         if not isinstance(m, list):
             continue
-        def at(i):
+        def at(i, m=m):
             return m[i] if (i is not None and i < len(m)) else None
         hr, sp, t = at(hr_i), at(sp_i), at(t_i)
         cad = at(cad_i)
@@ -297,6 +297,68 @@ def fitness() -> dict:
         store.load_hyrox_results(), store.load_benchmarks(), profile, activities, details)
     limiters = rank_limiters(running, load, strength)
     return {"running": running, "load": load, "strength": strength, **limiters}
+
+
+# ── HYROX race import (results.hyrox.com) ────────────────────────────
+
+
+def hyrox_search(name: str, *, gender: str = "M", firstname: str = "") -> dict:
+    """Search results.hyrox.com for an athlete; write data/hyrox_preview.json.
+
+    Returns a pick-list (no split fetches) the web UI renders so the athlete can
+    confirm which races are actually theirs before importing.
+    """
+    from datetime import datetime
+
+    from paceforge.hyrox.scraper import HyroxScraper
+
+    scraper = HyroxScraper()
+    try:
+        summaries = scraper.search_preview(name, firstname=firstname, gender=gender)
+    finally:
+        scraper.close()
+
+    preview = {
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "query": {"name": name, "gender": gender, "firstname": firstname},
+        "results": [
+            {
+                "name": s.get("name", ""),
+                "city": s.get("city", ""),
+                "event_date": s.get("city_raw", "") or s.get("city", ""),
+                "total_time": s.get("total_time", ""),
+                "rank": s.get("rank", ""),
+                "athlete_url": s.get("athlete_url", ""),
+            }
+            for s in summaries
+        ],
+    }
+    store.save_hyrox_preview(preview)
+    return preview
+
+
+def hyrox_import(
+    name: str,
+    *,
+    gender: str = "M",
+    firstname: str = "",
+    selected_urls: list[str] | None = None,
+) -> dict:
+    """Fetch full race splits for the chosen athlete URLs; write data/hyrox.json."""
+    from paceforge.hyrox.scraper import HyroxScraper, to_cached_dict
+
+    scraper = HyroxScraper()
+    try:
+        results = scraper.search_athlete(
+            name, firstname=firstname, gender=gender, selected_urls=selected_urls
+        )
+    finally:
+        scraper.close()
+
+    store.save_hyrox_results(
+        to_cached_dict(results, search_name=name, search_gender=gender)
+    )
+    return {"imported": len(results), "races": [r.city or r.event_date for r in results]}
 
 
 def validate() -> list[str]:

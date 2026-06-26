@@ -539,3 +539,14 @@ class HyroxScraper:
                     ))
                     break
         return splits
+
+
+def to_cached_dict(
+    results: list[HyroxRaceResult], *, search_name: str, search_gender: str
+) -> dict:
+    """Wrap scraped results in the persisted shape store.load_hyrox_results reads."""
+    return {
+        "search_name": search_name,
+        "search_gender": search_gender,
+        "results": [r.model_dump(mode="json") for r in results],
+    }

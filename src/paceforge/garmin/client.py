@@ -17,6 +17,7 @@ from garminconnect.workout import (
     create_repeat_group,
 )
 
+from paceforge.engine.analytics import _normalize_lt_speed
 from paceforge.models.plan import (
     Workout,
     WorkoutStepType,
@@ -28,7 +29,6 @@ from paceforge.models.profile import (
     RecentActivity,
     UserFitnessProfile,
 )
-from paceforge.engine.analytics import _normalize_lt_speed
 
 logger = logging.getLogger(__name__)
 

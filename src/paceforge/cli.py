@@ -44,6 +44,15 @@ def main(argv: list[str] | None = None) -> int:
     p_push.add_argument("--week", type=int, default=None)
     p_push.add_argument("--dry-run", action="store_true")
 
+    for cmd, help_ in (("hyrox-search", "find your HYROX races (pick-list)"),
+                       ("hyrox-import", "import chosen HYROX races with splits")):
+        p = sub.add_parser(cmd, help=help_)
+        p.add_argument("name", help="athlete surname or full name")
+        p.add_argument("--firstname", default="")
+        p.add_argument("--gender", default="M", choices=["M", "F"])
+        if cmd == "hyrox-import":
+            p.add_argument("--urls", default="", help="comma-separated athlete URLs to import")
+
     args = parser.parse_args(argv)
 
     try:
@@ -77,6 +86,12 @@ def main(argv: list[str] | None = None) -> int:
             print("valid")
         elif args.cmd == "push":
             _emit(actions.push(week=args.week, dry_run=args.dry_run))
+        elif args.cmd == "hyrox-search":
+            _emit(actions.hyrox_search(args.name, gender=args.gender, firstname=args.firstname))
+        elif args.cmd == "hyrox-import":
+            urls = [u.strip() for u in args.urls.split(",") if u.strip()] or None
+            _emit(actions.hyrox_import(
+                args.name, gender=args.gender, firstname=args.firstname, selected_urls=urls))
     except (RuntimeError, KeyError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 1

@@ -254,11 +254,11 @@ a{color:var(--emerald);text-decoration:none}
 .settings-value{font-size:.85rem;color:var(--text-2);font-family:var(--font-m)}
 .field{margin-bottom:14px}
 .field label{display:block;font-size:.8rem;font-weight:600;color:var(--text-2);margin-bottom:7px}
-.field input,.field textarea,.field select,.bm-field input{
+.field input,.field textarea,.field select,.bm-field input,.ev-row input,.ev-row select{
   width:100%;background:var(--bg-2);color:var(--text);border:1px solid var(--border);border-radius:var(--r-sm);
   padding:12px 14px;font-size:.92rem;outline:none;transition:border-color var(--t-fast);
 }
-.field input:focus,.field textarea:focus,.field select:focus,.bm-field input:focus{border-color:var(--emerald)}
+.field input:focus,.field textarea:focus,.field select:focus,.bm-field input:focus,.ev-row input:focus,.ev-row select:focus{border-color:var(--emerald)}
 .field .hint{font-size:.74rem;color:var(--text-3);margin-top:6px;line-height:1.45}
 .mono-input{font-family:var(--font-m)}
 .conn-status{display:inline-flex;align-items:center;gap:7px;font-size:.82rem;font-weight:600;padding:5px 11px;border-radius:var(--r-pill)}
@@ -463,7 +463,6 @@ async function apiJson(path, opts = {}) {
     case '/auth/profile': return profileMeta();
     case '/garmin/status': { const pr = await loadJSON('profile.json').catch(() => null); return { connected: !!(pr && pr.profile_date) }; }
     case '/weekly-overview': return loadJSON('weekly.json').catch(() => ({ content: null }));
-    case '/hyrox/results': return hyroxResults();
     case '/feed': return feedFromActivities();
     default:
       if (p.startsWith('/feed/')) return [];
@@ -477,18 +476,6 @@ async function profileMeta() {
     name: state.user.name, email: state.user.email, role: 'user', status: 'active',
     garmin_email: state.user.email, created_at: pr.profile_date || '',
   };
-}
-
-async function hyroxResults() {
-  const h = await loadJSON('hyrox.json').catch(() => ({ results: [] }));
-  return (h.results || []).map(r => ({
-    race_name: r.event_date || r.city || 'Race',
-    overall_time: r.total_time_display || '',
-    stations: (r.splits || []).map(s => ({
-      name: (s.name || '').replace(/_/g, ' '),
-      time: formatSeconds(s.time_seconds),
-    })),
-  }));
 }
 
 async function feedFromActivities() {
@@ -657,6 +644,13 @@ function openCoachModal(prefillWeek) {
 
 ${prefillWeek ? `**Focus week:** ${prefillWeek}\n` : ''}_Generated from the PaceForge dashboard. Edit freely before submitting._`;
 
+  openCoachIssueModal('Coach: build/adapt my plan', defaultBody);
+}
+
+// Shared coach-issue modal: a title + Markdown body the user can edit, posted as a
+// `coach`-labelled GitHub issue that triggers the coach workflow.
+function openCoachIssueModal(title, body) {
+  if (!requireToken()) return;
   openModal(`
     <div class="modal-h">
       <div>
@@ -667,11 +661,11 @@ ${prefillWeek ? `**Focus week:** ${prefillWeek}\n` : ''}_Generated from the Pace
     </div>
     <div class="field">
       <label for="coach-title">Issue title</label>
-      <input id="coach-title" value="Coach: build/adapt my plan">
+      <input id="coach-title" value="${escHtml(title)}">
     </div>
     <div class="field">
       <label for="coach-body">Request (Markdown)</label>
-      <textarea id="coach-body" rows="11" class="mono-input" style="font-size:.82rem;line-height:1.5">${escHtml(defaultBody)}</textarea>
+      <textarea id="coach-body" rows="11" class="mono-input" style="font-size:.82rem;line-height:1.5">${escHtml(body)}</textarea>
       <div class="hint">This is posted to <b>${REPO}</b> issues. The coach workflow reads it and responds.</div>
     </div>
     <div class="modal-foot">
@@ -899,11 +893,12 @@ function emptyState(title, sub, icon) {
 // VIEW: OVERVIEW (dashboard)
 // ═══════════════════════════════════════════════════════
 async function renderHome(page) {
-  const [analytics, activities, plan, profile] = await Promise.all([
+  const [analytics, activities, plan, profile, events] = await Promise.all([
     cached('analytics', () => apiJson('/profile/analytics').catch(() => null)),
     cached('activities', () => apiJson('/activities').catch(() => [])),
     cached('plans', () => apiJson('/plans').catch(() => [])).then(p => p[0] || null),
     loadJSON('profile.json').catch(() => ({})),
+    loadJSON('events.json').catch(() => []),
   ]);
 
   const a = analytics || {}, snap = a.snapshot || {}, aero = a.aerobic || {}, lr = a.load_recovery || {}, rp = a.race_predictions || {};
@@ -928,6 +923,7 @@ async function renderHome(page) {
     </div>
 
     <div class="dash-grid mt">
+      ${upcomingEventsCard(events) ? `<div class="span-12">${upcomingEventsCard(events)}</div>` : ''}
       <div class="span-7">${recentActivitiesCard(activities)}</div>
       <div class="span-5">${thisWeekCard(plan)}</div>
       <div class="span-5">${racePredictionsCard(rp)}</div>
@@ -948,6 +944,23 @@ function statCard(s) {
     <div class="stat-value">${s.value}${s.unit ? `<span class="unit">${s.unit}</span>` : ''}</div>
     ${s.sub ? `<div class="stat-sub"><span class="chip"><span class="dotmark"></span>${escHtml(s.sub)}</span></div>` : ''}
   </div>`;
+}
+
+function upcomingEventsCard(events) {
+  const today = new Date().toISOString().slice(0, 10);
+  const upcoming = (events || []).filter(e => e.date && e.date >= today)
+    .sort((a, b) => a.date.localeCompare(b.date)).slice(0, 3);
+  if (!upcoming.length) return '';
+  const items = upcoming.map(e => {
+    const days = Math.round((new Date(e.date + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000);
+    const col = days <= 14 ? 'var(--rose)' : days <= 42 ? 'var(--amber)' : 'var(--emerald)';
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border-s)">
+      <div><div style="font-weight:600;font-size:.9rem">${escHtml(e.name || e.type || 'Event')}</div>
+        <div class="hint">${escHtml(e.date)}${e.type ? ' · ' + escHtml(e.type) : ''}${e.goal_time ? ' · goal ' + escHtml(e.goal_time) : ''}</div></div>
+      <div style="text-align:right"><div style="font-size:1.3rem;font-weight:700;color:${col}">${days}</div><div class="hint">${days === 1 ? 'day' : 'days'}</div></div>
+    </div>`;
+  }).join('');
+  return `<div class="card"><div class="card-h"><div class="card-title"><span class="ico">${icons.calendar}</span>Upcoming events</div></div>${items}</div>`;
 }
 
 function recentActivitiesCard(activities) {
@@ -1847,10 +1860,20 @@ async function renderCalendar(page) {
   let viewYear = now.getFullYear(), viewMonth = now.getMonth();
   const calEntries = {};
 
-  const [plan, activities] = await Promise.all([
+  const [plan, activities, events] = await Promise.all([
     planStore.get().catch(() => null),
     cached('activities', () => apiJson('/activities').catch(() => [])),
+    loadJSON('events.json').catch(() => []),
   ]);
+
+  for (const ev of events || []) {
+    if (!ev.date) continue;
+    (calEntries[ev.date] ||= []).push({
+      type: 'event', color: 'var(--rose)',
+      title: '🏁 ' + (ev.name || ev.type || 'Event'),
+      sub: [ev.type, ev.goal_time ? 'goal ' + ev.goal_time : ''].filter(Boolean).join(' · '),
+    });
+  }
 
   // Index activities + which ones a plan workout already claims, so a matched run
   // shows as ONE entry (the workout, opening its actual activity) — not two.
@@ -2262,13 +2285,194 @@ function renderWorkoutDetail(container, wo, { onBack } = {}) {
 // VIEW: HYROX
 // ═══════════════════════════════════════════════════════
 async function renderHyroxPage(page) {
-  const results = await apiJson('/hyrox/results').catch(() => []);
-  if (!results || !results.length) { page.innerHTML = `<div class="fade-in">${emptyState('No HYROX results yet', 'Race results appear here after sync.', icons.hyrox)}</div>`; return; }
-  page.innerHTML = `<div class="fade-in"><div class="grid cols-auto">${results.map(race => `
-    <div class="card">
-      <div class="card-h"><div class="card-title" style="font-size:.95rem">${escHtml(race.race_name || 'Race')}</div>${race.overall_time ? `<span style="font-family:var(--font-m);font-weight:700;color:var(--emerald)">${race.overall_time}</span>` : ''}</div>
-      ${(race.stations || []).map(s => `<div class="hyrox-station"><span class="hyrox-name">${escHtml(s.name || s.station || '')}</span><span class="hyrox-time">${s.time || ''}</span></div>`).join('')}
-    </div>`).join('')}</div></div>`;
+  let data = null;
+  try { data = await loadJSON('hyrox_analysis.json'); } catch {}
+  const races = (data && data.races) || [];
+  if (!races.length) {
+    page.innerHTML = `<div class="fade-in">${emptyState('No HYROX races yet', 'Import your races in <b>Settings → HYROX races</b>.', icons.hyrox)}</div>`;
+    return;
+  }
+  const ordered = [...races].sort((a, b) => String(b.event_date).localeCompare(String(a.event_date)));
+  page.innerHTML = `<div class="fade-in">
+    ${hyroxProgressionSection(data.progression, data.priorities)}
+    <div class="eyebrow" style="margin:22px 0 12px">Your races</div>
+    <div class="grid cols-auto">${ordered.map(hyroxRaceCard).join('')}</div>
+  </div>`;
+  page.querySelectorAll('[data-race]').forEach(el =>
+    el.addEventListener('click', () => openHyroxRace(el.dataset.race)));
+}
+
+function fadeColor(pct) {
+  return pct >= 15 ? 'var(--rose)' : pct >= 8 ? 'var(--amber)' : 'var(--emerald)';
+}
+function pill(text, color) {
+  return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:.72rem;font-weight:600;padding:3px 9px;border-radius:99px;background:color-mix(in srgb,${color} 16%,transparent);color:${color}">${text}</span>`;
+}
+
+function hyroxRaceCard(r) {
+  return `<div class="card" data-race="${escHtml(r.id)}" style="cursor:pointer">
+    <div class="card-h"><div class="card-title" style="font-size:.95rem">${escHtml(r.city || r.event_date || 'Race')}</div>
+      <span style="font-family:var(--font-m);font-weight:700;color:var(--emerald)">${escHtml(r.total_display || r.total_time_display || '—')}</span></div>
+    <div class="hint">${escHtml(r.event_date || '')}${r.division ? ' · ' + escHtml(r.division) : ''}${r.rank ? ' · rank ' + escHtml(String(r.rank)) : ''}</div>
+    <div style="display:flex;gap:7px;margin-top:11px;flex-wrap:wrap">
+      ${pill('Run fade ' + r.fade_pct + '%', fadeColor(r.fade_pct))}
+      ${pill('Run ' + r.running_pct + '%', 'var(--sky)')}
+      ${pill('Stations ' + r.station_pct + '%', 'var(--violet)')}
+    </div>
+    <div class="hint" style="margin-top:10px;color:var(--text-3)">${escHtml(r.running_class || '')} · tap for full analysis →</div>
+  </div>`;
+}
+
+// ── Progression / evolution across all races ──
+function sparkline(values, { width = 220, height = 44 } = {}) {
+  const v = (values || []).filter(x => x != null);
+  if (v.length < 2) return '';
+  const min = Math.min(...v), max = Math.max(...v), span = (max - min) || 1;
+  const dx = width / (v.length - 1);
+  const pts = v.map((x, i) => `${(i * dx).toFixed(1)},${(height - ((x - min) / span) * height).toFixed(1)}`);
+  return `<svg viewBox="0 0 ${width} ${height}" width="100%" height="${height}" preserveAspectRatio="none" style="overflow:visible">
+    <polyline fill="none" stroke="var(--emerald)" stroke-width="2" points="${pts.join(' ')}"/>
+    ${pts.map(p => `<circle cx="${p.split(',')[0]}" cy="${p.split(',')[1]}" r="2.5" fill="var(--emerald)"/>`).join('')}
+  </svg>`;
+}
+
+function hyroxProgressionSection(prog, priorities) {
+  if (!prog || !prog.num_races) return '';
+  const best = prog.best_race;
+  const improvingPill = prog.num_races >= 3
+    ? pill(prog.improving ? 'Improving' : 'Plateauing', prog.improving ? 'var(--emerald)' : 'var(--amber)')
+    : '';
+  // Station progression: most improved first (positive improvement_seconds = got faster).
+  const sc = (prog.station_comparison || []).filter(s => s.improvement_seconds != null);
+  sc.sort((a, b) => b.improvement_seconds - a.improvement_seconds);
+  const stationRows = sc.map(s => {
+    const imp = s.improvement_seconds;
+    const col = imp > 1 ? 'var(--emerald)' : imp < -1 ? 'var(--rose)' : 'var(--text-3)';
+    const sign = imp > 0 ? '−' : imp < 0 ? '+' : '±';
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border-s)">
+      <span style="font-size:.84rem">${escHtml(s.display)}</span>
+      <span style="display:flex;gap:12px;align-items:center">
+        <span class="hint">best ${escHtml(s.best_display)}</span>
+        <span style="font-family:var(--font-m);font-size:.8rem;font-weight:600;color:${col};min-width:54px;text-align:right">${sign}${Math.abs(Math.round(imp))}s</span>
+      </span></div>`;
+  }).join('');
+  const focus = (priorities || []).slice(0, 4).map(p =>
+    `<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border-s)">
+      <span style="font-size:.84rem;font-weight:500">${escHtml(p.display)}</span>
+      <span class="hint">${p.gap_seconds > 0 ? '+' + Math.round(p.gap_seconds) + 's vs top-3 (' + p.gap_pct + '%)' : 'at top-3 level'}</span>
+    </div>`).join('');
+
+  return `<div class="dash-grid">
+    <div class="span-6"><div class="card" style="height:100%">
+      <div class="card-h"><div class="card-title"><span class="ico">${icons.hyrox}</span>Progression</div>${improvingPill}</div>
+      <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:6px">
+        <div><div class="hint">Races</div><div style="font-size:1.4rem;font-weight:700">${prog.num_races}</div></div>
+        ${best ? `<div><div class="hint">Best</div><div style="font-size:1.4rem;font-weight:700;color:var(--emerald)">${escHtml(best.total_display)}</div><div class="hint">${escHtml(best.event_date)}</div></div>` : ''}
+      </div>
+      <div class="hint" style="margin-top:8px">Finish-time trend (lower is better)</div>
+      ${sparkline(prog.total_trend)}
+    </div></div>
+    <div class="span-6"><div class="card" style="height:100%">
+      <div class="card-h"><div class="card-title"><span class="ico">${icons.spark}</span>Focus for next race</div></div>
+      <div class="hint" style="margin-bottom:6px">Biggest gaps to the top-3 field in your latest race.</div>
+      ${focus || '<div class="hint">No priorities computed.</div>'}
+    </div></div>
+    ${stationRows ? `<div class="span-12"><div class="card">
+      <div class="card-h"><div class="card-title">Station evolution — first race → latest</div></div>
+      ${stationRows}</div></div>` : ''}
+  </div>`;
+}
+
+// ── Single-race detail ──
+async function openHyroxRace(id) {
+  const page = document.getElementById('page-content');
+  if (!page) return;
+  let data = null; try { data = await loadJSON('hyrox_analysis.json'); } catch {}
+  const r = ((data && data.races) || []).find(x => x.id === id);
+  if (!r) { goTab('hyrox'); return; }
+  let coachMd = null; try { coachMd = await loadText(`analyses/hyrox-${id}.md`); } catch {}
+  setTopbar(r.city || 'Race', 'HYROX race detail', '');
+  page.innerHTML = `<div class="fade-in">
+    <div class="detail-head">
+      <button class="btn btn-ghost btn-sm" data-back>${icons.back} Back</button>
+      <div><div class="detail-h-title">${escHtml(r.city || 'Race')}</div>
+        <div class="detail-h-sub">${escHtml(r.event_date || '')}${r.division ? ' · ' + escHtml(r.division) : ''}${r.rank ? ' · rank ' + escHtml(String(r.rank)) : ''} · ${escHtml(r.total_display || '')}</div></div>
+    </div>
+    ${hyroxDetailBody(r, coachMd)}
+  </div>`;
+  page.querySelector('[data-back]')?.addEventListener('click', () => goTab('hyrox'));
+  on('hyrox-coach', 'click', () => askCoachAboutRace(r));
+  document.querySelector('.page')?.scrollTo({ top: 0 });
+}
+
+function hyroxRaceFeedback(r) {
+  const sa = r.split_analysis || [];
+  const behind = sa.filter(s => s.gap_vs_top3 != null && s.gap_vs_top3 > 0)
+    .sort((a, b) => b.gap_vs_top3 - a.gap_vs_top3).slice(0, 3);
+  const ahead = sa.filter(s => s.beats_top3).slice(0, 3);
+  const mistakes = [];
+  if (r.fade_pct >= 15) mistakes.push(`Severe run fade (${r.fade_pct}%) — you went out too hot. Even pacing across the 8 runs is your biggest free time.`);
+  else if (r.fade_pct >= 8) mistakes.push(`Moderate run fade (${r.fade_pct}%) — a positive split. Hold the first two runs ~10s/km easier.`);
+  if (r.roxzone_pct >= 8) mistakes.push(`Roxzone is ${r.roxzone_pct}% of your race (${r.roxzone_display}) — slow transitions. Drill station entries/exits and walk-to-work tempo.`);
+  return { behind, ahead, mistakes };
+}
+
+function hyroxDetailBody(r, coachMd) {
+  const bar = (label, pct, color) => hrZoneLikeBar(label, pct, color);
+  const breakdown = fxCard('Time breakdown', icons.hyrox, `
+    ${bar('Running', r.running_pct, 'var(--sky)')}
+    ${bar('Stations', r.station_pct, 'var(--violet)')}
+    ${bar('Roxzone', r.roxzone_pct, 'var(--amber)')}
+    <div class="hint" style="margin-top:8px">Running ${escHtml(r.total_running_display)} · Stations ${escHtml(r.total_stations_display)} · Roxzone ${escHtml(r.roxzone_display)} · avg run ${escHtml(r.avg_run_pace_display)}</div>`);
+
+  const fb = hyroxRaceFeedback(r);
+  const fbItem = (txt, color) => `<div style="display:flex;gap:9px;padding:6px 0"><span style="color:${color};font-weight:700">•</span><span style="font-size:.85rem;line-height:1.45">${txt}</span></div>`;
+  const feedback = fxCard('Coach read — what to fix', icons.spark, `
+    ${fb.behind.length ? `<div class="eyebrow" style="margin-bottom:4px">Weaknesses</div>${fb.behind.map(s => fbItem(`<b>${escHtml(s.display)}</b> — ${Math.round(s.gap_vs_top3)}s behind the top-3 (${escHtml(s.athlete_display)} vs ${escHtml(s.top3_avg_display)}).`, 'var(--rose)')).join('')}` : ''}
+    ${fb.mistakes.length ? `<div class="eyebrow" style="margin:10px 0 4px">Pacing & execution</div>${fb.mistakes.map(m => fbItem(m, 'var(--amber)')).join('')}` : ''}
+    ${fb.ahead.length ? `<div class="eyebrow" style="margin:10px 0 4px">Strengths to protect</div>${fb.ahead.map(s => fbItem(`<b>${escHtml(s.display)}</b> — beating the top-3 (${escHtml(s.athlete_display)} vs ${escHtml(s.top3_avg_display)}).`, 'var(--emerald)')).join('')}` : ''}`);
+
+  const rows = (r.split_analysis || []).map(s => {
+    const col = s.beats_top3 ? 'var(--emerald)' : s.beats_field ? 'var(--amber)' : 'var(--rose)';
+    const gapTxt = s.gap_vs_top3 != null ? (s.gap_vs_top3 > 0 ? '+' : '') + Math.round(s.gap_vs_top3) + 's' : '—';
+    return `<tr>
+      <td style="padding:6px 8px;font-size:.83rem">${escHtml(s.display)}</td>
+      <td style="padding:6px 8px;font-family:var(--font-m);font-size:.82rem;text-align:right">${escHtml(s.athlete_display)}</td>
+      <td style="padding:6px 8px;font-family:var(--font-m);font-size:.82rem;text-align:right;color:var(--text-3)">${escHtml(s.field_avg_display)}</td>
+      <td style="padding:6px 8px;font-family:var(--font-m);font-size:.82rem;text-align:right;color:var(--text-3)">${escHtml(s.top3_avg_display)}</td>
+      <td style="padding:6px 8px;font-family:var(--font-m);font-size:.82rem;text-align:right;font-weight:600;color:${col}">${gapTxt}</td>
+    </tr>`;
+  }).join('');
+  const table = fxCard('Every split vs the field', icons.hyrox, `
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
+      <thead><tr style="border-bottom:1px solid var(--border)">
+        <th style="padding:6px 8px;text-align:left;font-size:.72rem;color:var(--text-3)">Split</th>
+        <th style="padding:6px 8px;text-align:right;font-size:.72rem;color:var(--text-3)">You</th>
+        <th style="padding:6px 8px;text-align:right;font-size:.72rem;color:var(--text-3)">Field</th>
+        <th style="padding:6px 8px;text-align:right;font-size:.72rem;color:var(--text-3)">Top-3</th>
+        <th style="padding:6px 8px;text-align:right;font-size:.72rem;color:var(--text-3)">vs Top-3</th>
+      </tr></thead><tbody>${rows}</tbody></table></div>`);
+
+  const coach = coachMd
+    ? `<div class="card mb"><div class="card-h"><div class="card-title"><span class="ico">${icons.spark}</span>Coach's race review</div></div><div class="act-analysis">${formatMarkdown(coachMd)}</div></div>`
+    : `<div class="card mb"><div class="card-h"><div class="card-title"><span class="ico">${icons.spark}</span>Coach's race review</div></div>
+        <div class="hint" style="margin-bottom:10px">No written review yet. Ask the coach for a personalised breakdown of this race.</div>
+        <button class="btn btn-outline btn-sm" id="hyrox-coach">${icons.spark} Ask coach to review this race</button></div>`;
+
+  return breakdown + feedback + table + coach;
+}
+
+function askCoachAboutRace(r) {
+  const body =
+`**Race:** ${r.city || ''} (${r.event_date || ''}) — finish ${r.total_display || ''}, rank ${r.rank || '—'}.
+
+**Please review this HYROX race and write \`data/analyses/hyrox-${r.id}.md\`:**
+- Biggest weaknesses vs the top-3 field and why.
+- Pacing/execution mistakes (run fade ${r.fade_pct}%, roxzone ${r.roxzone_display}).
+- 3 concrete things to train before my next race, tied to my current plan.
+
+_Generated from the PaceForge dashboard. Edit freely before submitting._`;
+  openCoachIssueModal(`Coach: review my ${r.city || 'HYROX'} race`, body);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -2306,6 +2510,7 @@ async function renderSettings(page) {
   try { const gs = await apiJson('/garmin/status'); garminStatus = gs.connected ? 'Connected' : 'Not connected'; } catch {}
   const tokenSet = githubToken.has();
   const lastRun = await fetchLastSyncRun();
+  const events = await loadJSON('events.json').catch(() => []);
   const dataAsOf = profile.created_at
     ? `${profile.created_at.slice(0, 10)} · ${formatTimeAgo(profile.created_at)}`
     : '—';
@@ -2357,6 +2562,9 @@ async function renderSettings(page) {
         </div>
       </div>
     </div>
+
+    <div class="span-12">${hyroxImportCard()}</div>
+    <div class="span-12">${eventsCard(events)}</div>
   </div></div>`;
 
   on('gh-save', 'click', () => {
@@ -2377,6 +2585,123 @@ async function renderSettings(page) {
   on('set-coach', 'click', () => openCoachModal());
   on('set-export', 'click', () => { planStore.export(); toast('ok', 'Exported', 'plan.json downloaded.'); });
   on('set-hyrox', 'click', () => goTab('hyrox'));
+  bindHyroxImport(page);
+  bindEventsCard(page);
+}
+
+// ── Settings: HYROX race import (search → pick → import) ──
+function hyroxImportCard() {
+  return `<div class="card">
+    <div class="card-h"><div class="card-title"><span class="ico">${icons.hyrox}</span>HYROX races</div></div>
+    <div class="hint" style="margin-bottom:12px">Pull your races from results.hyrox.com. Search by name, tick the ones that are yours, import. Needs a GitHub token (above).</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 90px auto;gap:10px;align-items:end">
+      <div class="field" style="margin:0"><label for="hx-name">Surname (or full name)</label><input id="hx-name" placeholder="Perez Rodriguez"></div>
+      <div class="field" style="margin:0"><label for="hx-first">First name (optional)</label><input id="hx-first" placeholder="Victor"></div>
+      <div class="field" style="margin:0"><label for="hx-gender">Gender</label><select id="hx-gender"><option value="M">M</option><option value="F">F</option></select></div>
+      <button class="btn btn-primary" id="hx-search">Find races</button>
+    </div>
+    <div class="hint" id="hx-status" style="margin-top:10px"></div>
+    <div id="hyrox-pick" style="margin-top:6px"></div>
+  </div>`;
+}
+
+async function dispatchHyrox(inputs) {
+  const res = await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/hyrox.yml/dispatches`,
+    { method: 'POST', headers: ghHeaders(), body: JSON.stringify({ ref: REF, inputs }) });
+  if (!res.ok && res.status !== 204) throw new Error(await ghError(res));
+}
+
+// Poll the committed preview file on raw (public, no Pages-deploy wait) until the
+// search workflow overwrites it (generated_at changes from what was there before).
+async function pollPreview(prevGen, { tries = 30, delay = 6000 } = {}) {
+  const url = `https://raw.githubusercontent.com/${REPO}/${REF}/data/hyrox_preview.json`;
+  for (let i = 0; i < tries; i++) {
+    await new Promise(r => setTimeout(r, delay));
+    try {
+      const res = await fetch(`${url}?t=${Date.now()}`, { cache: 'no-store' });
+      if (res.ok) {
+        const p = await res.json();
+        if (p.generated_at && p.generated_at !== prevGen) return p;
+      }
+    } catch {}
+  }
+  return null;
+}
+
+function bindHyroxImport(page) {
+  const status = page.querySelector('#hx-status');
+  const pick = page.querySelector('#hyrox-pick');
+  on('hx-search', 'click', e => withBusy(e.currentTarget, 'Searching…', async () => {
+    if (!requireToken()) return;
+    const name = val('hx-name');
+    if (!name) { toast('err', 'Name required', 'Enter your surname first.'); return; }
+    const inputs = { mode: 'search', name, gender: val('hx-gender') || 'M', firstname: val('hx-first') };
+    // Note the current preview generated_at so we can detect the fresh one.
+    let prevGen = null;
+    try { const r0 = await fetch(`https://raw.githubusercontent.com/${REPO}/${REF}/data/hyrox_preview.json?t=${Date.now()}`, { cache: 'no-store' }); if (r0.ok) prevGen = (await r0.json()).generated_at; } catch {}
+    await dispatchHyrox(inputs);
+    status.textContent = 'Searching results.hyrox.com… this takes ~30–60s.';
+    const preview = await pollPreview(prevGen);
+    if (!preview) { status.innerHTML = 'Timed out waiting for results. Check the <a href="https://github.com/' + REPO + '/actions/workflows/hyrox.yml" target="_blank" rel="noopener">workflow run</a> and retry.'; return; }
+    if (!preview.results.length) { status.textContent = 'No races found for that name/gender. Try just the surname, or check the spelling on results.hyrox.com.'; pick.innerHTML = ''; return; }
+    status.textContent = `${preview.results.length} race(s) found — tick the ones that are yours:`;
+    pick.innerHTML = `
+      ${preview.results.map((r, i) => `<label style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-s);cursor:pointer">
+        <input type="checkbox" class="hx-pick" value="${escHtml(r.athlete_url)}" checked>
+        <span style="flex:1"><b>${escHtml(r.event_date || r.city || 'Race')}</b> <span class="hint">${escHtml(r.name)}${r.total_time ? ' · ' + escHtml(r.total_time) : ''}${r.rank ? ' · rank ' + escHtml(String(r.rank)) : ''}</span></span>
+      </label>`).join('')}
+      <button class="btn btn-primary btn-sm" id="hx-import" style="margin-top:12px">${icons.download || ''} Import selected</button>`;
+    on('hx-import', 'click', e2 => withBusy(e2.currentTarget, 'Importing…', async () => {
+      const urls = [...pick.querySelectorAll('.hx-pick:checked')].map(c => c.value);
+      if (!urls.length) { toast('err', 'Nothing selected', 'Tick at least one race.'); return; }
+      await dispatchHyrox({ mode: 'import', name, gender: val('hx-gender') || 'M', firstname: val('hx-first'), urls: urls.join(',') });
+      status.innerHTML = `Importing ${urls.length} race(s) + rebuilding your analysis (~2–3 min). Reload the HYROX tab after that.`;
+      pick.innerHTML = '';
+    }));
+  }));
+}
+
+// ── Settings: upcoming events ──
+const EVENT_TYPES = ['HYROX', '5K', '10K', 'Half Marathon', 'Marathon', 'Other'];
+function eventRow(ev = {}) {
+  return `<div class="ev-row" style="display:grid;grid-template-columns:140px 1fr 130px 90px 32px;gap:8px;align-items:center;margin-bottom:8px">
+    <input type="date" value="${escHtml(ev.date || '')}" data-ev="date" class="mono-input">
+    <input type="text" placeholder="Event name / city" value="${escHtml(ev.name || '')}" data-ev="name">
+    <select data-ev="type">${EVENT_TYPES.map(t => `<option ${ev.type === t ? 'selected' : ''}>${t}</option>`).join('')}</select>
+    <input type="text" placeholder="goal" value="${escHtml(ev.goal_time || '')}" data-ev="goal_time" class="mono-input">
+    <button class="btn-icon" data-ev-remove aria-label="Remove event">×</button>
+  </div>`;
+}
+function eventsCard(events) {
+  const rows = (events && events.length ? events : []).map(eventRow).join('') || eventRow();
+  return `<div class="card">
+    <div class="card-h"><div class="card-title"><span class="ico">${icons.calendar || icons.hyrox}</span>Upcoming events</div></div>
+    <div class="hint" style="margin-bottom:12px">Add your next races/runs. The coach reads these (with your health metrics) to taper into events and build between them — ask it to "rebalance my plan around my events".</div>
+    <div id="events-rows">${rows}</div>
+    <div style="display:flex;gap:10px;margin-top:6px">
+      <button class="btn btn-outline btn-sm" id="ev-add">+ Add event</button>
+      <button class="btn btn-primary btn-sm" id="ev-save">${icons.check || ''} Save events</button>
+    </div>
+  </div>`;
+}
+function bindEventsCard(page) {
+  const rows = page.querySelector('#events-rows');
+  if (!rows) return;
+  const bindRemoves = () => rows.querySelectorAll('[data-ev-remove]').forEach(b =>
+    b.onclick = () => b.closest('.ev-row').remove());
+  bindRemoves();
+  on('ev-add', 'click', () => { rows.insertAdjacentHTML('beforeend', eventRow()); bindRemoves(); });
+  on('ev-save', 'click', e => withBusy(e.currentTarget, 'Saving…', async () => {
+    if (!requireToken()) return;
+    const list = [...rows.querySelectorAll('.ev-row')].map(r => {
+      const g = k => (r.querySelector(`[data-ev="${k}"]`)?.value || '').trim();
+      return { date: g('date'), name: g('name'), type: g('type'), goal_time: g('goal_time') };
+    }).filter(ev => ev.date || ev.name).sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    const res = await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/save-events.yml/dispatches`,
+      { method: 'POST', headers: ghHeaders(), body: JSON.stringify({ ref: REF, inputs: { data: JSON.stringify(list) } }) });
+    if (!res.ok && res.status !== 204) throw new Error(await ghError(res));
+    toast('ok', 'Events saved', 'Rebuilding (~1–2 min). Ask the coach to rebalance your plan around them.');
+  }));
 }
 
 // ═══════════════════════════════════════════════════════

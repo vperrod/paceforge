@@ -127,17 +127,17 @@ def rank_limiters(running: dict, load: dict, strength: dict, *, goal: str = "HYR
             "Practice even / slightly-negative splits; start 'embarrassingly controlled', especially on runs."))
 
     # Rank by severity × time-impact; recovery (if present) always leads.
-    cands.sort(key=lambda l: l.severity * l.time_impact, reverse=True)
-    recovery = [l for l in cands if l.area == "recovery"]
-    rest = [l for l in cands if l.area != "recovery"]
+    cands.sort(key=lambda c: c.severity * c.time_impact, reverse=True)
+    recovery = [c for c in cands if c.area == "recovery"]
+    rest = [c for c in cands if c.area != "recovery"]
     ranked = (recovery + rest)[:3]
 
-    this_week = [{"area": l.area, "action": l.recommendation} for l in ranked]
+    this_week = [{"area": c.area, "action": c.recommendation} for c in ranked]
     headline = (ranked[0].name + " — " + ranked[0].evidence) if ranked else \
         "No clear limiter — keep building consistently."
 
     return {
-        "limiters": [asdict(l) for l in ranked],
+        "limiters": [asdict(c) for c in ranked],
         "headline": headline,
         "this_week": this_week,
         "data_gaps": strength.get("data_gaps") or [],
@@ -149,8 +149,8 @@ def rank_limiters(running: dict, load: dict, strength: dict, *, goal: str = "HYR
                 "overtraining": ot_level, "garmin_status": _g(load, "garmin_native", "training_status"),
             },
             "ranked_limiters": [
-                {"name": l.name, "area": l.area, "evidence": l.evidence,
-                 "time_impact": l.time_impact} for l in ranked
+                {"name": c.name, "area": c.area, "evidence": c.evidence,
+                 "time_impact": c.time_impact} for c in ranked
             ],
             "key_metrics": {
                 "decoupling_pct": dec.get("average_pct"),

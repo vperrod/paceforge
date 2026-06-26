@@ -23,13 +23,23 @@ src/paceforge/
 │   ├── strength.py           # HYROX stations, hybrid balance (needs benchmarks)
 │   └── limiters.py           # ranks limiters → coach_input contract
 ├── garmin/client.py  # reads metrics + per-sample series, uploads workouts
-└── hyrox/            # race-result analyzer vs field benchmarks
+└── hyrox/            # scraper.py (results.hyrox.com), analyzer.py (vs field benchmarks)
 web/index.html        # the GitHub Pages dashboard (reads committed data/*.json)
-scripts/build_site_data.py  # precomputes analytics.json + fitness.json for the web (CI)
+scripts/build_site_data.py  # precomputes analytics/fitness/hyrox_analysis.json for the web (CI)
 data/                 # profile.json, plan.json, activities.json, history.jsonl,
-                      # details/{id}.json (splits + time-series), analyses/{id}.md,
-                      # hyrox.json, benchmarks.json
+                      # details/{id}.json (splits + time-series), analyses/{id}.md +
+                      # analyses/hyrox-{id}.md, hyrox.json, benchmarks.json, events.json
 ```
+
+## HYROX + events flow (serverless writes)
+The browser dispatches a GitHub Action with the user's PAT → the Action runs a CLI command
+that writes `data/*.json` + commits → `pages.yml` (which reacts to those workflows in its
+`workflow_run` list) rebuilds and redeploys. Mirror this for any new browser-driven write:
+- `hyrox.yml` → `paceforge hyrox-search|hyrox-import` → `data/hyrox_preview.json` (pick-list
+  the UI polls on raw.githubusercontent.com) then `data/hyrox.json`.
+- `save-events.yml` → `data/events.json`.
+- `build_site_data.py` derives `data/hyrox_analysis.json` (`{races, priorities, progression}`)
+  from `hyrox.json` at deploy time.
 
 ## The AI / validation split
 Deterministic facts (paces, plan structure) stay in code. Claude **proposes** a plan
@@ -40,7 +50,7 @@ Never invent paces — the engine derives them.
 ```bash
 .venv/bin/ruff check src/ tests/    # lint (must pass before commit)
 .venv/bin/pytest tests/ -q          # tests (must pass before push)
-.venv/bin/paceforge sync|analyze|plan|validate|push|status
+.venv/bin/paceforge sync|analyze|plan|validate|push|status|hyrox-search|hyrox-import
 ```
 
 ## Conventions
