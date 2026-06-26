@@ -1,1 +1,6 @@
-{}
+{
+  "wall_balls_max": 120,
+  "row_500m_sec": 75,
+  "ski_500m_sec": 80,
+  "bodyweight_kg": 95
+}
