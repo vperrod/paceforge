@@ -2607,19 +2607,17 @@ async function renderSettings(page) {
   bindEventsCard(page);
 }
 
-// ── Settings: HYROX race import (search → pick → import) ──
+// ── Settings: HYROX race import (hyresult.com profile) ──
 function hyroxImportCard() {
   return `<div class="card">
     <div class="card-h"><div class="card-title"><span class="ico">${icons.hyrox}</span>HYROX races</div></div>
-    <div class="hint" style="margin-bottom:12px">Pull your races from results.hyrox.com. Search by name, tick the ones that are yours, import. Needs a GitHub token (above).</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 90px auto;gap:10px;align-items:end">
-      <div class="field" style="margin:0"><label for="hx-name">Surname (or full name)</label><input id="hx-name" placeholder="Perez Rodriguez"></div>
-      <div class="field" style="margin:0"><label for="hx-first">First name (optional)</label><input id="hx-first" placeholder="Victor"></div>
+    <div class="hint" style="margin-bottom:12px">Import every race from your <a href="https://www.hyresult.com" target="_blank" rel="noopener">hyresult.com</a> profile — per-race Overall + Age-group placing and full splits. Paste your profile URL or slug. Needs a GitHub token (above).</div>
+    <div style="display:grid;grid-template-columns:1fr 90px auto;gap:10px;align-items:end">
+      <div class="field" style="margin:0"><label for="hx-slug">Profile URL or slug</label><input id="hx-slug" placeholder="victor-perez-rodriguez"></div>
       <div class="field" style="margin:0"><label for="hx-gender">Gender</label><select id="hx-gender"><option value="M">M</option><option value="F">F</option></select></div>
-      <button class="btn btn-primary" id="hx-search">Find races</button>
+      <button class="btn btn-primary" id="hx-import">Import races</button>
     </div>
     <div class="hint" id="hx-status" style="margin-top:10px"></div>
-    <div id="hyrox-pick" style="margin-top:6px"></div>
   </div>`;
 }
 
@@ -2629,17 +2627,17 @@ async function dispatchHyrox(inputs) {
   if (!res.ok && res.status !== 204) throw new Error(await ghError(res));
 }
 
-// Poll the committed preview file on raw (public, no Pages-deploy wait) until the
-// search workflow overwrites it (generated_at changes from what was there before).
-async function pollPreview(prevGen, { tries = 30, delay = 6000 } = {}) {
-  const url = `https://raw.githubusercontent.com/${REPO}/${REF}/data/hyrox_preview.json`;
+// Poll the committed hyrox.json on raw (public, no Pages-deploy wait) until the
+// import workflow overwrites it for this profile slug; returns the race count.
+async function pollHyrox(slug, prevName, { tries = 25, delay = 6000 } = {}) {
+  const url = `https://raw.githubusercontent.com/${REPO}/${REF}/data/hyrox.json`;
   for (let i = 0; i < tries; i++) {
     await new Promise(r => setTimeout(r, delay));
     try {
       const res = await fetch(`${url}?t=${Date.now()}`, { cache: 'no-store' });
       if (res.ok) {
         const p = await res.json();
-        if (p.generated_at && p.generated_at !== prevGen) return p;
+        if (p.search_name === slug && p.search_name !== prevName) return (p.results || []).length;
       }
     } catch {}
   }
@@ -2648,34 +2646,20 @@ async function pollPreview(prevGen, { tries = 30, delay = 6000 } = {}) {
 
 function bindHyroxImport(page) {
   const status = page.querySelector('#hx-status');
-  const pick = page.querySelector('#hyrox-pick');
-  on('hx-search', 'click', e => withBusy(e.currentTarget, 'Searching…', async () => {
+  on('hx-import', 'click', e => withBusy(e.currentTarget, 'Importing…', async () => {
     if (!requireToken()) return;
-    const name = val('hx-name');
-    if (!name) { toast('err', 'Name required', 'Enter your surname first.'); return; }
-    const inputs = { mode: 'search', name, gender: val('hx-gender') || 'M', firstname: val('hx-first') };
-    // Note the current preview generated_at so we can detect the fresh one.
-    let prevGen = null;
-    try { const r0 = await fetch(`https://raw.githubusercontent.com/${REPO}/${REF}/data/hyrox_preview.json?t=${Date.now()}`, { cache: 'no-store' }); if (r0.ok) prevGen = (await r0.json()).generated_at; } catch {}
-    await dispatchHyrox(inputs);
-    status.textContent = 'Searching results.hyrox.com… this takes ~30–60s.';
-    const preview = await pollPreview(prevGen);
-    if (!preview) { status.innerHTML = 'Timed out waiting for results. Check the <a href="https://github.com/' + REPO + '/actions/workflows/hyrox.yml" target="_blank" rel="noopener">workflow run</a> and retry.'; return; }
-    if (!preview.results.length) { status.textContent = 'No races found for that name/gender. Try just the surname, or check the spelling on results.hyrox.com.'; pick.innerHTML = ''; return; }
-    status.textContent = `${preview.results.length} race(s) found — tick the ones that are yours:`;
-    pick.innerHTML = `
-      ${preview.results.map((r, i) => `<label style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-s);cursor:pointer">
-        <input type="checkbox" class="hx-pick" value="${escHtml(r.athlete_url)}" checked>
-        <span style="flex:1"><b>${escHtml(r.event_date || r.city || 'Race')}</b> <span class="hint">${escHtml(r.name)}${r.total_time ? ' · ' + escHtml(r.total_time) : ''}${r.rank ? ' · rank ' + escHtml(String(r.rank)) : ''}</span></span>
-      </label>`).join('')}
-      <button class="btn btn-primary btn-sm" id="hx-import" style="margin-top:12px">${icons.download || ''} Import selected</button>`;
-    on('hx-import', 'click', e2 => withBusy(e2.currentTarget, 'Importing…', async () => {
-      const urls = [...pick.querySelectorAll('.hx-pick:checked')].map(c => c.value);
-      if (!urls.length) { toast('err', 'Nothing selected', 'Tick at least one race.'); return; }
-      await dispatchHyrox({ mode: 'import', name, gender: val('hx-gender') || 'M', firstname: val('hx-first'), urls: urls.join(',') });
-      status.innerHTML = `Importing ${urls.length} race(s) + rebuilding your analysis (~2–3 min). Reload the HYROX tab after that.`;
-      pick.innerHTML = '';
-    }));
+    let slug = val('hx-slug').trim();
+    const m = slug.match(/\/athlete\/([a-z0-9-]+)/i);   // accept a full profile URL too
+    if (m) slug = m[1];
+    slug = slug.replace(/^\/+|\/+$/g, '');
+    if (!slug) { toast('err', 'Slug required', 'Paste your hyresult profile URL or slug.'); return; }
+    let prevName = null;
+    try { const r0 = await fetch(`https://raw.githubusercontent.com/${REPO}/${REF}/data/hyrox.json?t=${Date.now()}`, { cache: 'no-store' }); if (r0.ok) prevName = (await r0.json()).search_name; } catch {}
+    await dispatchHyrox({ mode: 'profile', slug, gender: val('hx-gender') || 'M' });
+    status.textContent = 'Importing from hyresult.com… ~30–60s, then the dashboard redeploys.';
+    const count = await pollHyrox(slug, prevName);
+    if (count == null) { status.innerHTML = 'Dispatched. Track the <a href="https://github.com/' + REPO + '/actions/workflows/hyrox.yml" target="_blank" rel="noopener">workflow run</a>; your races refresh after it redeploys.'; return; }
+    status.textContent = `Imported ${count} race(s). The dashboard refreshes on the next redeploy (~1 min).`;
   }));
 }
 

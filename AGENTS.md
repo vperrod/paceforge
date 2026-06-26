@@ -35,10 +35,12 @@ data/                 # profile.json, plan.json, activities.json, history.jsonl,
 The browser dispatches a GitHub Action with the user's PAT → the Action runs a CLI command
 that writes `data/*.json` + commits → `pages.yml` (which reacts to those workflows in its
 `workflow_run` list) rebuilds and redeploys. Mirror this for any new browser-driven write:
-- `hyrox-import-profile <slug>` → `data/hyrox.json` from a hyresult.com athlete profile
-  (the source of truth: results.hyrox.com's season-overall ranking drops races and reports
-  season-cumulative ranks; hyresult has every race with per-race Overall + Age-group ranks
-  and full splits). The legacy `hyrox.yml`/`hyrox-search` name-search path remains for now.
+- `hyrox.yml` (mode `profile`) → `paceforge hyrox-import-profile <slug>` → `data/hyrox.json`
+  from a hyresult.com athlete profile. Dispatched from Settings → HYROX races (paste profile
+  URL/slug); the UI polls raw `data/hyrox.json` for the slug. hyresult is the source of truth:
+  results.hyrox.com's season-overall ranking drops races and reports season-cumulative ranks,
+  whereas hyresult has every race with per-race Overall + Age-group ranks and full splits.
+  (The legacy `search`/`import` results.hyrox.com modes still exist in `hyrox.yml`.)
 - `save-events.yml` → `data/events.json`.
 - `build_site_data.py` derives `data/hyrox_analysis.json` (`{races, priorities, progression}`)
   from `hyrox.json` at deploy time.
