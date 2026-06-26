@@ -35,7 +35,9 @@ deployed by `pages.yml` and re-deployed automatically after each sync:
   coaching analysis.
 - **HYROX** — import every race from your hyresult.com athlete profile (`paceforge
   hyrox-import-profile <slug>`), then open each race for a full breakdown: per-race
-  Overall and Age-group placing, time split running vs
+  Overall and Age-group placing, a **field-percentile bar per segment**, a **station
+  strengths radar**, a **pacing view** (run-lap fade + cumulative curve), a **roxzone
+  transition spotlight**, a **vs-your-other-races** comparison, time split running vs
   stations vs roxzone, every split vs the field & top-3 average, a deterministic coach
   read (weaknesses, pacing mistakes, strengths), an optional Claude-written race review,
   and a cross-race **progression** view (finish-time trend, per-station evolution, and

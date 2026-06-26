@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from paceforge.hyrox.models import (
+    HYROX_SPLIT_NAMES,
     RUNNING_SPLITS,
     STATION_SPLITS,
     HyroxRaceResult,
@@ -79,6 +80,20 @@ def _splits_dict(result: HyroxRaceResult) -> dict[str, float | None]:
     return {s.name: s.time_seconds for s in result.splits}
 
 
+def _splits_rank(result: HyroxRaceResult) -> dict[str, tuple[int, int]]:
+    """Map split name -> (rank, field_size) for splits that carry per-segment ranks."""
+    out: dict[str, tuple[int, int]] = {}
+    for s in result.splits:
+        if s.rank and s.field_size:
+            out[s.name] = (int(s.rank), int(s.field_size))
+    return out
+
+
+def _percentile(rank: int, field_size: int) -> int:
+    """Percentile rank — 99 = best in field, higher is better."""
+    return round(100 * (field_size - rank) / field_size) if field_size else 0
+
+
 def _fmt_time(secs: float | None) -> str:
     if secs is None:
         return "—"
@@ -130,7 +145,8 @@ def analyze_race(result: HyroxRaceResult) -> dict:
     station_pct = round((total_stations / total) * 100, 1) if total > 0 else 0
     roxzone_pct = round((roxzone / total) * 100, 1) if total > 0 else 0
 
-    # Per-split comparison to benchmarks
+    # Per-split comparison to benchmarks (+ live per-segment rank/percentile when imported)
+    ranks = _splits_rank(result)
     split_analysis = []
     for split_name in RUNNING_SPLITS + STATION_SPLITS:
         athlete_time = sd.get(split_name)
@@ -139,6 +155,7 @@ def analyze_race(result: HyroxRaceResult) -> dict:
         if athlete_time is not None and field_avg:
             gap_field = round(athlete_time - field_avg, 1)
             gap_top3 = round(athlete_time - top3_avg, 1) if top3_avg else None
+            rank, field_size = ranks.get(split_name, (0, 0))
             split_analysis.append({
                 "name": split_name,
                 "display": SPLIT_DISPLAY_NAMES.get(split_name, split_name),
@@ -152,6 +169,10 @@ def analyze_race(result: HyroxRaceResult) -> dict:
                 "gap_vs_top3": gap_top3,
                 "beats_field": gap_field < 0,
                 "beats_top3": (gap_top3 is not None and gap_top3 < 0),
+                "rank": rank or None,
+                "field_size": field_size or None,
+                "percentile": _percentile(rank, field_size) if rank and field_size else None,
+                "is_run": split_name in RUNNING_SPLITS,
             })
 
     return {
@@ -175,7 +196,39 @@ def analyze_race(result: HyroxRaceResult) -> dict:
             for i in range(len(run_times))
         ],
         "split_analysis": split_analysis,
+        "segments": _ordered_segments(result),
     }
+
+
+def _ordered_segments(result: HyroxRaceResult) -> list[dict]:
+    """Every segment in race order with cumulative time + rank/percentile.
+
+    Powers the cumulative pacing curve and the per-station rank chart.
+    """
+    sd = _splits_dict(result)
+    ranks = _splits_rank(result)
+    segments = []
+    cumulative = 0.0
+    for name in HYROX_SPLIT_NAMES:
+        if name == "Roxzone_Time":
+            continue
+        secs = sd.get(name)
+        if secs is None:
+            continue
+        cumulative += secs
+        rank, field_size = ranks.get(name, (0, 0))
+        segments.append({
+            "name": name,
+            "display": SPLIT_DISPLAY_NAMES.get(name, name),
+            "seconds": secs,
+            "display_time": _fmt_time(secs),
+            "cumulative": round(cumulative, 1),
+            "rank": rank or None,
+            "field_size": field_size or None,
+            "percentile": _percentile(rank, field_size) if rank and field_size else None,
+            "is_run": name in RUNNING_SPLITS,
+        })
+    return segments
 
 
 def compute_training_priorities(result: HyroxRaceResult) -> list[dict]:
