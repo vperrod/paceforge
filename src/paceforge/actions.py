@@ -361,6 +361,30 @@ def hyrox_import(
     return {"imported": len(results), "races": [r.city or r.event_date for r in results]}
 
 
+def hyrox_import_profile(slug: str, *, gender: str = "M") -> dict:
+    """Import every race for a hyresult.com athlete profile → data/hyrox.json.
+
+    hyresult.com is the source of truth: results.hyrox.com's season-overall
+    ranking drops races (e.g. Berlin 2026) and reports season-cumulative ranks,
+    whereas hyresult has every race with correct per-race Overall + Age-group
+    ranks and full splits.
+    """
+    from paceforge.hyrox.hyresult import HyresultScraper
+
+    scraper = HyresultScraper()
+    try:
+        results = scraper.fetch_athlete(slug)
+    finally:
+        scraper.close()
+
+    store.save_hyrox_results({
+        "search_name": slug,
+        "search_gender": gender,
+        "results": [r.model_dump(mode="json") for r in results],
+    })
+    return {"imported": len(results), "races": [r.city or r.event_date for r in results]}
+
+
 def validate() -> list[str]:
     plan = store.load_plan()
     if plan is None:

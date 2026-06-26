@@ -50,6 +50,9 @@ def _build_hyrox() -> dict:
             "event_date": r.event_date,
             "division": r.division,
             "rank": r.rank,
+            "rank_age_group": r.rank_age_group,
+            "field_size": r.field_size,
+            "age_group": r.age_group,
             "total_display": r.total_time_display,
             **analyze_race(r),
         })
