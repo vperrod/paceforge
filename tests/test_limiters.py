@@ -10,20 +10,20 @@ def test_empty_inputs_do_not_crash():
 def test_decoupling_gap_is_flagged():
     running = {"decoupling": {"available": True, "average_pct": 14.0}}
     out = rank_limiters(running, {}, {})
-    assert any(l["area"] == "durability" for l in out["limiters"])
+    assert any(x["area"] == "durability" for x in out["limiters"])
 
 
 def test_grey_zone_distribution_flagged():
     running = {"intensity_distribution": {"availability": "ok", "available": True,
                                           "adherence": "too_hard", "low_pct": 30, "mid_pct": 58}}
     out = rank_limiters(running, {}, {})
-    assert any(l["area"] == "distribution" for l in out["limiters"])
+    assert any(x["area"] == "distribution" for x in out["limiters"])
 
 
 def test_weak_stations_flagged():
     strength = {"station_percentiles": {"available": True, "weakest": ["Row_1000m", "Wall_Balls"]}}
     out = rank_limiters({}, {}, strength)
-    assert any(l["area"] == "strength" for l in out["limiters"])
+    assert any(x["area"] == "strength" for x in out["limiters"])
 
 
 def test_readiness_red_makes_recovery_the_top_limiter():

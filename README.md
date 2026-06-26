@@ -33,6 +33,15 @@ deployed by `pages.yml` and re-deployed automatically after each sync:
   charts over time (with an efficient-range band on cadence & stride), an HR-zone
   distribution, a pace histogram, per-km splits, planned-vs-actual, and a Claude-written
   coaching analysis.
+- **HYROX** — import your races from results.hyrox.com (Settings → search by name, tick
+  which are yours), then open each race for a full breakdown: time split running vs
+  stations vs roxzone, every split vs the field & top-3 average, a deterministic coach
+  read (weaknesses, pacing mistakes, strengths), an optional Claude-written race review,
+  and a cross-race **progression** view (finish-time trend, per-station evolution, and
+  your biggest gaps to fix next).
+- **Events** — add upcoming races/runs (Settings → Upcoming events); they show as a
+  countdown on Overview and on the Calendar, and the coach rebalances your plan around
+  them (taper into races, build between them) gated by your health metrics.
 - **Fitness** — the full assessment (below).
 - Edit the plan, trigger a Sync / Push-to-Garmin, or request a coach analysis straight
   from the browser via a GitHub fine-grained token (stored only in your browser).
@@ -75,6 +84,8 @@ paceforge plan --goal MARATHON --date 2026-10-04 --level intermediate
 paceforge validate                          # check data/plan.json against the rules
 paceforge push --dry-run                    # preview the week's workouts
 paceforge push                              # upload to Garmin
+paceforge hyrox-search "Surname" --gender M # find your HYROX races (pick-list)
+paceforge hyrox-import "Surname" --urls ... # import chosen races with full splits
 ```
 
 Or just ask Claude: *"sync and review my week"*, *"build my marathon block"*,

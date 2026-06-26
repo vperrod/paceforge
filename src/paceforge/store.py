@@ -6,6 +6,7 @@ the history and backup. Override the location with ``PACEFORGE_DATA_DIR``.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 from pathlib import Path
@@ -124,6 +125,31 @@ def save_benchmarks(benchmarks: dict) -> None:
     _write(_path("benchmarks.json"), json.dumps(benchmarks, indent=2))
 
 
+def save_hyrox_results(cached: dict) -> None:
+    """Persist scraped HYROX races (the HyroxCachedData shape) to data/hyrox.json."""
+    _write(_path("hyrox.json"), json.dumps(cached, indent=2, default=str))
+
+
+def save_hyrox_preview(preview: dict) -> None:
+    """Persist a transient race-search preview (for the web pick-list) to disk."""
+    _write(_path("hyrox_preview.json"), json.dumps(preview, indent=2, default=str))
+
+
+def load_events() -> list[dict]:
+    """Upcoming races/runs the athlete entered (data/events.json); [] if absent."""
+    p = _path("events.json")
+    if not p.exists():
+        return []
+    try:
+        return json.loads(p.read_text()) or []
+    except (json.JSONDecodeError, OSError):
+        return []
+
+
+def save_events(events: list[dict]) -> None:
+    _write(_path("events.json"), json.dumps(events, indent=2, default=str))
+
+
 def load_history() -> list[dict]:
     """All stored daily wellness snapshots, oldest first."""
     p = _path("history.jsonl")
@@ -134,10 +160,8 @@ def load_history() -> list[dict]:
         line = line.strip()
         if not line:
             continue
-        try:
+        with contextlib.suppress(json.JSONDecodeError):
             out.append(json.loads(line))
-        except json.JSONDecodeError:
-            pass
     return out
 
 

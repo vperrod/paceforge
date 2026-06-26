@@ -73,6 +73,35 @@ at most 3 limiters; cite the metric evidence so the athlete trusts it; honestly 
 `data_gaps` as a call-to-action (which benchmarks to enter). Mind concurrent-training interference
 (separate hard strength and hard endurance by ≥6 h / non-consecutive days).
 
+## Upcoming events → rebalance the plan (`data/events.json`)
+The athlete enters their next races/runs in the dashboard; they land in `data/events.json`
+as a list of `{date, name, type, goal_time}` (type ∈ HYROX/5K/10K/Half Marathon/Marathon/Other).
+When asked to "rebalance my plan around my events" (or on the weekly run), read this file and:
+1. **Anchor periodization on the nearest event.** Work backwards: Race → Taper (1–2wk,
+   volume −40–60%, keep some intensity) → Peak → Build → Base. The plan's `target_date`
+   should track the next priority event.
+2. **Sequence multiple events.** Between two close events, recover then sharpen (no big
+   build); between far-apart events, run a normal base→build block into the later one.
+3. **Gate by health.** Cross-check `data/fitness.json` (`coach_input.readiness`, overtraining
+   composite) — never stack a hard block into a low-readiness window; pull volume if ACWR
+   or monotony is spiking even if an event is near.
+4. Match event `type` to the work (HYROX → hybrid run/strength + station practice; road race
+   → running periodization). Then edit `data/plan.json`, `paceforge validate`, refresh
+   `plan.md`, and (if the current week changed) `paceforge push`.
+
+## Per-HYROX-race review → `data/analyses/hyrox-{id}.md`
+The HYROX tab renders a Markdown review per race (button: "Ask coach to review this race",
+which opens a `Coach: review my … race` issue). `scripts/build_site_data.py` writes
+`data/hyrox_analysis.json` = `{races, priorities, progression}`; each race has an `id`
+(slug), `split_analysis` (per-split gaps vs field & top-3), `fade_pct`, `roxzone_pct`, and
+the time breakdown. To review a race:
+1. Find the race in `data/hyrox_analysis.json` by `id` (or the city/date in the request).
+2. Write `data/analyses/hyrox-{id}.md` with `##` sections: **Race summary**, **Weaknesses**
+   (biggest `gap_vs_top3` splits, with the numbers), **Pacing & mistakes** (run fade,
+   roxzone/transition cost), **Strengths**, **Train this before next time** (3 concrete,
+   tied to the current plan and `priorities`). Cite the split numbers — no platitudes.
+3. Commit it; the site redeploys and the review appears under that race.
+
 ## Weekly review → `week-review.md`
 1. `paceforge sync`, then read `data/activities.json`, `data/profile.json` and `data/fitness.json`.
 2. `paceforge analyze` for legacy metrics; the limiters/assessment come from `data/fitness.json`.
