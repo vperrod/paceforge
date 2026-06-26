@@ -2309,6 +2309,114 @@ function pill(text, color) {
   return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:.72rem;font-weight:600;padding:3px 9px;border-radius:99px;background:color-mix(in srgb,${color} 16%,transparent);color:${color}">${text}</span>`;
 }
 
+// ── HYROX race visualisations (percentile, radar, pacing) ──
+// Higher percentile = better (99th = near the front of the field).
+function pctColor(p) { return p >= 90 ? 'var(--emerald)' : p >= 70 ? 'var(--sky)' : p >= 50 ? 'var(--amber)' : 'var(--rose)'; }
+
+function pctBar(label, pct, sub) {
+  const c = pctColor(pct);
+  return `<div style="display:flex;align-items:center;gap:10px;padding:4px 0">
+    <div style="width:118px;font-size:.8rem">${escHtml(label)}</div>
+    <div style="flex:1;height:9px;background:var(--border-s);border-radius:5px;overflow:hidden">
+      <div style="width:${Math.max(pct, 2)}%;height:100%;background:${c}"></div></div>
+    <div style="width:104px;text-align:right;font-family:var(--font-m);font-size:.76rem;color:${c}">${pct}th${sub ? ' · ' + escHtml(sub) : ''}</div>
+  </div>`;
+}
+
+// Per-segment percentile, every station/run in race order — the core benchmark view.
+function stationPercentileCard(segments) {
+  const rows = (segments || []).filter(s => s.percentile != null)
+    .map(s => pctBar(s.display, s.percentile, s.field_size ? '#' + s.rank + '/' + s.field_size : '#' + s.rank)).join('');
+  return rows ? fxCard('Field percentile — every segment', icons.hyrox,
+    rows + `<div class="hint" style="margin-top:8px">Your placing in the gender field at each segment. Green = front of the field, red = where you lose ground.</div>`) : '';
+}
+
+// Radar of the 8 stations' percentiles — strengths vs weaknesses at a glance.
+function radarChart(items, { size = 250 } = {}) {
+  const n = items.length, cx = size / 2, cy = size / 2, R = size / 2 - 42;
+  const ang = i => (Math.PI * 2 * i / n) - Math.PI / 2;
+  const pt = (i, r) => [cx + Math.cos(ang(i)) * R * (r / 100), cy + Math.sin(ang(i)) * R * (r / 100)];
+  const rings = [25, 50, 75, 100].map(r =>
+    `<polygon points="${items.map((_, i) => pt(i, r).map(v => v.toFixed(1)).join(',')).join(' ')}" fill="none" stroke="var(--border-s)" stroke-width="1"/>`).join('');
+  const poly = `<polygon points="${items.map((it, i) => pt(i, Math.max(it.value, 2)).map(v => v.toFixed(1)).join(',')).join(' ')}" fill="var(--violet)" fill-opacity="0.16" stroke="var(--violet)" stroke-width="2"/>`;
+  const dots = items.map((it, i) => { const [x, y] = pt(i, Math.max(it.value, 2)); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="${pctColor(it.value)}"/>`; }).join('');
+  const labels = items.map((it, i) => { const x = cx + Math.cos(ang(i)) * (R + 18), y = cy + Math.sin(ang(i)) * (R + 18); return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="8.5" fill="var(--text-3)" text-anchor="middle" dominant-baseline="middle">${escHtml(it.label)}</text>`; }).join('');
+  return `<svg viewBox="0 0 ${size} ${size}" width="100%" style="max-width:300px;display:block;margin:0 auto">${rings}${poly}${dots}${labels}</svg>`;
+}
+function stationRadarCard(segments) {
+  const stations = (segments || []).filter(s => !s.is_run && s.percentile != null);
+  if (stations.length < 3) return '';
+  return fxCard('Station strengths', icons.hyrox,
+    radarChart(stations.map(s => ({ label: s.display.replace('Broad Jump', 'BBJ'), value: s.percentile }))) +
+    `<div class="hint" style="margin-top:6px;text-align:center">Each spoke is your field percentile for that station.</div>`);
+}
+
+// Cumulative pacing curve + per-run-lap fade vs the field.
+function pacingCard(r) {
+  const segs = (r.segments || []).filter(s => s.cumulative != null);
+  if (segs.length < 4) return '';
+  const cumLine = sparkline(segs.map(s => s.cumulative), { width: 260, height: 50 });
+  const runs = segs.filter(s => s.is_run);
+  const maxRun = Math.max(...runs.map(s => s.seconds), 1);
+  const bars = runs.map(s => {
+    const h = Math.round((s.seconds / maxRun) * 56) + 4;
+    const c = s.percentile != null ? pctColor(s.percentile) : 'var(--sky)';
+    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+      <div style="width:100%;max-width:22px;height:${h}px;background:${c};border-radius:3px 3px 0 0"></div>
+      <div class="hint" style="font-size:.62rem">${escHtml(s.display_time)}</div></div>`;
+  }).join('');
+  return fxCard('Pacing', icons.activity || icons.hyrox, `
+    <div class="eyebrow" style="margin-bottom:4px">Run laps — height = time, colour = field percentile</div>
+    <div style="display:flex;align-items:flex-end;gap:5px;height:74px">${bars}</div>
+    <div class="hint" style="margin:8px 0 2px">Cumulative time across the race</div>
+    ${cumLine}
+    <div class="hint" style="margin-top:8px">Run fade ${r.fade_pct}% (${escHtml(r.running_class || '')}). Elite athletes hold within ~5% across the 8 laps.</div>`);
+}
+
+// Roxzone (transition) spotlight — often the biggest hidden time loss.
+function roxzoneCard(r) {
+  if (!r.roxzone_pct) return '';
+  const heavy = r.roxzone_pct >= 8;
+  return fxCard('Roxzone — your transitions', icons.hyrox, `
+    <div style="display:flex;align-items:baseline;gap:10px">
+      <div style="font-family:var(--font-m);font-size:1.6rem;font-weight:700;color:${heavy ? 'var(--rose)' : 'var(--emerald)'}">${escHtml(r.roxzone_display)}</div>
+      <div class="hint">${r.roxzone_pct}% of your race</div>
+    </div>
+    <div class="hint" style="margin-top:6px">${heavy
+      ? 'That is a lot of standing time — drill station entries/exits and a brisk walk-to-work tempo; transitions cost more total time than any single weak station for most athletes.'
+      : 'Tidy transitions — keep moving through the roxzone and you hold this edge.'}</div>`);
+}
+
+// Phase 3 — this race vs your average across your other races.
+function comparePastCard(r, pastAvg) {
+  const segs = (r.segments || []).filter(s => pastAvg[s.name] != null);
+  if (segs.length < 4) return '';
+  const rows = segs.map(s => {
+    const delta = s.seconds - pastAvg[s.name];
+    const better = delta < 0;
+    return `<tr>
+      <td style="padding:5px 8px;font-size:.82rem">${escHtml(s.display)}</td>
+      <td style="padding:5px 8px;font-family:var(--font-m);font-size:.8rem;text-align:right">${escHtml(s.display_time)}</td>
+      <td style="padding:5px 8px;font-family:var(--font-m);font-size:.8rem;text-align:right;color:var(--text-3)">${fmtSecs(pastAvg[s.name])}</td>
+      <td style="padding:5px 8px;font-family:var(--font-m);font-size:.8rem;text-align:right;font-weight:600;color:${better ? 'var(--emerald)' : 'var(--rose)'}">${better ? '' : '+'}${Math.round(delta)}s</td>
+    </tr>`;
+  }).join('');
+  return fxCard('vs your other races (average)', icons.hyrox, `
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
+      <thead><tr style="border-bottom:1px solid var(--border)">
+        <th style="padding:5px 8px;text-align:left;font-size:.72rem;color:var(--text-3)">Segment</th>
+        <th style="padding:5px 8px;text-align:right;font-size:.72rem;color:var(--text-3)">This race</th>
+        <th style="padding:5px 8px;text-align:right;font-size:.72rem;color:var(--text-3)">Your avg</th>
+        <th style="padding:5px 8px;text-align:right;font-size:.72rem;color:var(--text-3)">Δ</th>
+      </tr></thead><tbody>${rows}</tbody></table></div>`);
+}
+
+function fmtSecs(secs) {
+  if (secs == null) return '—';
+  const t = Math.round(secs), m = Math.floor(t / 60), s = t % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
 // Per-race ranks: Overall (position in the gender field) + Age-group.
 // results.hyrox.com only had a season-cumulative number; hyresult gives these per race.
 function hyroxRankText(r) {
@@ -2400,14 +2508,20 @@ async function openHyroxRace(id) {
   const r = ((data && data.races) || []).find(x => x.id === id);
   if (!r) { goTab('hyrox'); return; }
   let coachMd = null; try { coachMd = await loadText(`analyses/hyrox-${id}.md`); } catch {}
+  // Average each segment across your OTHER races for the "vs your past races" compare.
+  const pastAvg = {};
+  const acc = {};
+  ((data && data.races) || []).filter(x => x.id !== id).forEach(o =>
+    (o.segments || []).forEach(s => { (acc[s.name] = acc[s.name] || []).push(s.seconds); }));
+  Object.entries(acc).forEach(([k, v]) => { pastAvg[k] = v.reduce((a, b) => a + b, 0) / v.length; });
   setTopbar(r.city || 'Race', 'HYROX race detail', '');
   page.innerHTML = `<div class="fade-in">
     <div class="detail-head">
       <button class="btn btn-ghost btn-sm" data-back>${icons.back} Back</button>
       <div><div class="detail-h-title">${escHtml(r.city || 'Race')}</div>
-        <div class="detail-h-sub">${escHtml(r.event_date || '')}${r.division ? ' · ' + escHtml(r.division) : ''}${r.rank ? ' · rank ' + escHtml(String(r.rank)) : ''} · ${escHtml(r.total_display || '')}</div></div>
+        <div class="detail-h-sub">${escHtml(r.event_date || '')}${r.division ? ' · ' + escHtml(r.division) : ''}${hyroxRankText(r)} · ${escHtml(r.total_display || '')}</div></div>
     </div>
-    ${hyroxDetailBody(r, coachMd)}
+    ${hyroxDetailBody(r, coachMd, pastAvg)}
   </div>`;
   page.querySelector('[data-back]')?.addEventListener('click', () => goTab('hyrox'));
   on('hyrox-coach', 'click', () => askCoachAboutRace(r));
@@ -2426,7 +2540,7 @@ function hyroxRaceFeedback(r) {
   return { behind, ahead, mistakes };
 }
 
-function hyroxDetailBody(r, coachMd) {
+function hyroxDetailBody(r, coachMd, pastAvg = {}) {
   const bar = (label, pct, color) => hrZoneLikeBar(label, pct, color);
   const rankCell = (label, value, sub) => `<div style="flex:1;min-width:90px">
       <div class="eyebrow">${label}</div>
@@ -2453,9 +2567,12 @@ function hyroxDetailBody(r, coachMd) {
   const rows = (r.split_analysis || []).map(s => {
     const col = s.beats_top3 ? 'var(--emerald)' : s.beats_field ? 'var(--amber)' : 'var(--rose)';
     const gapTxt = s.gap_vs_top3 != null ? (s.gap_vs_top3 > 0 ? '+' : '') + Math.round(s.gap_vs_top3) + 's' : '—';
+    const pctTxt = s.percentile != null ? `${s.percentile}th` : '—';
+    const pctCol = s.percentile != null ? pctColor(s.percentile) : 'var(--text-3)';
     return `<tr>
       <td style="padding:6px 8px;font-size:.83rem">${escHtml(s.display)}</td>
       <td style="padding:6px 8px;font-family:var(--font-m);font-size:.82rem;text-align:right">${escHtml(s.athlete_display)}</td>
+      <td style="padding:6px 8px;font-family:var(--font-m);font-size:.8rem;text-align:right;font-weight:600;color:${pctCol}">${pctTxt}</td>
       <td style="padding:6px 8px;font-family:var(--font-m);font-size:.82rem;text-align:right;color:var(--text-3)">${escHtml(s.field_avg_display)}</td>
       <td style="padding:6px 8px;font-family:var(--font-m);font-size:.82rem;text-align:right;color:var(--text-3)">${escHtml(s.top3_avg_display)}</td>
       <td style="padding:6px 8px;font-family:var(--font-m);font-size:.82rem;text-align:right;font-weight:600;color:${col}">${gapTxt}</td>
@@ -2466,6 +2583,7 @@ function hyroxDetailBody(r, coachMd) {
       <thead><tr style="border-bottom:1px solid var(--border)">
         <th style="padding:6px 8px;text-align:left;font-size:.72rem;color:var(--text-3)">Split</th>
         <th style="padding:6px 8px;text-align:right;font-size:.72rem;color:var(--text-3)">You</th>
+        <th style="padding:6px 8px;text-align:right;font-size:.72rem;color:var(--text-3)">Pct</th>
         <th style="padding:6px 8px;text-align:right;font-size:.72rem;color:var(--text-3)">Field</th>
         <th style="padding:6px 8px;text-align:right;font-size:.72rem;color:var(--text-3)">Top-3</th>
         <th style="padding:6px 8px;text-align:right;font-size:.72rem;color:var(--text-3)">vs Top-3</th>
@@ -2477,7 +2595,9 @@ function hyroxDetailBody(r, coachMd) {
         <div class="hint" style="margin-bottom:10px">No written review yet. Ask the coach for a personalised breakdown of this race.</div>
         <button class="btn btn-outline btn-sm" id="hyrox-coach">${icons.spark} Ask coach to review this race</button></div>`;
 
-  return ranks + breakdown + feedback + table + coach;
+  return ranks + stationPercentileCard(r.segments) + stationRadarCard(r.segments)
+    + pacingCard(r) + roxzoneCard(r) + breakdown + feedback
+    + comparePastCard(r, pastAvg) + table + coach;
 }
 
 function askCoachAboutRace(r) {

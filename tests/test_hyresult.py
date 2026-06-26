@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+from paceforge.hyrox.analyzer import analyze_race
 from paceforge.hyrox.hyresult import parse_result
 
 FIXTURE = (Path(__file__).parent / "fixtures" / "hyresult_berlin.html").read_text()
@@ -39,3 +40,19 @@ def test_all_seventeen_splits_present():
 def test_split_carries_its_own_rank():
     skierg = next(s for s in parse_result(FIXTURE).splits if s.name == "SkiErg_1000m")
     assert skierg.rank == "236"
+
+
+def test_analyze_emits_a_segment_per_split_in_race_order():
+    segments = analyze_race(parse_result(FIXTURE))["segments"]
+    assert len(segments) == 16
+
+
+def test_analyze_computes_segment_percentile():
+    segments = analyze_race(parse_result(FIXTURE))["segments"]
+    skierg = next(s for s in segments if s["name"] == "SkiErg_1000m")
+    assert skierg["percentile"] == 94  # rank 236 of 4142
+
+
+def test_segments_carry_cumulative_time():
+    segments = analyze_race(parse_result(FIXTURE))["segments"]
+    assert segments[-1]["cumulative"] > segments[0]["cumulative"]
