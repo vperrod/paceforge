@@ -1855,6 +1855,19 @@ function confirmResetPlan() {
 // ═══════════════════════════════════════════════════════
 // VIEW: CALENDAR
 // ═══════════════════════════════════════════════════════
+// Calendar dots are colour-coded by session type so the month reads at a glance:
+// green = easy/recovery, blue = long, amber = tempo/threshold, red = fast (intervals/
+// speed/hills/fartlek), violet = cross-training/HYROX, grey = rest.
+const WO_COLORS = {
+  easy_run:'var(--emerald)', recovery_run:'var(--emerald)', easy_with_strides:'var(--emerald)',
+  long_run:'var(--sky)', long_run_progressive:'var(--sky)', long_run_with_race_pace:'var(--sky)', progressive:'var(--sky)',
+  tempo:'var(--amber)', threshold:'var(--amber)', race_pace:'var(--amber)',
+  intervals:'var(--rose)', speed:'var(--rose)', vo2max:'var(--rose)', fartlek:'var(--rose)', hills:'var(--rose)', strides:'var(--rose)',
+  cross_training:'var(--violet)', hyrox_mixed:'var(--violet)',
+  rest:'var(--text-3)',
+};
+const colorForWorkout = t => WO_COLORS[t] || 'var(--sky)';
+
 async function renderCalendar(page) {
   const now = new Date();
   let viewYear = now.getFullYear(), viewMonth = now.getMonth();
@@ -1912,7 +1925,7 @@ async function renderCalendar(page) {
         (calEntries[wo.scheduled_date] ||= []).push({
           type: matchedAct ? 'activity' : 'planned',
           title: (wo.completed ? '✓ ' : '○ ') + (wo.name || 'Workout'), sub,
-          color: wo.completed ? 'var(--emerald)' : 'var(--sky)', wo, activity: matchedAct,
+          color: colorForWorkout(wo.workout_type), wo, activity: matchedAct,
         });
       }
     }
