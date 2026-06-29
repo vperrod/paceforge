@@ -80,6 +80,14 @@ def login() -> str:
     return _export_token(token_dir)
 
 
+def export_token() -> str:
+    """Return the current on-disk token as a GARMIN_TOKEN blob (no network)."""
+    token_dir = _token_dir()
+    if not _has_token(token_dir):
+        raise RuntimeError("No token on disk to export — run `paceforge sync` (or `login`) first.")
+    return _export_token(token_dir)
+
+
 # ── Sync / analyse / push ────────────────────────────────────────────
 
 
@@ -92,6 +100,12 @@ def sync(lookback_days: int = 90, details_limit: int = 40) -> dict:
     store.save_activities(profile.recent_activities)
     new_details = _sync_details(client, limit=details_limit)
     matched = _match_plan()
+    # Write the refreshed token back to disk so the workflow can persist it to
+    # the GARMIN_TOKEN secret — keeps the headless token from going stale.
+    try:
+        client.dump_tokens(str(_token_dir()))
+    except Exception:
+        logger.debug("Token re-dump after sync failed", exc_info=True)
     return {
         "vo2_max": profile.vo2_max,
         "training_readiness": profile.training_readiness,

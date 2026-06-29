@@ -32,6 +32,17 @@ jobs:
           GARMIN_TOKEN: ${{ secrets.GARMIN_TOKEN }}
         run: paceforge sync
 
+      - name: Refresh GARMIN_TOKEN secret
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.ACTIONS_PAT }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "ACTIONS_PAT not set — skipping token refresh (set it to enable self-refresh)."
+            exit 0
+          fi
+          paceforge export-token | gh secret set GARMIN_TOKEN --repo "$GITHUB_REPOSITORY"
+
       - name: Commit data if changed
         run: |
           git config user.name "paceforge-bot"

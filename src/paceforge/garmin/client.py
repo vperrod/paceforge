@@ -156,6 +156,15 @@ class GarminClient:
             raise RuntimeError("Not logged in. Call login() first.")
         return self._client
 
+    def dump_tokens(self, token_dir: str) -> None:
+        """Persist the current (possibly auto-refreshed) OAuth tokens to disk.
+
+        Garmin's OAuth2 token is short-lived and refreshed from the OAuth1
+        token during a session; writing it back keeps headless runs from
+        re-loading a stale token next time.
+        """
+        self.client.garth.dump(str(Path(token_dir).expanduser()))
+
     # ── Read operations ──────────────────────────────────────────────
 
     def get_fitness_profile(self, lookback_days: int = 90, activity_types: list[str] | None = None) -> UserFitnessProfile:

@@ -53,6 +53,8 @@ def main(argv: list[str] | None = None) -> int:
         if cmd == "hyrox-import":
             p.add_argument("--urls", default="", help="comma-separated athlete URLs to import")
 
+    sub.add_parser("export-token", help="print current on-disk token as a GARMIN_TOKEN blob")
+
     p_hp = sub.add_parser("hyrox-import-profile",
                           help="import every race from a hyresult.com athlete profile")
     p_hp.add_argument("slug", help="hyresult athlete slug, e.g. victor-perez-rodriguez")
@@ -65,6 +67,9 @@ def main(argv: list[str] | None = None) -> int:
             token = actions.login()
             print("\nGarmin login OK. Store this as the GARMIN_TOKEN secret:\n")
             print(token)
+            return 0
+        if args.cmd == "export-token":
+            print(actions.export_token())
             return 0
         if args.cmd == "sync":
             _emit(actions.sync(lookback_days=args.lookback_days, details_limit=args.details))
