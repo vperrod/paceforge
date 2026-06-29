@@ -75,8 +75,30 @@ python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 .venv/bin/paceforge login        # one-time Garmin auth (handles MFA) → prints GARMIN_TOKEN
 ```
 
-Store the printed `GARMIN_TOKEN` (and `PACEFORGE_GARMIN_EMAIL`) as GitHub Actions
-secrets to enable headless sync. See `.env.example` for all variables.
+Run `login` in a **real interactive terminal** — it prompts for your password (hidden) and
+an MFA code, so it can't run in a non-interactive shell (a piped CI step or an agent's
+`!`-prefixed shell fails with `EOFError`/`No valid Garmin token`).
+
+To enable headless sync, set these GitHub Actions secrets:
+
+| Secret | Purpose |
+|--------|---------|
+| `PACEFORGE_GARMIN_EMAIL` | Garmin login email |
+| `GARMIN_TOKEN` | base64 token printed by `paceforge login` |
+| `ACTIONS_PAT` | *(recommended)* fine-grained PAT — repo `paceforge`, **Secrets: Read & Write** |
+
+```bash
+.venv/bin/paceforge login | gh secret set GARMIN_TOKEN --repo <owner>/paceforge   # one line
+```
+
+**Token self-refresh:** Garmin's OAuth2 token is short-lived, so a stored `GARMIN_TOKEN`
+goes stale within days and the daily sync starts failing with `No valid Garmin token`. With
+`ACTIONS_PAT` set, `sync.yml` writes the freshly-refreshed token back into the `GARMIN_TOKEN`
+secret after every run, so it never expires unattended. Without `ACTIONS_PAT` the refresh
+step is skipped cleanly and you must re-set `GARMIN_TOKEN` by hand. The underlying OAuth1
+token still expires roughly yearly — when it does, run `paceforge login` again.
+
+See `.env.example` for all variables.
 
 ## Usage
 

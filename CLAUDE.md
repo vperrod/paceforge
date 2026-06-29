@@ -46,6 +46,13 @@ the model to compute paces a formula does exactly — scaffold with
 `PACEFORGE_GARMIN_EMAIL`, `GARMIN_TOKEN` (base64 token from `paceforge login`),
 `PACEFORGE_GARMIN_TOKEN_DIR` (default `~/.garminconnect`). None are committed.
 
+`paceforge login` is interactive (password + MFA) — it can't run in a non-interactive shell
+(piped/CI/agent `!` → `EOFError`); use a real terminal. The OAuth2 token is short-lived, so
+`sync.yml` refreshes it and writes it back to the `GARMIN_TOKEN` secret each run when the
+`ACTIONS_PAT` secret (fine-grained PAT, Secrets R/W) is set; without it, re-set the token by
+hand. After a successful login the token is on disk — recover it without re-logging-in via
+`paceforge export-token`.
+
 ## Style
 - Ruff, 100-char lines (see `pyproject.toml`). `from __future__ import annotations` at top.
 - Named exports, verb-first functions. Commit messages: `area: short description`.
