@@ -1940,9 +1940,9 @@ async function renderCalendar(page) {
   function drawMonth() {
     const first = new Date(viewYear, viewMonth, 1);
     const last = new Date(viewYear, viewMonth + 1, 0);
-    const startDay = first.getDay();
+    const startDay = (first.getDay() + 6) % 7;  // Monday-first: shift Sun(0)→6
     const monthName = first.toLocaleString('default', { month:'long', year:'numeric' });
-    let grid = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => `<div class="cal-day-label">${d}</div>`).join('');
+    let grid = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d => `<div class="cal-day-label">${d}</div>`).join('');
     const prevLast = new Date(viewYear, viewMonth, 0).getDate();
     for (let i = startDay - 1; i >= 0; i--) grid += `<div class="cal-day other-month"><div class="cal-num">${prevLast - i}</div></div>`;
     const todayStr = new Date().toISOString().slice(0,10);
