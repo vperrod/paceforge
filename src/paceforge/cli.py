@@ -65,7 +65,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.cmd == "login":
             token = actions.login()
-            print("\nGarmin login OK. Store this as the GARMIN_TOKEN secret:\n")
+            print("\nGarmin login OK. Store this as the GARMIN_TOKEN secret:\n", file=sys.stderr)
             print(token)
             return 0
         if args.cmd == "export-token":

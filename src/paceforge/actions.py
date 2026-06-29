@@ -16,6 +16,7 @@ import getpass
 import io
 import logging
 import os
+import sys
 import tarfile
 from datetime import date
 from pathlib import Path
@@ -68,15 +69,21 @@ def garmin_connect() -> GarminClient:
     return client
 
 
+def _ask(prompt: str) -> str:
+    """Prompt on stderr so stdout stays clean for capturing the token blob."""
+    print(prompt, end="", file=sys.stderr, flush=True)
+    return input()
+
+
 def login() -> str:
     """Interactive first-time login (handles MFA). Returns the GARMIN_TOKEN blob."""
-    email = os.environ.get("PACEFORGE_GARMIN_EMAIL") or input("Garmin email: ")
+    email = os.environ.get("PACEFORGE_GARMIN_EMAIL") or _ask("Garmin email: ")
     password = os.environ.get("PACEFORGE_GARMIN_PASSWORD") or getpass.getpass("Garmin password: ")
     token_dir = _token_dir()
     token_dir.mkdir(parents=True, exist_ok=True)
     client = GarminClient(email, password, token_dir=str(token_dir))
     if client.login() == "mfa_required":
-        client.complete_mfa(input("MFA code: ").strip())
+        client.complete_mfa(_ask("MFA code: ").strip())
     return _export_token(token_dir)
 
 
