@@ -506,10 +506,30 @@ const planStore = {
   async get() {
     if (this._mem) return this._mem;
     const raw = localStorage.getItem(PLAN_KEY);
-    if (raw) { try { this._mem = JSON.parse(raw); return this._mem; } catch {} }
-    this._mem = await this._seed();
+    if (raw) { try { this._mem = JSON.parse(raw); } catch {} }
+    if (this._mem) await this._mergeSynced();   // localStorage is stale for sync-matched completions
+    else this._mem = await this._seed();
     this._persist();
     return this._mem;
+  },
+  // The daily Garmin sync marks workouts completed/matched in ./data/plan.json, but the
+  // editable plan lives in localStorage. Pull those completions in (additively, so a manual
+  // "Mark done" is never un-done) when the synced plan is still the same plan.
+  async _mergeSynced() {
+    let synced;
+    try { synced = await loadJSON('plan.json'); } catch { return; }
+    if (!synced || synced.plan_id !== this._mem.plan_id) return;
+    (synced.weeks || []).forEach((sw, wi) => {
+      const lw = this._mem.weeks?.[wi];
+      (sw.workouts || []).forEach((swo, woi) => {
+        const lwo = lw?.workouts?.[woi];
+        if (!lwo || !swo.completed) return;
+        lwo.completed = true;
+        lwo.matched_activity_ids = swo.matched_activity_ids || lwo.matched_activity_ids;
+        lwo.completion_analysis = swo.completion_analysis ?? lwo.completion_analysis;
+        lwo.completion_metrics = swo.completion_metrics ?? lwo.completion_metrics;
+      });
+    });
   },
   _persist() {
     try { localStorage.setItem(PLAN_KEY, JSON.stringify(this._mem)); } catch {}
@@ -1019,7 +1039,7 @@ function thisWeekCard(plan) {
   }
   const idx = currentWeekIndex(plan);
   const w = plan.weeks[idx];
-  const workouts = (w.workouts || []);
+  const workouts = (w.workouts || []).filter(x => x.workout_type !== 'rest');  // rest = cross-train day, not shown
   const done = workouts.filter(x => x.completed).length;
   const pct = workouts.length ? Math.round(done / workouts.length * 100) : 0;
   const upcoming = workouts.slice(0, 4);
@@ -1676,13 +1696,17 @@ function drawWeek(plan) {
   const wi = planSelectedWeek;
   const w = (plan.weeks || [])[wi];
   if (!w) return;
+  // Rest days are intentionally hidden — the athlete cross-trains, not rests. Keep the
+  // original index so toggle/open addressing (wkIdx:woIdx) still points at the right workout.
+  const planned = (w.workouts || []).map((wo, woIdx) => ({ wo, woIdx }))
+    .filter(({ wo }) => wo.workout_type !== 'rest');
   const infoEl = document.getElementById('week-info');
   if (infoEl) {
-    const done = (w.workouts || []).filter(x => x.completed).length;
+    const done = planned.filter(({ wo }) => wo.completed).length;
     infoEl.innerHTML = `<div class="card card-pad-sm" style="margin-bottom:14px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
       <div style="flex:1;min-width:160px">
         <div class="eyebrow">${escHtml(w.phase || 'Block')}${w.focus ? ' · ' + escHtml(w.focus) : ''}</div>
-        <div style="font-size:.84rem;color:var(--text-2);margin-top:4px">${w.total_distance_km ? w.total_distance_km.toFixed(0) + ' km total' : ''} · ${done}/${(w.workouts||[]).length} workouts done</div>
+        <div style="font-size:.84rem;color:var(--text-2);margin-top:4px">${w.total_distance_km ? w.total_distance_km.toFixed(0) + ' km total' : ''} · ${done}/${planned.length} workouts done</div>
       </div>
       <button class="btn btn-primary btn-sm" id="push-week">${icons.push} Push Week ${w.week_number || wi+1} to Garmin</button>
     </div>`;
@@ -1691,7 +1715,7 @@ function drawWeek(plan) {
   const contentEl = document.getElementById('week-content');
   if (!contentEl) return;
   contentEl.className = 'grid cols-auto';
-  contentEl.innerHTML = (w.workouts || []).map((wo, woIdx) => workoutCardHtml(wo, wi, woIdx)).join('') || emptyState('No workouts this week', '', icons.plan);
+  contentEl.innerHTML = planned.map(({ wo, woIdx }) => workoutCardHtml(wo, wi, woIdx)).join('') || emptyState('No workouts this week', '', icons.plan);
   contentEl.querySelectorAll('[data-open-wo]').forEach(el => el.addEventListener('click', () => {
     const [wkIdx, woIdx] = el.dataset.openWo.split(':').map(Number);
     showWorkoutSheet(plan.weeks[wkIdx].workouts[woIdx], wkIdx, woIdx);
