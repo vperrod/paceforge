@@ -367,12 +367,7 @@ def _build_varied_week(
         workout_date = week_start + timedelta(days=offset)
 
         if day_name not in training_set:
-            workouts.append(Workout(
-                workout_type=WorkoutType.REST,
-                name="Rest Day",
-                scheduled_date=workout_date,
-            ))
-            continue
+            continue  # non-training days are implicit rest — no placeholder entry
 
         role = role_map.get(day_name, "easy_0")
 
@@ -633,14 +628,7 @@ def _build_workouts(
         wtype = WorkoutType(day_tmpl["type"])
 
         if wtype == WorkoutType.REST:
-            workouts.append(
-                Workout(
-                    workout_type=WorkoutType.REST,
-                    name="Rest Day",
-                    scheduled_date=workout_date,
-                )
-            )
-            continue
+            continue  # non-training days are implicit rest — no placeholder entry
 
         # Compute distance
         distance_km = day_tmpl.get("distance_km")

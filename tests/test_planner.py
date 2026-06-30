@@ -65,7 +65,8 @@ class TestPlanGeneration:
         for week in plan.weeks:
             assert len(week.workouts) > 0
 
-    def test_plan_includes_rest_days(self):
+    def test_plan_has_no_rest_placeholders(self):
+        """Non-training days are implicit rest — the plan emits no rest entries."""
         plan = generate_plan(_make_profile(), _make_goal())
         rest_count = sum(
             1
@@ -73,7 +74,7 @@ class TestPlanGeneration:
             for w in week.workouts
             if w.workout_type.value == "rest"
         )
-        assert rest_count > 0
+        assert rest_count == 0
 
     def test_progressive_volume(self):
         plan = generate_plan(_make_profile(), _make_goal())
@@ -120,14 +121,14 @@ class TestPlanGeneration:
 
     # ── Day-selection tests ──────────────────────────────────────────
 
-    def test_3_day_plan_has_rest_on_other_days(self):
-        """With 3 training days, exactly 4 rest days per non-race week."""
+    def test_3_day_plan_has_only_training_days(self):
+        """With 3 training days, the week holds exactly those 3 — no rest entries."""
         goal = _make_goal(training_days=["tuesday", "thursday", "sunday"], long_run_day="sunday")
         plan = generate_plan(_make_profile(), goal)
         week = plan.weeks[0]
         rest = [w for w in week.workouts if w.workout_type == WorkoutType.REST]
         run = [w for w in week.workouts if w.workout_type != WorkoutType.REST]
-        assert len(rest) == 4, f"Expected 4 rest days, got {len(rest)}"
+        assert len(rest) == 0, f"Expected 0 rest days, got {len(rest)}"
         assert len(run) == 3, f"Expected 3 run days, got {len(run)}"
 
     def test_5_day_custom_days(self):
