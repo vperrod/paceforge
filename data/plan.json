@@ -3034,8 +3034,10 @@
           "notes": "Building back up after recovery week. Strides help maintain speed while building base.",
           "purpose": "aerobic_base",
           "cadence_target": null,
-          "completed": false,
-          "matched_activity_ids": [],
+          "completed": true,
+          "matched_activity_ids": [
+            23422094990
+          ],
           "completion_analysis": null,
           "completion_metrics": null,
           "user_rpe": null,
