@@ -2137,14 +2137,70 @@ function deterministicInsights(detail, act, match) {
 
 function analyzeActivityWithCoach(act, btn) {
   if (!requireToken()) return;
+  const id = act.activity_id;
   withBusy(btn, 'Requesting…', async () => {
-    const title = `Coach: analyze activity ${act.activity_id} (${act.name || 'activity'})`;
-    const body = `Analyze Garmin activity **${act.activity_id}** — "${act.name || ''}" on ${act.start_time || ''}.\n\nWrite the analysis to \`data/analyses/${act.activity_id}.md\`: what was done, how it compares to the planned workout (if one matched), how it affects my athlete profile, and what I should improve.`;
+    const title = `Coach: analyze activity ${id} (${act.name || 'activity'})`;
+    const body = `Analyze Garmin activity **${id}** — "${act.name || ''}" on ${act.start_time || ''}.\n\nWrite the analysis to \`data/analyses/${id}.md\`: what was done, how it compares to the planned workout (if one matched), how it affects my athlete profile, and what I should improve.`;
     const res = await fetch(`https://api.github.com/repos/${REPO}/issues`, { method: 'POST', headers: ghHeaders(), body: JSON.stringify({ title, body, labels: ['coach'] }) });
     if (!res.ok) throw new Error(await ghError(res));
     const issue = await res.json();
-    toast('ok', 'Analysis requested', `<a href="${issue.html_url}" target="_blank" rel="noopener">#${issue.number}</a> — Claude will write it shortly.`);
+    toast('ok', 'Analysis requested', `<a href="${issue.html_url}" target="_blank" rel="noopener">#${issue.number}</a> — tracking progress below.`);
+    pollForAnalysis(id, issue.html_url);
   });
+}
+
+function coachProgressHtml(elapsedS, statusLine, issueUrl) {
+  const m = Math.floor(elapsedS / 60), s = elapsedS % 60;
+  return `<div class="act-analysis" style="display:flex;flex-direction:column;gap:8px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="spinner" style="width:18px;height:18px;border-width:2px"></span>
+      <b style="color:var(--text)">Coach is analyzing this session…</b>
+    </div>
+    <div class="hint">${escHtml(statusLine)} · elapsed ${m}:${String(s).padStart(2, '0')}</div>
+    <div class="hint">Claude writes the analysis via GitHub Actions — usually 2–5 min. You can leave this page; the result lands here automatically.${issueUrl ? ` <a href="${issueUrl}" target="_blank" rel="noopener">View request</a>` : ''}</div>
+  </div>`;
+}
+
+// After requesting an analysis, poll until the markdown file lands, then render it
+// in place. The file check is authoritative; workflow status is just reassurance.
+async function pollForAnalysis(id, issueUrl) {
+  const slot = document.getElementById('coach-analysis-slot');
+  if (!slot) return;
+  const start = Date.now(), TIMEOUT = 15 * 60 * 1000, EVERY = 12000;
+  let statusLine = 'Waiting for the coach workflow to start…';
+  const tick = async () => {
+    if (!document.body.contains(slot)) return;  // user navigated away — stop polling
+    slot.innerHTML = coachProgressHtml(Math.floor((Date.now() - start) / 1000), statusLine, issueUrl);
+    try {
+      const r = await fetch(`https://api.github.com/repos/${REPO}/contents/data/analyses/${id}.md?ref=master&t=${Date.now()}`, { headers: ghHeaders() });
+      if (r.ok) {
+        const j = await r.json();
+        const md = decodeURIComponent(escape(atob((j.content || '').replace(/\s/g, ''))));
+        slot.innerHTML = `<div class="act-analysis">${formatMarkdown(md)}</div>`;
+        toast('ok', 'Analysis ready', 'Your coaching analysis is in.');
+        return;
+      }
+    } catch {}
+    try {
+      const wr = await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/coach.yml/runs?per_page=1&t=${Date.now()}`, { headers: ghHeaders() });
+      if (wr.ok) {
+        const run = (await wr.json()).workflow_runs?.[0];
+        // Only trust a run started around/after this request, not a stale prior one.
+        if (run && new Date(run.created_at).getTime() >= start - 120000) {
+          statusLine = run.status === 'completed'
+            ? (run.conclusion === 'success' ? 'Workflow finished — fetching the analysis…'
+               : `Workflow ${run.conclusion}. Check the run on GitHub.`)
+            : run.status === 'in_progress' ? 'Coach workflow running…' : 'Coach workflow queued…';
+        }
+      }
+    } catch {}
+    if (Date.now() - start > TIMEOUT) {
+      slot.innerHTML = `<div class="act-analysis"><div class="hint">This is taking longer than usual. It'll appear here once the coach finishes — reload in a few minutes${issueUrl ? `, or <a href="${issueUrl}" target="_blank" rel="noopener">check the request on GitHub</a>` : ''}.</div></div>`;
+      return;
+    }
+    setTimeout(tick, EVERY);
+  };
+  tick();
 }
 
 // Inner body (metrics → charts → planned-vs-actual → coach analysis) shared by the
@@ -2233,7 +2289,7 @@ function activityDetailBody(act, detail, analysisMd, match) {
     </div>
     ${charts}
     ${planHtml}
-    <div class="act-sec"><div class="eyebrow" style="margin-bottom:8px">Coach analysis</div>${analysisInner}</div>`;
+    <div class="act-sec"><div class="eyebrow" style="margin-bottom:8px">Coach analysis</div><div id="coach-analysis-slot">${analysisInner}</div></div>`;
 }
 
 // Render an activity's full detail into a container (page or calendar panel). onBack,
