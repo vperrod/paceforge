@@ -662,23 +662,28 @@
   "hr_zones": [
     {
       "zone": 1,
-      "secs": 973.186
+      "secs": 973.186,
+      "low": 92
     },
     {
       "zone": 2,
-      "secs": 605.115
+      "secs": 605.115,
+      "low": 110
     },
     {
       "zone": 3,
-      "secs": 124.994
+      "secs": 124.994,
+      "low": 128
     },
     {
       "zone": 4,
-      "secs": 0.0
+      "secs": 0.0,
+      "low": 146
     },
     {
       "zone": 5,
-      "secs": 0.0
+      "secs": 0.0,
+      "low": 152
     }
   ],
   "weather": {

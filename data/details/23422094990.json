@@ -800,23 +800,28 @@
   "hr_zones": [
     {
       "zone": 1,
-      "secs": 20.001
+      "secs": 20.001,
+      "low": 92
     },
     {
       "zone": 2,
-      "secs": 492.992
+      "secs": 492.992,
+      "low": 110
     },
     {
       "zone": 3,
-      "secs": 633.997
+      "secs": 633.997,
+      "low": 128
     },
     {
       "zone": 4,
-      "secs": 0.0
+      "secs": 0.0,
+      "low": 146
     },
     {
       "zone": 5,
-      "secs": 0.0
+      "secs": 0.0,
+      "low": 152
     }
   ],
   "weather": {

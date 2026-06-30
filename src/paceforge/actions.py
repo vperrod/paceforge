@@ -222,7 +222,8 @@ def _trim_detail(detail: dict) -> dict:
     hz = detail.get("hr_zones")
     if isinstance(hz, list):
         out["hr_zones"] = [
-            {"zone": z.get("zoneNumber"), "secs": z.get("secsInZone")}
+            {"zone": z.get("zoneNumber"), "secs": z.get("secsInZone"),
+             "low": z.get("zoneLowBoundary")}
             for z in hz if isinstance(z, dict)
         ]
 

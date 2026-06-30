@@ -332,6 +332,7 @@ a{color:var(--emerald);text-decoration:none}
 .zrow{display:grid;grid-template-columns:96px 1fr 78px;align-items:center;gap:10px}
 .zlbl{font-size:.78rem;font-weight:700;font-family:var(--font-m)}
 .zlbl span{font-weight:500;color:var(--text-3);font-family:var(--font);font-size:.72rem}
+.zbpm{display:block;font-weight:500;color:var(--text-2);font-family:var(--font-m);font-size:.66rem;margin-top:1px}
 .ztrack{height:9px;background:var(--elevated);border-radius:5px;overflow:hidden}
 .zfill{height:100%;border-radius:5px}
 .zval{font-size:.74rem;color:var(--text-2);text-align:right;font-family:var(--font-m)}
@@ -2074,10 +2075,13 @@ function hrZoneBars(zones) {
   const z = (zones || []).filter(x => x && x.secs);
   if (!z.length) return '';
   const total = z.reduce((a, b) => a + (b.secs || 0), 0) || 1;
+  const lowOf = {}; (zones || []).forEach(x => { if (x && x.low != null) lowOf[x.zone] = x.low; });
   return `<div class="zbars">` + z.map(x => {
     const pct = Math.round((x.secs / total) * 100);
     const c = ZONE_COLORS[(x.zone || 1) - 1] || 'var(--text-3)';
-    return `<div class="zrow"><div class="zlbl">Z${x.zone} <span>${ZONE_LABELS[(x.zone || 1) - 1] || ''}</span></div>
+    const nextLow = lowOf[(x.zone || 0) + 1];
+    const bpm = x.low != null ? `<span class="zbpm">${x.low}${nextLow ? '–' + (nextLow - 1) : '+'} bpm</span>` : '';
+    return `<div class="zrow"><div class="zlbl">Z${x.zone} <span>${ZONE_LABELS[(x.zone || 1) - 1] || ''}</span>${bpm}</div>
       <div class="ztrack"><div class="zfill" style="width:${Math.max(pct, 1)}%;background:${c}"></div></div>
       <div class="zval">${Math.round(x.secs / 60)}m · ${pct}%</div></div>`;
   }).join('') + `</div>`;

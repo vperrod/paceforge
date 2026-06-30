@@ -733,23 +733,28 @@
   "hr_zones": [
     {
       "zone": 1,
-      "secs": 33.0
+      "secs": 33.0,
+      "low": 92
     },
     {
       "zone": 2,
-      "secs": 836.931
+      "secs": 836.931,
+      "low": 110
     },
     {
       "zone": 3,
-      "secs": 700.492
+      "secs": 700.492,
+      "low": 128
     },
     {
       "zone": 4,
-      "secs": 0.0
+      "secs": 0.0,
+      "low": 146
     },
     {
       "zone": 5,
-      "secs": 0.0
+      "secs": 0.0,
+      "low": 152
     }
   ],
   "weather": {
