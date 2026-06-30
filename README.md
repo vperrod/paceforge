@@ -27,12 +27,14 @@ A desktop-first static dashboard ([vperrod.github.io/paceforge](https://vperrod.
 deployed by `pages.yml` and re-deployed automatically after each sync:
 
 - **Overview** — recent activities, this week's plan, key stats.
-- **Calendar** — compact month grid; click a day to see the session inline (no popups);
-  past days show what you actually did, upcoming days show the plan.
+- **Calendar** — compact month grid (weeks start Monday), with dots colour-coded by
+  session type (easy, long, tempo, fast, cross-training); click a day to see the session
+  inline (no popups); past days show what you actually did, upcoming days show the plan.
 - **Activity detail** — opens as a page with **pace / heart-rate / cadence / stride-length**
   charts over time (with an efficient-range band on cadence & stride), an HR-zone
-  distribution, a pace histogram, per-km splits, planned-vs-actual, and a Claude-written
-  coaching analysis.
+  distribution (with the bpm range per zone), a pace histogram, per-km splits,
+  planned-vs-actual, and a Claude-written coaching analysis (with live progress while
+  it's generated).
 - **HYROX** — import every race from your hyresult.com athlete profile (`paceforge
   hyrox-import-profile <slug>`), then open each race for a full breakdown: per-race
   Overall and Age-group placing, a **field-percentile bar per segment**, a **station

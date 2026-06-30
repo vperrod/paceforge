@@ -27,7 +27,8 @@ in `data/`; you read and write them, then push to Garmin.
 4. **Use the athlete's EXACT paces** from the engine — never invent paces.
 5. **Specific coaching notes** on every workout — purpose and feel, not generic.
 6. **No back-to-back intense days**; easy/rest buffer quality. (A quality day
-   before the weekend long run is fine.)
+   before the weekend long run is fine.) Rest is implicit — a non-training day
+   simply has no workout entry; never add "Rest Day" placeholders to the plan.
 7. **Cutback weeks reduce distance, not quality** — keep one shorter quality session.
 
 ## The loop (commands + files)
