@@ -1,5 +1,28 @@
 [
   {
+    "activity_id": 23441259894,
+    "name": "HYROX Simulation Fartlek",
+    "activity_type": "treadmill_running",
+    "start_time": "2026-07-01T12:35:21",
+    "distance_meters": 6150.0,
+    "duration_seconds": 1910.04296875,
+    "avg_hr": 133,
+    "max_hr": 153,
+    "avg_pace_sec_per_km": 310.6,
+    "calories": 497,
+    "training_effect_aerobic": 2.700000047683716,
+    "training_effect_anaerobic": 0.20000000298023224,
+    "vo2_max_value": null,
+    "avg_running_cadence": 146.984375,
+    "avg_stride_length": 124.6300048828125,
+    "avg_ground_contact_time": 280.8999938964844,
+    "avg_vertical_oscillation": 9.4,
+    "avg_vertical_ratio": 7.730000019073486,
+    "avg_power": 386.0,
+    "elevation_gain": null,
+    "avg_respiration_rate": null
+  },
+  {
     "activity_id": 23425853878,
     "name": "Cardio",
     "activity_type": "indoor_cardio",

@@ -2800,8 +2800,10 @@
           "notes": "Simulates HYROX running segments. Vary efforts like you'll experience between stations. Practice quick pace changes.",
           "purpose": null,
           "cadence_target": null,
-          "completed": false,
-          "matched_activity_ids": [],
+          "completed": true,
+          "matched_activity_ids": [
+            23441259894
+          ],
           "completion_analysis": null,
           "completion_metrics": null,
           "user_rpe": null,
