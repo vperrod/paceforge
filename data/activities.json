@@ -1,5 +1,28 @@
 [
   {
+    "activity_id": 23445793820,
+    "name": "Cardio",
+    "activity_type": "indoor_cardio",
+    "start_time": "2026-07-01T19:17:56",
+    "distance_meters": 0.0,
+    "duration_seconds": 2209.60205078125,
+    "avg_hr": 136,
+    "max_hr": 176,
+    "avg_pace_sec_per_km": null,
+    "calories": 580,
+    "training_effect_aerobic": 3.200000047683716,
+    "training_effect_anaerobic": 2.299999952316284,
+    "vo2_max_value": null,
+    "avg_running_cadence": null,
+    "avg_stride_length": null,
+    "avg_ground_contact_time": null,
+    "avg_vertical_oscillation": null,
+    "avg_vertical_ratio": null,
+    "avg_power": null,
+    "elevation_gain": null,
+    "avg_respiration_rate": null
+  },
+  {
     "activity_id": 23441259894,
     "name": "HYROX Simulation Fartlek",
     "activity_type": "treadmill_running",
